@@ -118,7 +118,6 @@ def run_sam(input_image, sam_model_id):
     return seg_image, "Segment Anything completed"
 
 def select_mask(masks_image):
-    # global sam_masks
     global sam_dict
     if sam_dict["sam_masks"] is None or masks_image is None:
         clear_cache()
