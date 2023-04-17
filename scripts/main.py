@@ -12,6 +12,7 @@ from datetime import datetime
 import gc
 import argparse
 import platform
+from PIL.PngImagePlugin import PngInfo
 # print("platform:", platform.system())
 
 import modules.scripts as scripts
@@ -59,6 +60,10 @@ def get_sam_mask_generator(sam_checkpoint):
         torch.load = load
     
     return sam_mask_generator
+
+output_dir = os.path.join(os.path.dirname(extensions_dir),
+                          "outputs", "inpaint-anything",
+                          datetime.now().strftime("%Y-%m-%d"))
 
 sam_dict = {"sam_masks": None}
 
@@ -149,7 +154,7 @@ def select_mask(masks_image, invert_chk):
     clear_cache()
     return seg_image
 
-def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, scale, seed, model_id):
+def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id):
     if input_image is None or sel_mask is None:
         clear_cache()
         return None
@@ -158,6 +163,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, scale, seed
     sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
     sel_mask = sel_mask_image * sel_mask_mask
 
+    global output_dir
     print(model_id)
     if platform.system() == "Darwin":
         pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float32)
@@ -209,12 +215,36 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, scale, seed
         "height": height,
         "mask_image": mask_image,
         "num_inference_steps": ddim_steps,
-        "guidance_scale": scale,
+        "guidance_scale": cfg_scale,
         "negative_prompt": n_prompt,
         "generator": generator,
         }
     
     output_image = pipe(**pipe_args_dict).images[0]
+    
+    if True:
+        generation_params = {
+            "Steps": ddim_steps,
+            "Sampler": pipe.scheduler.__class__.__name__,
+            "CFG scale": cfg_scale,
+            "Seed": seed,
+            "Size": f"{width}x{height}",
+            "Model": model_id,
+            }
+
+        generation_params_text = ", ".join([k if k == v else f'{k}: {v}' for k, v in generation_params.items() if v is not None])
+        prompt_text = prompt if prompt else ""
+        negative_prompt_text = "Negative prompt: " + n_prompt if n_prompt else ""
+        infotext = f"{prompt_text}\n{negative_prompt_text}\n{generation_params_text}".strip()
+        
+        metadata = PngInfo()
+        metadata.add_text("parameters", infotext)
+        
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(model_id) + "_" + str(seed) + ".png"
+        save_name = os.path.join(output_dir, save_name)
+        output_image.save(save_name, pnginfo=metadata)
     
     clear_cache()
     return output_image
@@ -254,7 +284,7 @@ def on_ui_tabs():
                 n_prompt = gr.Textbox(label="Negative prompt")
                 with gr.Accordion("Advanced options", open=False):
                     ddim_steps = gr.Slider(label="Sampling Steps", minimum=1, maximum=50, value=20, step=1)
-                    scale = gr.Slider(label="Guidance Scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
+                    cfg_scale = gr.Slider(label="Guidance Scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
                     seed = gr.Slider(
                         label="Seed",
                         minimum=0,
@@ -286,7 +316,7 @@ def on_ui_tabs():
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id], outputs=[sam_image, status_text])
             select_btn.click(select_mask, inputs=[sam_image, invert_chk], outputs=[sel_mask])
-            inpaint_btn.click(run_inpaint, inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, scale, seed, model_id],
+            inpaint_btn.click(run_inpaint, inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id],
                               outputs=[out_image])
     
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]

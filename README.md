@@ -9,11 +9,16 @@ Using Segment Anything enables users to specify masks by simply pointing to the 
 
 To install the software, please follow these steps:
 
-1. Open the "Extensions" tab.
+1. Open the "Extensions" tab on the AUTOMATIC1111's [Stable Diffusion Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui.git).
 2. Select the "Install from URL" option.
-3. Enter the URL of this repository in the "URL for extension's git repository" field.
+3. Enter `https://github.com/Uminosachi/sd-webui-inpaint-anything.git` in the "URL for extension's git repository" field.
 4. Click the "Install" button.
 5. Once installation is complete, restart the Web UI.
+
+## Running the application
+
+* To use xFormers for inference, please add the argument `--xformers` to the startup command. (for example `./webui.sh --xformers`)
+* Recommended browsers: Microsoft Edge or Mozilla Firefox (as mask selection may not work properly with Google Chrome).
 
 ## Downloading the Model
 
@@ -37,6 +42,10 @@ To download the model:
 Inpainting is performed using [diffusers](https://github.com/huggingface/diffusers).
 
 ![UI image](images/inpaint_anything_ui_image_1.png)
+
+## Auto-saving images
+
+* The inpainted image will be automatically saved in the folder that matches the current date within the `outputs/inpaint-anything` directory.
 
 ## License
 
