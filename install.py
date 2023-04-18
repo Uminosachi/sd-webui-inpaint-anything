@@ -6,12 +6,6 @@ if not launch.is_installed("gradio"):
     except:
         print("Can't install gradio. Please follow the readme to install manually")
 
-if not launch.is_installed("gradio_client"):
-    try:
-        launch.run_pip("install gradio_client", "requirements for gradio_client")
-    except:
-        print("Can't install gradio_client. Please follow the readme to install manually")
-
 if not launch.is_installed("accelerate"):
     try:
         launch.run_pip("install accelerate", "requirements for accelerate")
