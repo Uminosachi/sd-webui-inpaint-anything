@@ -19,7 +19,7 @@ To install the software, please follow these steps:
 
 ## Running the application
 
-* To use xFormers for inference, please add the `--xformers` argument to the startup command. For example, run `./webui.sh --xformers` or `webui.bat --xformers`.
+* To use xFormers for inference, please add the `--xformers` argument to the startup command. For example, run `./webui.sh --xformers` or `webui.bat --xformers`
 * Recommended browsers: Microsoft Edge or Mozilla Firefox (as mask selection may not work properly with Google Chrome).
 * Note: In Gradio version 3.23.0, the segmentation image may appear small on the Web UI due to an outdated version. However, in the [Standalone version](https://github.com/Uminosachi/inpaint-anything) of Gradio 3.26.0, the image is displayed at larger size.
 
