@@ -5,6 +5,8 @@ Inpaint Anything performs stable diffusion inpainting on a browser UI using any 
 
 Using Segment Anything enables users to specify masks by simply pointing to the desired areas, instead of manually filling them in. This can increase the efficiency and accuracy of the mask creation process, leading to potentially higher-quality inpainting results while saving time and effort.
 
+[Standalone version](https://github.com/Uminosachi/inpaint-anything)
+
 ## Installation
 
 To install the software, please follow these steps:
@@ -19,6 +21,7 @@ To install the software, please follow these steps:
 
 * To use xFormers for inference, please add the argument `--xformers` to the startup command. (for example `./webui.sh --xformers`)
 * Recommended browsers: Microsoft Edge or Mozilla Firefox (as mask selection may not work properly with Google Chrome).
+* Note: In Gradio version 3.23.0, the segmentation image may appear small on the Web UI due to an outdated version. However, in the [Standalone version](https://github.com/Uminosachi/inpaint-anything) of Gradio 3.26.0, the image is displayed at larger size.
 
 ## Downloading the Model
 
