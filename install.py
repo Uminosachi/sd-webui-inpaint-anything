@@ -50,7 +50,7 @@ if not launch.is_installed("Pillow"):
 
 if not launch.is_installed("segment_anything"):
     try:
-        launch.run_pip("install -e git+https://github.com/facebookresearch/segment-anything.git#egg=segment_anything", "requirements for segment_anything")
+        launch.run_pip("install segment_anything", "requirements for segment_anything")
     except:
         print("Can't install segment_anything. Please follow the readme to install manually")
 
