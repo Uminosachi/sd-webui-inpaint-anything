@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 import gradio as gr
 from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler, UniPCMultistepScheduler
-from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
+from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
 from scripts.get_dataset_colormap import create_pascal_label_colormap
 from torch.hub import download_url_to_file
 from torchvision import transforms
@@ -58,8 +58,25 @@ def get_sam_mask_generator(sam_checkpoint):
         sam.to(device=device)
         sam_mask_generator = SamAutomaticMaskGenerator(sam)
         torch.load = load
+    else:
+        sam_mask_generator = None
     
     return sam_mask_generator
+
+def get_sam_predictor(sam_checkpoint):
+    # model_type = "vit_h"
+    model_type = os.path.basename(sam_checkpoint)[4:9]
+
+    if os.path.isfile(sam_checkpoint):
+        torch.load = unsafe_torch_load
+        sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+        sam.to(device=device)
+        sam_predictor = SamPredictor(sam)
+        torch.load = load
+    else:
+        sam_predictor = None
+    
+    return sam_predictor
 
 output_dir = os.path.join(os.path.dirname(extensions_dir),
                           "outputs", "inpaint-anything",
@@ -81,6 +98,7 @@ def clear_cache():
     torch_gc()
 
 def run_sam(input_image, sam_model_id):
+    clear_cache()
     global sam_dict
     # print(sam_dict)    
     if sam_dict["sam_masks"] is not None:
@@ -89,11 +107,9 @@ def run_sam(input_image, sam_model_id):
     
     sam_checkpoint = os.path.join(extensions_dir, "sd-webui-inpaint-anything", "models", sam_model_id)
     if not os.path.isfile(sam_checkpoint):
-        clear_cache()
         return None, f"{sam_model_id} not found, please download"
     
     if input_image is None:
-        clear_cache()
         return None, "Input image not found"
     print("input_image:", input_image.shape, input_image.dtype)
     
@@ -103,6 +119,7 @@ def run_sam(input_image, sam_model_id):
     # print(len(seg_colormap))
     
     sam_mask_generator = get_sam_mask_generator(sam_checkpoint)
+    print(f"{sam_mask_generator.__class__.__name__} {sam_model_id}")
     sam_masks = sam_mask_generator.generate(input_image)
 
     canvas_image = np.zeros_like(input_image)
@@ -154,7 +171,7 @@ def select_mask(masks_image, invert_chk):
     clear_cache()
     return seg_image
 
-def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id):
+def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk):
     if input_image is None or sel_mask is None:
         clear_cache()
         return None
@@ -164,6 +181,13 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     sel_mask = sel_mask_image * sel_mask_mask
 
     global output_dir
+    if save_mask_chk:
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
+        save_name = os.path.join(output_dir, save_name)
+        Image.fromarray(sel_mask).save(save_name)
+
     print(model_id)
     if platform.system() == "Darwin":
         pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float32)
@@ -271,22 +295,23 @@ def on_ui_tabs():
                 with gr.Row():
                     with gr.Column():
                         sam_model_id = gr.Dropdown(label="Segment Anything Model ID", elem_id="sam_model_id", choices=sam_model_ids,
-                                                   value=sam_model_ids[0], show_label=True)
+                                                   value=sam_model_ids[1], show_label=True)
                     with gr.Column():
                         with gr.Row():
-                            load_model_btn = gr.Button("Download model")
+                            load_model_btn = gr.Button("Download model", elem_id="load_model_btn")
                         with gr.Row():
                             status_text = gr.Textbox(label="", max_lines=1, show_label=False, interactive=False)
                 input_image = gr.Image(label="Input image", elem_id="input_image", source="upload", type="numpy", interactive=True)
-                sam_btn = gr.Button("Run Segment Anything")
+                sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
                 
-                prompt = gr.Textbox(label="Prompt")
-                n_prompt = gr.Textbox(label="Negative prompt")
+                prompt = gr.Textbox(label="Inpainting prompt", elem_id="sd_prompt")
+                n_prompt = gr.Textbox(label="Negative prompt", elem_id="sd_n_prompt")
                 with gr.Accordion("Advanced options", open=False):
-                    ddim_steps = gr.Slider(label="Sampling Steps", minimum=1, maximum=50, value=20, step=1)
-                    cfg_scale = gr.Slider(label="Guidance Scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
+                    ddim_steps = gr.Slider(label="Sampling Steps", elem_id="ddim_steps", minimum=1, maximum=50, value=20, step=1)
+                    cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
                     seed = gr.Slider(
                         label="Seed",
+                        elem_id="sd_seed",
                         minimum=0,
                         maximum=2147483647,
                         step=1,
@@ -297,7 +322,9 @@ def on_ui_tabs():
                         model_id = gr.Dropdown(label="Inpainting Model ID", elem_id="model_id", choices=model_ids, value=model_ids[0], show_label=True)
                     with gr.Column():
                         with gr.Row():
-                            inpaint_btn = gr.Button("Run Inpainting")
+                            inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn")
+                        with gr.Row():
+                            save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk", show_label=True, interactive=True)
                                     
                 out_image = gr.Image(label="Inpainted image", elem_id="out_image", interactive=False).style(height=480)
                 
@@ -306,7 +333,7 @@ def on_ui_tabs():
                                      interactive=True).style(height=480)
                 with gr.Row():
                     with gr.Column():
-                        select_btn = gr.Button("Create mask")
+                        select_btn = gr.Button("Create mask", elem_id="select_btn")
                     with gr.Column():
                         invert_chk = gr.Checkbox(label="Invert mask", elem_id="invert_chk", show_label=True, interactive=True)
 
@@ -316,7 +343,7 @@ def on_ui_tabs():
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id], outputs=[sam_image, status_text])
             select_btn.click(select_mask, inputs=[sam_image, invert_chk], outputs=[sel_mask])
-            inpaint_btn.click(run_inpaint, inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id],
+            inpaint_btn.click(run_inpaint, inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk],
                               outputs=[out_image])
     
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
