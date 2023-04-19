@@ -78,7 +78,7 @@ def get_sam_predictor(sam_checkpoint):
     
     return sam_predictor
 
-output_dir = os.path.join(os.path.dirname(extensions_dir),
+ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
                           "outputs", "inpaint-anything",
                           datetime.now().strftime("%Y-%m-%d"))
 
@@ -180,12 +180,12 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
     sel_mask = sel_mask_image * sel_mask_mask
 
-    global output_dir
+    global ia_outputs_dir
     if save_mask_chk:
-        if not os.path.isdir(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
+        if not os.path.isdir(ia_outputs_dir):
+            os.makedirs(ia_outputs_dir, exist_ok=True)
         save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
-        save_name = os.path.join(output_dir, save_name)
+        save_name = os.path.join(ia_outputs_dir, save_name)
         Image.fromarray(sel_mask).save(save_name)
 
     print(model_id)
@@ -264,10 +264,10 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         metadata = PngInfo()
         metadata.add_text("parameters", infotext)
         
-        if not os.path.isdir(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
+        if not os.path.isdir(ia_outputs_dir):
+            os.makedirs(ia_outputs_dir, exist_ok=True)
         save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(model_id) + "_" + str(seed) + ".png"
-        save_name = os.path.join(output_dir, save_name)
+        save_name = os.path.join(ia_outputs_dir, save_name)
         output_image.save(save_name, pnginfo=metadata)
     
     clear_cache()
