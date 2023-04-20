@@ -18,9 +18,9 @@ if not launch.is_installed("diffusers"):
     except:
         print("Can't install diffusers. Please follow the readme to install manually")
 
-if not launch.is_installed("huggingface-hub"):
+if not launch.is_installed("huggingface_hub"):
     try:
-        launch.run_pip("install huggingface-hub", "requirements for huggingface-hub")
+        launch.run_pip("install huggingface-hub", "requirements for huggingface_hub")
     except:
         print("Can't install huggingface-hub. Please follow the readme to install manually")
 
@@ -36,23 +36,23 @@ if not launch.is_installed("numpy"):
     except:
         print("Can't install numpy. Please follow the readme to install manually")
 
-if not launch.is_installed("opencv-python"):
+if not launch.is_installed("cv2"):
     try:
-        launch.run_pip("install opencv-python", "requirements for opencv-python")
+        launch.run_pip("install opencv-python", "requirements for cv2")
     except:
         print("Can't install opencv-python. Please follow the readme to install manually")
 
-if not launch.is_installed("Pillow"):
+if not launch.is_installed("PIL"):
     try:
-        launch.run_pip("install Pillow", "requirements for Pillow")
+        launch.run_pip("install Pillow", "requirements for PIL")
     except:
         print("Can't install Pillow. Please follow the readme to install manually")
 
 if not launch.is_installed("segment_anything"):
     try:
-        launch.run_pip("install segment_anything", "requirements for segment_anything")
+        launch.run_pip("install segment-anything", "requirements for segment_anything")
     except:
-        print("Can't install segment_anything. Please follow the readme to install manually")
+        print("Can't install segment-anything. Please follow the readme to install manually")
 
 if not launch.is_installed("transformers"):
     try:
