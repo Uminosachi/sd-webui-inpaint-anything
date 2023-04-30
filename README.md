@@ -21,7 +21,7 @@ To install the software, please follow these steps:
 
 * To use xFormers for inference, please add the `--xformers` argument to the startup command. For example, run `./webui.sh --xformers` or `webui.bat --xformers`
 * Note: If you have a privacy protection extension enabled in your web browser, such as DuckDuckGo, you may not be able to retrieve the mask from your sketch.
-* Note: In Gradio version 3.23.0 or under, the segmentation image may appear small on the Web UI.
+* Note: In Gradio version 3.23.0 or older, the segmentation image may appear small on the Web UI.
 
 ## Downloading the Model
 
