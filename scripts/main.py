@@ -87,9 +87,11 @@ sam_dict = {"sam_masks": None}
 def get_model_ids():
     model_ids = [
         "stabilityai/stable-diffusion-2-inpainting",
-        "runwayml/stable-diffusion-inpainting",
+        "Uminosachi/revAnimated_v121Inp-inpainting",
+        "Uminosachi/dreamshaper_5-inpainting",
         "saik0s/realistic_vision_inpainting",
         "parlance/dreamlike-diffusion-1.0-inpainting",
+        "runwayml/stable-diffusion-inpainting",
         ]
     return model_ids
 
