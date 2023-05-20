@@ -262,7 +262,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         print("resize:", f"({height}, {width})", "->", f"({int(height*scale+0.5)}, {int(width*scale+0.5)})")
         init_image = transforms.functional.resize(init_image, (int(height*scale+0.5), int(width*scale+0.5)), transforms.InterpolationMode.LANCZOS)
         mask_image = transforms.functional.resize(mask_image, (int(height*scale+0.5), int(width*scale+0.5)), transforms.InterpolationMode.LANCZOS)
-        print("center_crop:", f"({int(height*scale)}, {int(width*scale)})", "->", f"({new_height}, {new_width})")
+        print("center_crop:", f"({int(height*scale+0.5)}, {int(width*scale+0.5)})", "->", f"({new_height}, {new_width})")
         init_image = transforms.functional.center_crop(init_image, (new_height, new_width))
         mask_image = transforms.functional.center_crop(mask_image, (new_height, new_width))
         assert init_image.size == mask_image.size, "The size of image and mask do not match"
