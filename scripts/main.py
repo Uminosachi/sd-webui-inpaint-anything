@@ -133,7 +133,7 @@ def clear_cache():
     gc.collect()
     torch_gc()
 
-def run_sam(input_image, sam_model_id):
+def run_sam(input_image, sam_model_id, sam_image):
     clear_cache()
     global sam_dict
     # print(sam_dict)    
@@ -172,9 +172,18 @@ def run_sam(input_image, sam_model_id):
     sam_dict["sam_masks"] = sam_masks
 
     clear_cache()
-    return seg_image, "Segment Anything completed"
+    
+    if sam_image is None:
+        return seg_image, "Segment Anything completed"
+    else:
+        image = sam_image["image"]
+        
+        if np.all(image == seg_image):
+            return gr.update(), "Segment Anything completed"
+        else:
+            return gr.update(value=seg_image), "Segment Anything completed"
 
-def select_mask(masks_image, invert_chk):
+def select_mask(masks_image, invert_chk, sel_mask):
     global sam_dict
     if sam_dict["sam_masks"] is None or masks_image is None:
         clear_cache()
@@ -205,7 +214,17 @@ def select_mask(masks_image, invert_chk):
         seg_image = np.logical_not(seg_image.astype(bool)).astype(np.uint8) * 255
 
     clear_cache()
-    return seg_image
+    if sel_mask is None:
+        return seg_image
+    else:
+        sel_mask_image = sel_mask["image"]
+        sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
+        sel_mask = sel_mask_image * sel_mask_mask
+        
+        if np.all(sel_mask == seg_image):
+            return gr.update()
+        else:
+            return gr.update(value=seg_image)
 
 def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk):
     if input_image is None or sel_mask is None:
@@ -377,8 +396,8 @@ def on_ui_tabs():
                                     interactive=True).style(height=480)
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
-            sam_btn.click(run_sam, inputs=[input_image, sam_model_id], outputs=[sam_image, status_text])
-            select_btn.click(select_mask, inputs=[sam_image, invert_chk], outputs=[sel_mask])
+            sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text])
+            select_btn.click(select_mask, inputs=[sam_image, invert_chk, sel_mask], outputs=[sel_mask])
             inpaint_btn.click(run_inpaint, inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk],
                               outputs=[out_image])
     
