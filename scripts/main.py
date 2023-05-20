@@ -218,10 +218,8 @@ def select_mask(masks_image, invert_chk, sel_mask):
         return seg_image
     else:
         sel_mask_image = sel_mask["image"]
-        sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
-        sel_mask = sel_mask_image * sel_mask_mask
         
-        if np.all(sel_mask == seg_image):
+        if np.all(sel_mask_image == seg_image):
             return gr.update()
         else:
             return gr.update(value=seg_image)
@@ -392,7 +390,7 @@ def on_ui_tabs():
                     with gr.Column():
                         invert_chk = gr.Checkbox(label="Invert mask", elem_id="invert_chk", show_label=True, interactive=True)
 
-                sel_mask = gr.Image(label="Selected mask image", elem_id="sel_mask", type="numpy", tool="sketch", brush_radius=16,
+                sel_mask = gr.Image(label="Selected mask image", elem_id="sel_mask", type="numpy", tool="sketch", brush_radius=12,
                                     interactive=True).style(height=480)
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
