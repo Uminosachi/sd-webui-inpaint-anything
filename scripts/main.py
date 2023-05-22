@@ -15,6 +15,7 @@ import platform
 from PIL.PngImagePlugin import PngInfo
 import time
 import random
+import cv2
 # print("platform:", platform.system())
 
 import modules.scripts as scripts
@@ -226,6 +227,22 @@ def select_mask(masks_image, invert_chk, sel_mask):
         else:
             return gr.update(value=seg_image)
 
+def expand_mask(sel_mask, expand_iteration):
+    if sel_mask is None:
+        clear_cache()
+        return None
+    
+    sel_mask_image = sel_mask["image"]
+    sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
+    sel_mask = sel_mask_image * sel_mask_mask
+    
+    expand_iteration = int(np.clip(expand_iteration, 1, 5))
+    
+    for i in range(expand_iteration):
+        sel_mask = np.array(cv2.dilate(sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=1))
+    
+    return gr.update(value=sel_mask)
+
 def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk):
     if input_image is None or sel_mask is None:
         clear_cache()
@@ -398,10 +415,18 @@ def on_ui_tabs():
 
                 sel_mask = gr.Image(label="Selected mask image", elem_id="sel_mask", type="numpy", tool="sketch", brush_radius=12,
                                     interactive=True).style(height=480)
+
+                with gr.Row():
+                    with gr.Column():
+                        expand_mask_btn = gr.Button("Expand mask region", elem_id="expand_mask_btn")
+                    with gr.Column():
+                        expand_iteration = gr.Slider(label="Iterations", elem_id="expand_iteration", minimum=1, maximum=5, value=1,
+                                                     step=1, visible=False)
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text])
             select_btn.click(select_mask, inputs=[sam_image, invert_chk, sel_mask], outputs=[sel_mask])
+            expand_mask_btn.click(expand_mask, inputs=[sel_mask, expand_iteration], outputs=[sel_mask])
             inpaint_btn.click(run_inpaint, inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk],
                               outputs=[out_image])
     
