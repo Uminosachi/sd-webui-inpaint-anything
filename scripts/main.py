@@ -18,7 +18,7 @@ import random
 import cv2
 from lama_cleaner.model_manager import ModelManager
 from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
-print("platform:", platform.system())
+# print("platform:", platform.system())
 
 import modules.scripts as scripts
 from modules import shared, script_callbacks
