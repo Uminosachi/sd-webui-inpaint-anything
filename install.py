@@ -65,3 +65,9 @@ if not launch.is_installed("xformers"):
         launch.run_pip("install xformers", "requirements for xformers")
     except:
         print("Can't install xformers. Please follow the readme to install manually")
+
+if not launch.is_installed("lama_cleaner"):
+    try:
+        launch.run_pip("install lama-cleaner", "requirements for lama_cleaner")
+    except:
+        print("Can't install lama-cleaner. Please follow the readme to install manually")

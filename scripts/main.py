@@ -16,6 +16,8 @@ from PIL.PngImagePlugin import PngInfo
 import time
 import random
 import cv2
+from lama_cleaner.model_manager import ModelManager
+from lama_cleaner.schema import Config, HDStrategy, SDSampler
 # print("platform:", platform.system())
 
 import modules.scripts as scripts
@@ -132,6 +134,17 @@ def get_model_ids():
         ]
     return model_ids
 
+def get_cleaner_model_ids():
+    """Get cleaner model ids list.
+
+    Returns:
+        list: model ids list
+    """
+    model_ids = [
+        "lama",
+        ]
+    return model_ids
+
 def clear_cache():
     gc.collect()
     torch_gc()
@@ -243,6 +256,30 @@ def expand_mask(sel_mask, expand_iteration):
     
     return gr.update(value=sel_mask)
 
+def auto_resize_to_pil(input_image, mask_image):
+    init_image = Image.fromarray(input_image).convert("RGB")
+    mask_image = Image.fromarray(mask_image).convert("RGB")
+    assert init_image.size == mask_image.size, "The size of image and mask do not match"
+    # print(init_image.size, mask_image.size)
+    width, height = init_image.size
+
+    new_height = (height // 8) * 8
+    new_width = (width // 8) * 8
+    if new_width < width or new_height < height:
+        if (new_width / width) < (new_height / height):
+            scale = new_height / height
+        else:
+            scale = new_width / width
+        print("resize:", f"({height}, {width})", "->", f"({int(height*scale+0.5)}, {int(width*scale+0.5)})")
+        init_image = transforms.functional.resize(init_image, (int(height*scale+0.5), int(width*scale+0.5)), transforms.InterpolationMode.LANCZOS)
+        mask_image = transforms.functional.resize(mask_image, (int(height*scale+0.5), int(width*scale+0.5)), transforms.InterpolationMode.LANCZOS)
+        print("center_crop:", f"({int(height*scale+0.5)}, {int(width*scale+0.5)})", "->", f"({new_height}, {new_width})")
+        init_image = transforms.functional.center_crop(init_image, (new_height, new_width))
+        mask_image = transforms.functional.center_crop(mask_image, (new_height, new_width))
+        assert init_image.size == mask_image.size, "The size of image and mask do not match"
+    
+    return init_image, mask_image
+
 def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk):
     if input_image is None or sel_mask is None:
         clear_cache()
@@ -285,27 +322,8 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     
     mask_image = sel_mask
         
-    init_image = Image.fromarray(input_image).convert("RGB")
-    mask_image = Image.fromarray(mask_image).convert("RGB")
-    assert init_image.size == mask_image.size, "The size of image and mask do not match"
-    # print(init_image.size, mask_image.size)
+    init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
-
-    new_height = (height // 8) * 8
-    new_width = (width // 8) * 8
-    if new_width < width or new_height < height:
-        if (new_width / width) < (new_height / height):
-            scale = new_height / height
-        else:
-            scale = new_width / width
-        print("resize:", f"({height}, {width})", "->", f"({int(height*scale+0.5)}, {int(width*scale+0.5)})")
-        init_image = transforms.functional.resize(init_image, (int(height*scale+0.5), int(width*scale+0.5)), transforms.InterpolationMode.LANCZOS)
-        mask_image = transforms.functional.resize(mask_image, (int(height*scale+0.5), int(width*scale+0.5)), transforms.InterpolationMode.LANCZOS)
-        print("center_crop:", f"({int(height*scale+0.5)}, {int(width*scale+0.5)})", "->", f"({new_height}, {new_width})")
-        init_image = transforms.functional.center_crop(init_image, (new_height, new_width))
-        mask_image = transforms.functional.center_crop(mask_image, (new_height, new_width))
-        assert init_image.size == mask_image.size, "The size of image and mask do not match"
-        width, height = init_image.size
     
     pipe_args_dict = {
         "prompt": prompt,
@@ -348,6 +366,60 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     clear_cache()
     return output_image
 
+def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
+    if input_image is None or sel_mask is None:
+        clear_cache()
+        return None
+
+    sel_mask_image = sel_mask["image"]
+    sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
+    sel_mask = sel_mask_image * sel_mask_mask
+
+    global ia_outputs_dir
+    if cleaner_save_mask_chk:
+        if not os.path.isdir(ia_outputs_dir):
+            os.makedirs(ia_outputs_dir, exist_ok=True)
+        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
+        save_name = os.path.join(ia_outputs_dir, save_name)
+        Image.fromarray(sel_mask).save(save_name)
+
+    print(cleaner_model_id)
+    model = ModelManager(name=cleaner_model_id, device=device)
+
+    mask_image = sel_mask
+    
+    init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
+    width, height = init_image.size
+    
+    init_image = np.array(init_image)
+    mask_image = np.array(mask_image.convert("L"))
+    
+    config = Config(
+        ldm_steps=20,
+        hd_strategy=HDStrategy.ORIGINAL,
+        hd_strategy_crop_margin=32,
+        hd_strategy_crop_trigger_size=512,
+        hd_strategy_resize_limit=512,
+        prompt="",
+        sd_steps=20,
+        sd_sampler=SDSampler.ddim
+    )
+    
+    output_image = model(image=init_image, mask=mask_image, config=config)
+    # print(output_image.shape, output_image.dtype, np.min(output_image), np.max(output_image))
+    output_image = cv2.cvtColor(output_image.astype(np.uint8), cv2.COLOR_BGR2RGB)
+    output_image = Image.fromarray(output_image)
+    
+    if True:
+        if not os.path.isdir(ia_outputs_dir):
+            os.makedirs(ia_outputs_dir, exist_ok=True)
+        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(cleaner_model_id) + ".png"
+        save_name = os.path.join(ia_outputs_dir, save_name)
+        output_image.save(save_name)
+    
+    clear_cache()
+    return output_image
+
 class Script(scripts.Script):
   def __init__(self) -> None:
     super().__init__()
@@ -364,6 +436,8 @@ class Script(scripts.Script):
 def on_ui_tabs():
     sam_model_ids = get_sam_model_ids()
     model_ids = get_model_ids()
+    cleaner_model_ids = get_cleaner_model_ids()
+    
     with gr.Blocks(analytics_enabled=False) as inpaint_anything_interface:
         with gr.Row():
             with gr.Column():
@@ -379,30 +453,44 @@ def on_ui_tabs():
                 input_image = gr.Image(label="Input image", elem_id="input_image", source="upload", type="numpy", interactive=True)
                 sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
                 
-                prompt = gr.Textbox(label="Inpainting prompt", elem_id="sd_prompt")
-                n_prompt = gr.Textbox(label="Negative prompt", elem_id="sd_n_prompt")
-                with gr.Accordion("Advanced options", open=False):
-                    ddim_steps = gr.Slider(label="Sampling Steps", elem_id="ddim_steps", minimum=1, maximum=50, value=20, step=1)
-                    cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
-                    seed = gr.Slider(
-                        label="Seed",
-                        elem_id="sd_seed",
-                        minimum=-1,
-                        maximum=2147483647,
-                        step=1,
-                        value=-1,
-                        # randomize=True,
-                    )
-                with gr.Row():
-                    with gr.Column():
-                        model_id = gr.Dropdown(label="Inpainting Model ID", elem_id="model_id", choices=model_ids, value=model_ids[0], show_label=True)
-                    with gr.Column():
-                        with gr.Row():
-                            inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn")
-                        with gr.Row():
-                            save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk", show_label=True, interactive=True)
-                                    
-                out_image = gr.Image(label="Inpainted image", elem_id="out_image", interactive=False).style(height=480)
+                with gr.Tab("Inpainting"):
+                    prompt = gr.Textbox(label="Inpainting prompt", elem_id="sd_prompt")
+                    n_prompt = gr.Textbox(label="Negative prompt", elem_id="sd_n_prompt")
+                    with gr.Accordion("Advanced options", open=False):
+                        ddim_steps = gr.Slider(label="Sampling Steps", elem_id="ddim_steps", minimum=1, maximum=50, value=20, step=1)
+                        cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
+                        seed = gr.Slider(
+                            label="Seed",
+                            elem_id="sd_seed",
+                            minimum=-1,
+                            maximum=2147483647,
+                            step=1,
+                            value=-1,
+                            # randomize=True,
+                        )
+                    with gr.Row():
+                        with gr.Column():
+                            model_id = gr.Dropdown(label="Inpainting Model ID", elem_id="model_id", choices=model_ids, value=model_ids[0], show_label=True)
+                        with gr.Column():
+                            with gr.Row():
+                                inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn")
+                            with gr.Row():
+                                save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk", show_label=True, interactive=True)
+                                        
+                    out_image = gr.Image(label="Inpainted image", elem_id="out_image", interactive=False).style(height=480)
+                
+                with gr.Tab("Cleaner"):
+                    with gr.Row():
+                        with gr.Column():
+                            cleaner_model_id = gr.Dropdown(label="Cleaner Model ID", elem_id="cleaner_model_id", choices=cleaner_model_ids, value=cleaner_model_ids[0], show_label=True)
+                        with gr.Column():
+                            with gr.Row():
+                                cleaner_btn = gr.Button("Run Cleaner", elem_id="cleaner_btn")
+                            with gr.Row():
+                                cleaner_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cleaner_save_mask_chk", show_label=True, interactive=True)
+                    
+                    cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", interactive=False).style(height=480)
+
                 
             with gr.Column():
                 sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
@@ -429,6 +517,7 @@ def on_ui_tabs():
             expand_mask_btn.click(expand_mask, inputs=[sel_mask, expand_iteration], outputs=[sel_mask])
             inpaint_btn.click(run_inpaint, inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk],
                               outputs=[out_image])
+            cleaner_btn.click(run_cleaner, inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk], outputs=[cleaner_out_image])
     
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
