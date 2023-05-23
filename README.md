@@ -36,13 +36,21 @@ To download the model:
 
 * Drag and drop your image onto the input image area.
 * Click the "Run Segment Anything" button.
-* Use sketching to define the area you want to inpaint. You can undo and adjust the pen size.
-* Click the "Create mask" button (the mask will appear in the selected mask image area).
+* Use sketching to point the area you want to inpaint. You can undo and adjust the pen size.
+* Click the "Create mask" button. The mask will appear in the selected mask image area.
+
+### Inpainting Tab
+
 * Enter the Prompt and Negative Prompt, Choose the Inpainting Model ID.
 * Click the "Run Inpainting" button (**Please note that it may take some time to download the model for the first time**).
 * You can change the Sampling Steps, the Guidance Scale and the Seed in the Advanced options.
+* Inpainting process is performed using [diffusers](https://github.com/huggingface/diffusers).
 
-Inpainting is performed using [diffusers](https://github.com/huggingface/diffusers).
+### Cleaner Tab
+
+* Choose the Cleaner Model ID.
+* Click the "Run Cleaner" button (**Please note that it may take some time to download the model for the first time**).
+* Cleaner process is performed using [Lama Cleaner](https://github.com/Sanster/lama-cleaner).
 
 ![UI image](images/inpaint_anything_ui_image_1.png)
 
