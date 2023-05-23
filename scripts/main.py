@@ -17,7 +17,7 @@ import time
 import random
 import cv2
 from lama_cleaner.model_manager import ModelManager
-from lama_cleaner.schema import Config, HDStrategy, SDSampler
+from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
 # print("platform:", platform.system())
 
 import modules.scripts as scripts
@@ -142,6 +142,11 @@ def get_cleaner_model_ids():
     """
     model_ids = [
         "lama",
+        "ldm",
+        "zits",
+        "mat",
+        "fcf",
+        "manga",
         ]
     return model_ids
 
@@ -396,6 +401,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     
     config = Config(
         ldm_steps=20,
+        ldm_sampler=LDMSampler.ddim,
         hd_strategy=HDStrategy.ORIGINAL,
         hd_strategy_crop_margin=32,
         hd_strategy_crop_trigger_size=512,
