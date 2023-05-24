@@ -193,7 +193,6 @@ def run_sam(input_image, sam_model_id, sam_image):
     sam_dict["sam_masks"] = sam_masks
 
     clear_cache()
-    
     if sam_image is None:
         return seg_image, "Segment Anything completed"
     else:
@@ -205,9 +204,9 @@ def run_sam(input_image, sam_model_id, sam_image):
             return gr.update(value=seg_image), "Segment Anything completed"
 
 def select_mask(masks_image, invert_chk, sel_mask):
+    clear_cache()
     global sam_dict
     if sam_dict["sam_masks"] is None or masks_image is None:
-        clear_cache()
         return None
     sam_masks = sam_dict["sam_masks"]
     
@@ -246,8 +245,8 @@ def select_mask(masks_image, invert_chk, sel_mask):
             return gr.update(value=seg_image)
 
 def expand_mask(sel_mask, expand_iteration):
+    clear_cache()
     if sel_mask is None:
-        clear_cache()
         return None
     
     sel_mask_image = sel_mask["image"]
@@ -259,6 +258,7 @@ def expand_mask(sel_mask, expand_iteration):
     for i in range(expand_iteration):
         sel_mask = np.array(cv2.dilate(sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=1))
     
+    clear_cache()
     return gr.update(value=sel_mask)
 
 def auto_resize_to_pil(input_image, mask_image):
@@ -286,8 +286,8 @@ def auto_resize_to_pil(input_image, mask_image):
     return init_image, mask_image
 
 def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk):
+    clear_cache()
     if input_image is None or sel_mask is None:
-        clear_cache()
         return None
 
     sel_mask_image = sel_mask["image"]
@@ -372,8 +372,8 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     return output_image
 
 def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
+    clear_cache()
     if input_image is None or sel_mask is None:
-        clear_cache()
         return None
 
     sel_mask_image = sel_mask["image"]
