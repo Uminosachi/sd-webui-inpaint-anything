@@ -259,7 +259,10 @@ def expand_mask(sel_mask, expand_iteration):
         sel_mask = np.array(cv2.dilate(sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=1))
     
     clear_cache()
-    return gr.update(value=sel_mask)
+    if np.all(sel_mask_image == sel_mask):
+        return gr.update()
+    else:
+        return gr.update(value=sel_mask)
 
 def auto_resize_to_pil(input_image, mask_image):
     init_image = Image.fromarray(input_image).convert("RGB")
