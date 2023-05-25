@@ -116,7 +116,7 @@ ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
                           "outputs", "inpaint-anything",
                           datetime.now().strftime("%Y-%m-%d"))
 
-sam_dict = {"sam_masks": None}
+sam_dict = dict(sam_masks=None, mask_image=None)
 
 def get_model_ids():
     """Get inpainting model ids list.
@@ -203,7 +203,7 @@ def run_sam(input_image, sam_model_id, sam_image):
         else:
             return gr.update(value=seg_image), "Segment Anything completed"
 
-def select_mask(masks_image, invert_chk, sel_mask):
+def select_mask(input_image, masks_image, invert_chk, sel_mask):
     clear_cache()
     global sam_dict
     if sam_dict["sam_masks"] is None or masks_image is None:
@@ -233,36 +233,77 @@ def select_mask(masks_image, invert_chk, sel_mask):
     if invert_chk:
         seg_image = np.logical_not(seg_image.astype(bool)).astype(np.uint8) * 255
 
+    sam_dict["mask_image"] = seg_image
+
+    if input_image is not None:
+        ret_image = cv2.addWeighted(input_image, 0.5, seg_image, 0.5, 0)
+    else:
+        ret_image = seg_image
+
     clear_cache()
     if sel_mask is None:
-        return seg_image
+        return ret_image
     else:
-        sel_mask_image = sel_mask["image"]
-        
-        if np.all(sel_mask_image == seg_image):
+        if np.all(sel_mask["image"] == ret_image):
             return gr.update()
         else:
-            return gr.update(value=seg_image)
+            return gr.update(value=ret_image)
 
-def expand_mask(sel_mask, expand_iteration):
+def expand_mask(input_image, sel_mask, expand_iteration=1):
     clear_cache()
-    if sel_mask is None:
+    global sam_dict
+    # if sel_mask is None:
+    if sam_dict["mask_image"] is None or sel_mask is None:
         return None
     
-    sel_mask_image = sel_mask["image"]
-    sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
-    sel_mask = sel_mask_image * sel_mask_mask
+    # sel_mask_image = sel_mask["image"]
+    sel_mask_image = sam_dict["mask_image"]
+    # sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
+    # new_sel_mask = sel_mask_image * sel_mask_mask
+    new_sel_mask = sel_mask_image
     
     expand_iteration = int(np.clip(expand_iteration, 1, 5))
     
     for i in range(expand_iteration):
-        sel_mask = np.array(cv2.dilate(sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=1))
+        new_sel_mask = np.array(cv2.dilate(new_sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=1))
     
+    sam_dict["mask_image"] = new_sel_mask
+
+    if input_image is not None:
+        ret_image = cv2.addWeighted(input_image, 0.5, new_sel_mask, 0.5, 0)
+    else:
+        ret_image = new_sel_mask
+
     clear_cache()
-    if np.all(sel_mask_image == sel_mask):
+    if np.all(sel_mask["image"] == ret_image):
         return gr.update()
     else:
-        return gr.update(value=sel_mask)
+        return gr.update(value=ret_image)
+
+def apply_mask(input_image, sel_mask):
+    clear_cache()
+    global sam_dict
+    # if sel_mask is None:
+    if sam_dict["mask_image"] is None or sel_mask is None:
+        return None
+    
+    # sel_mask_image = sel_mask["image"]
+    sel_mask_image = sam_dict["mask_image"]
+    sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
+    new_sel_mask = sel_mask_image * sel_mask_mask
+    
+    sam_dict["mask_image"] = new_sel_mask
+
+    if input_image is not None:
+        ret_image = cv2.addWeighted(input_image, 0.5, new_sel_mask, 0.5, 0)
+    else:
+        ret_image = new_sel_mask
+
+    clear_cache()
+    if np.all(sel_mask["image"] == ret_image):
+        return gr.update()
+    else:
+        return gr.update(value=ret_image)
 
 def auto_resize_to_pil(input_image, mask_image):
     init_image = Image.fromarray(input_image).convert("RGB")
@@ -290,12 +331,16 @@ def auto_resize_to_pil(input_image, mask_image):
 
 def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk):
     clear_cache()
-    if input_image is None or sel_mask is None:
+    global sam_dict
+    # if input_image is None or sel_mask is None:
+    if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
 
-    sel_mask_image = sel_mask["image"]
-    sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
-    sel_mask = sel_mask_image * sel_mask_mask
+    # sel_mask_image = sel_mask["image"]
+    sel_mask_image = sam_dict["mask_image"]
+    # sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
+    # sel_mask = sel_mask_image * sel_mask_mask
+    sel_mask = sel_mask_image
 
     global ia_outputs_dir
     if save_mask_chk:
@@ -376,12 +421,16 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 
 def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     clear_cache()
-    if input_image is None or sel_mask is None:
+    global sam_dict
+    # if input_image is None or sel_mask is None:
+    if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
 
-    sel_mask_image = sel_mask["image"]
-    sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
-    sel_mask = sel_mask_image * sel_mask_mask
+    # sel_mask_image = sel_mask["image"]
+    sel_mask_image = sam_dict["mask_image"]
+    # sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
+    # sel_mask = sel_mask_image * sel_mask_mask
+    sel_mask = sel_mask_image
 
     global ia_outputs_dir
     if cleaner_save_mask_chk:
@@ -517,13 +566,15 @@ def on_ui_tabs():
                     with gr.Column():
                         expand_mask_btn = gr.Button("Expand mask region", elem_id="expand_mask_btn")
                     with gr.Column():
-                        expand_iteration = gr.Slider(label="Iterations", elem_id="expand_iteration", minimum=1, maximum=5, value=1,
-                                                     step=1, visible=False)
+                        # expand_iteration = gr.Slider(label="Iterations", elem_id="expand_iteration", minimum=1, maximum=5, value=1,
+                        #                              step=1, visible=False)
+                        apply_mask_btn = gr.Button("Apply sketch to mask", elem_id="apply_mask_btn")
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text])
-            select_btn.click(select_mask, inputs=[sam_image, invert_chk, sel_mask], outputs=[sel_mask])
-            expand_mask_btn.click(expand_mask, inputs=[sel_mask, expand_iteration], outputs=[sel_mask])
+            select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask])
+            expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask], outputs=[sel_mask])
+            apply_mask_btn.click(apply_mask, inputs=[input_image, sel_mask], outputs=[sel_mask])
             inpaint_btn.click(run_inpaint, inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk],
                               outputs=[out_image])
             cleaner_btn.click(run_cleaner, inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk], outputs=[cleaner_out_image])
