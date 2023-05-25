@@ -232,7 +232,7 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
 
     sam_dict["mask_image"] = seg_image
 
-    if input_image is not None:
+    if input_image is not None and input_image.shape == seg_image.shape:
         ret_image = cv2.addWeighted(input_image, 0.5, seg_image, 0.5, 0)
     else:
         ret_image = seg_image
@@ -261,7 +261,7 @@ def expand_mask(input_image, sel_mask, expand_iteration=1):
     
     sam_dict["mask_image"] = new_sel_mask
 
-    if input_image is not None:
+    if input_image is not None and input_image.shape == new_sel_mask.shape:
         ret_image = cv2.addWeighted(input_image, 0.5, new_sel_mask, 0.5, 0)
     else:
         ret_image = new_sel_mask
@@ -284,7 +284,7 @@ def apply_mask(input_image, sel_mask):
     
     sam_dict["mask_image"] = new_sel_mask
 
-    if input_image is not None:
+    if input_image is not None and input_image.shape == new_sel_mask.shape:
         ret_image = cv2.addWeighted(input_image, 0.5, new_sel_mask, 0.5, 0)
     else:
         ret_image = new_sel_mask
