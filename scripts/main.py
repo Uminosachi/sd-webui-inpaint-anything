@@ -327,6 +327,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
+        print("The size of image and mask do not match")
         return None
 
     global ia_outputs_dir
