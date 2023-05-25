@@ -39,6 +39,10 @@ To download the model:
 * Use sketching to point the area you want to inpaint. You can undo and adjust the pen size.
 * Click the "Create mask" button. The mask will appear in the selected mask image area.
 
+### Mask Adjustment
+* "Expand mask region" button: Use this to slightly expand the area of the mask for broader coverage.
+* "Apply sketch to mask" button: Clicking this will exclude the sketched area from the mask.
+
 ### Inpainting Tab
 
 * Enter the Prompt and Negative Prompt, Choose the Inpainting Model ID.
