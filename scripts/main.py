@@ -410,8 +410,11 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
-
+    
     mask_image = sam_dict["mask_image"]
+    if input_image.shape != mask_image.shape:
+        print("The size of image and mask do not match")
+        return None
 
     global ia_outputs_dir
     if cleaner_save_mask_chk:
