@@ -195,7 +195,7 @@ def run_sam(input_image, sam_model_id, sam_image):
     if sam_image is None:
         return seg_image, "Segment Anything completed"
     else:
-        if np.all(sam_image["image"] == seg_image):
+        if sam_image["image"].shape == seg_image.shape and np.all(sam_image["image"] == seg_image):
             return gr.update(), "Segment Anything completed"
         else:
             return gr.update(value=seg_image), "Segment Anything completed"
@@ -241,7 +241,7 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
     if sel_mask is None:
         return ret_image
     else:
-        if np.all(sel_mask["image"] == ret_image):
+        if sel_mask["image"].shape == ret_image.shape and np.all(sel_mask["image"] == ret_image):
             return gr.update()
         else:
             return gr.update(value=ret_image)
@@ -267,7 +267,7 @@ def expand_mask(input_image, sel_mask, expand_iteration=1):
         ret_image = new_sel_mask
 
     clear_cache()
-    if np.all(sel_mask["image"] == ret_image):
+    if sel_mask["image"].shape == ret_image.shape and np.all(sel_mask["image"] == ret_image):
         return gr.update()
     else:
         return gr.update(value=ret_image)
@@ -290,7 +290,7 @@ def apply_mask(input_image, sel_mask):
         ret_image = new_sel_mask
 
     clear_cache()
-    if np.all(sel_mask["image"] == ret_image):
+    if sel_mask["image"].shape == ret_image.shape and np.all(sel_mask["image"] == ret_image):
         return gr.update()
     else:
         return gr.update(value=ret_image)
@@ -326,6 +326,8 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         return None
 
     mask_image = sam_dict["mask_image"]
+    if input_image.shape != mask_image.shape:
+        return None
 
     global ia_outputs_dir
     if save_mask_chk:
