@@ -157,7 +157,6 @@ def clear_cache():
 def run_sam(input_image, sam_model_id, sam_image):
     clear_cache()
     global sam_dict
-    # print(sam_dict)    
     if sam_dict["sam_masks"] is not None:
         sam_dict["sam_masks"] = None
         clear_cache()
@@ -196,22 +195,20 @@ def run_sam(input_image, sam_model_id, sam_image):
     if sam_image is None:
         return seg_image, "Segment Anything completed"
     else:
-        image = sam_image["image"]
-        
-        if np.all(image == seg_image):
+        if np.all(sam_image["image"] == seg_image):
             return gr.update(), "Segment Anything completed"
         else:
             return gr.update(value=seg_image), "Segment Anything completed"
 
-def select_mask(input_image, masks_image, invert_chk, sel_mask):
+def select_mask(input_image, sam_image, invert_chk, sel_mask):
     clear_cache()
     global sam_dict
-    if sam_dict["sam_masks"] is None or masks_image is None:
+    if sam_dict["sam_masks"] is None or sam_image is None:
         return None
     sam_masks = sam_dict["sam_masks"]
     
-    image = masks_image["image"]
-    mask = masks_image["mask"][:,:,0:3]
+    image = sam_image["image"]
+    mask = sam_image["mask"][:,:,0:3]
     
     canvas_image = np.zeros_like(image)
     mask_region = np.zeros_like(image)
