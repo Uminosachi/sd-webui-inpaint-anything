@@ -252,15 +252,10 @@ def select_mask(input_image, masks_image, invert_chk, sel_mask):
 def expand_mask(input_image, sel_mask, expand_iteration=1):
     clear_cache()
     global sam_dict
-    # if sel_mask is None:
     if sam_dict["mask_image"] is None or sel_mask is None:
         return None
     
-    # sel_mask_image = sel_mask["image"]
-    sel_mask_image = sam_dict["mask_image"]
-    # sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
-    # new_sel_mask = sel_mask_image * sel_mask_mask
-    new_sel_mask = sel_mask_image
+    new_sel_mask = sam_dict["mask_image"]
     
     expand_iteration = int(np.clip(expand_iteration, 1, 5))
     
@@ -283,11 +278,9 @@ def expand_mask(input_image, sel_mask, expand_iteration=1):
 def apply_mask(input_image, sel_mask):
     clear_cache()
     global sam_dict
-    # if sel_mask is None:
     if sam_dict["mask_image"] is None or sel_mask is None:
         return None
     
-    # sel_mask_image = sel_mask["image"]
     sel_mask_image = sam_dict["mask_image"]
     sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
     new_sel_mask = sel_mask_image * sel_mask_mask
@@ -332,15 +325,10 @@ def auto_resize_to_pil(input_image, mask_image):
 def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk):
     clear_cache()
     global sam_dict
-    # if input_image is None or sel_mask is None:
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
 
-    # sel_mask_image = sel_mask["image"]
-    sel_mask_image = sam_dict["mask_image"]
-    # sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
-    # sel_mask = sel_mask_image * sel_mask_mask
-    sel_mask = sel_mask_image
+    mask_image = sam_dict["mask_image"]
 
     global ia_outputs_dir
     if save_mask_chk:
@@ -348,7 +336,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
             os.makedirs(ia_outputs_dir, exist_ok=True)
         save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
         save_name = os.path.join(ia_outputs_dir, save_name)
-        Image.fromarray(sel_mask).save(save_name)
+        Image.fromarray(mask_image).save(save_name)
 
     print(model_id)
     if platform.system() == "Darwin":
@@ -373,8 +361,6 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         pipe.enable_xformers_memory_efficient_attention()
         generator = torch.Generator(device).manual_seed(seed)
     
-    mask_image = sel_mask
-        
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
     
@@ -422,15 +408,10 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     clear_cache()
     global sam_dict
-    # if input_image is None or sel_mask is None:
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
 
-    # sel_mask_image = sel_mask["image"]
-    sel_mask_image = sam_dict["mask_image"]
-    # sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
-    # sel_mask = sel_mask_image * sel_mask_mask
-    sel_mask = sel_mask_image
+    mask_image = sam_dict["mask_image"]
 
     global ia_outputs_dir
     if cleaner_save_mask_chk:
@@ -438,12 +419,10 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
             os.makedirs(ia_outputs_dir, exist_ok=True)
         save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
         save_name = os.path.join(ia_outputs_dir, save_name)
-        Image.fromarray(sel_mask).save(save_name)
+        Image.fromarray(mask_image).save(save_name)
 
     print(cleaner_model_id)
     model = ModelManager(name=cleaner_model_id, device=device)
-
-    mask_image = sel_mask
     
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
