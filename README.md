@@ -1,6 +1,6 @@
 # Inpaint Anything for Stable Diffusion Web UI
 
-Inpaint Anything performs stable diffusion inpainting on a browser UI using any mask selected from the output of [Segment Anything](https://github.com/facebookresearch/segment-anything).
+Inpaint Anything extension performs stable diffusion inpainting on a browser UI using any mask selected from the output of [Segment Anything](https://github.com/facebookresearch/segment-anything).
 
 
 Using Segment Anything enables users to specify masks by simply pointing to the desired areas, instead of manually filling them in. This can increase the efficiency and accuracy of the mask creation process, leading to potentially higher-quality inpainting results while saving time and effort.
@@ -11,11 +11,11 @@ Using Segment Anything enables users to specify masks by simply pointing to the 
 
 To install the software, please follow these steps:
 
-1. Open the "Extensions" tab on the AUTOMATIC1111's [Stable Diffusion Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui.git).
-2. Select the "Install from URL" option.
-3. Enter `https://github.com/Uminosachi/sd-webui-inpaint-anything.git` in the "URL for extension's git repository" field.
-4. Click the "Install" button.
-5. Once installation is complete, restart the Web UI.
+* Open the "Extensions" tab on the AUTOMATIC1111's [Stable Diffusion Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui.git).
+* Select the "Install from URL" option.
+* Enter `https://github.com/Uminosachi/sd-webui-inpaint-anything.git` in the "URL for extension's git repository" field.
+* Click the "Install" button.
+* Once installation is complete, restart the Web UI.
 
 ## Running the application
 
@@ -27,10 +27,11 @@ To install the software, please follow these steps:
 
 To download the model:
 
-1. Go to the "Inpaint Anything" tab of the Web UI.
-2. Click on the "Download model" button next to the [Segment Anything Model ID](https://github.com/facebookresearch/segment-anything#model-checkpoints).
-3. Wait for the download to complete.
-4. The downloaded model file will be stored in the `models` directory of this application's repository.
+* Go to the "Inpaint Anything" tab of the Web UI.
+* Click on the "Download model" button next to the [Segment Anything Model ID](https://github.com/facebookresearch/segment-anything#model-checkpoints).
+  * The SAM is available in three sizes. The sizes are: Base < Large < Huge. Please note that larger sizes consume more VRAM.
+* Wait for the download to complete.
+* The downloaded model file will be stored in the `models` directory of this application's repository.
 
 ## Usage
 
