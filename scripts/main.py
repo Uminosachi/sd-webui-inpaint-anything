@@ -29,6 +29,11 @@ except Exception:
 from modules.devices import device, torch_gc
 from modules.safe import unsafe_torch_load, load
 
+from scripts.webui_controlnet import find_controlnet
+from modules.processing import StableDiffusionProcessingImg2Img
+from modules.shared import opts, sd_model
+from modules.sd_samplers import samplers_for_img2img
+
 def get_sam_model_ids():
     """Get SAM model ids list.
 
@@ -116,7 +121,7 @@ ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
                           "outputs", "inpaint-anything",
                           datetime.now().strftime("%Y-%m-%d"))
 
-sam_dict = dict(sam_masks=None, mask_image=None)
+sam_dict = dict(sam_masks=None, mask_image=None, cnet=None)
 
 def get_model_ids():
     """Get inpainting model ids list.
@@ -377,30 +382,29 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         }
     
     output_image = pipe(**pipe_args_dict).images[0]
-    
-    if True:
-        generation_params = {
-            "Steps": ddim_steps,
-            "Sampler": pipe.scheduler.__class__.__name__,
-            "CFG scale": cfg_scale,
-            "Seed": seed,
-            "Size": f"{width}x{height}",
-            "Model": model_id,
-            }
+        
+    generation_params = {
+        "Steps": ddim_steps,
+        "Sampler": pipe.scheduler.__class__.__name__,
+        "CFG scale": cfg_scale,
+        "Seed": seed,
+        "Size": f"{width}x{height}",
+        "Model": model_id,
+        }
 
-        generation_params_text = ", ".join([k if k == v else f'{k}: {v}' for k, v in generation_params.items() if v is not None])
-        prompt_text = prompt if prompt else ""
-        negative_prompt_text = "Negative prompt: " + n_prompt if n_prompt else ""
-        infotext = f"{prompt_text}\n{negative_prompt_text}\n{generation_params_text}".strip()
-        
-        metadata = PngInfo()
-        metadata.add_text("parameters", infotext)
-        
-        if not os.path.isdir(ia_outputs_dir):
-            os.makedirs(ia_outputs_dir, exist_ok=True)
-        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(model_id) + "_" + str(seed) + ".png"
-        save_name = os.path.join(ia_outputs_dir, save_name)
-        output_image.save(save_name, pnginfo=metadata)
+    generation_params_text = ", ".join([k if k == v else f'{k}: {v}' for k, v in generation_params.items() if v is not None])
+    prompt_text = prompt if prompt else ""
+    negative_prompt_text = "Negative prompt: " + n_prompt if n_prompt else ""
+    infotext = f"{prompt_text}\n{negative_prompt_text}\n{generation_params_text}".strip()
+    
+    metadata = PngInfo()
+    metadata.add_text("parameters", infotext)
+    
+    if not os.path.isdir(ia_outputs_dir):
+        os.makedirs(ia_outputs_dir, exist_ok=True)
+    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(model_id) + "_" + str(seed) + ".png"
+    save_name = os.path.join(ia_outputs_dir, save_name)
+    output_image.save(save_name, pnginfo=metadata)
     
     clear_cache()
     return output_image
@@ -449,16 +453,69 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     # print(output_image.shape, output_image.dtype, np.min(output_image), np.max(output_image))
     output_image = cv2.cvtColor(output_image.astype(np.uint8), cv2.COLOR_BGR2RGB)
     output_image = Image.fromarray(output_image)
-    
-    if True:
-        if not os.path.isdir(ia_outputs_dir):
-            os.makedirs(ia_outputs_dir, exist_ok=True)
-        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(cleaner_model_id) + ".png"
-        save_name = os.path.join(ia_outputs_dir, save_name)
-        output_image.save(save_name)
+        
+    if not os.path.isdir(ia_outputs_dir):
+        os.makedirs(ia_outputs_dir, exist_ok=True)
+    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(cleaner_model_id) + ".png"
+    save_name = os.path.join(ia_outputs_dir, save_name)
+    output_image.save(save_name)
     
     clear_cache()
     return output_image
+
+def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk):
+    clear_cache()
+    global sam_dict
+    if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
+        return None
+
+    mask_image = sam_dict["mask_image"]
+    if input_image.shape != mask_image.shape:
+        print("The size of image and mask do not match")
+        return None
+
+    global ia_outputs_dir
+    if cn_save_mask_chk:
+        if not os.path.isdir(ia_outputs_dir):
+            os.makedirs(ia_outputs_dir, exist_ok=True)
+        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
+        save_name = os.path.join(ia_outputs_dir, save_name)
+        Image.fromarray(mask_image).save(save_name)
+
+    print(cn_model_id)
+
+    if cn_seed < 0:
+        cn_seed = random.randint(0, 2147483647)
+    
+    init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
+    width, height = init_image.size
+    
+    p = StableDiffusionProcessingImg2Img(
+        sd_model=sd_model,
+        outpath_samples = opts.outdir_samples or opts.outdir_img2img_samples,
+    )
+    
+    p.width, p.height = (width, height)
+    p.steps = cn_ddim_steps
+    p.seed = cn_seed
+    p.sampler_name = "DDIM"
+    p.tiling = False
+    p.restore_faces = False
+    p.subseed = -1
+    p.subseed_strength = 0
+    p.seed_resize_from_w = 0
+    p.seed_resize_from_h = 0
+    p.fill = "original"
+    p.batch_size = 1
+    p.do_not_save_samples = True
+    p.mask_blur = 4
+    p.extra_generation_params["Mask blur"] = 4
+    p.n_iter = 1
+    p.denoising_strength = cn_strength
+    p.cfg_scale = cn_cfg_scale
+    p.image_cfg_scale = 1.5
+    
+    return None
 
 class Script(scripts.Script):
   def __init__(self) -> None:
@@ -474,9 +531,15 @@ class Script(scripts.Script):
     return ()
 
 def on_ui_tabs():
+    global sam_dict
+    
     sam_model_ids = get_sam_model_ids()
     model_ids = get_model_ids()
     cleaner_model_ids = get_cleaner_model_ids()
+    sam_dict["cnet"] = find_controlnet() 
+    if sam_dict["cnet"] is not None:
+        cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint" in cn]
+        cn_model_ids = [cn for cn in sam_dict["cnet"].get_models() if "inpaint" in cn]
     
     with gr.Blocks(analytics_enabled=False) as inpaint_anything_interface:
         with gr.Row():
@@ -516,7 +579,7 @@ def on_ui_tabs():
                                 inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn")
                             with gr.Row():
                                 save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk", show_label=True, interactive=True)
-                                        
+
                     out_image = gr.Image(label="Inpainted image", elem_id="out_image", interactive=False).style(height=480)
                 
                 with gr.Tab("Cleaner"):
@@ -531,7 +594,40 @@ def on_ui_tabs():
                     
                     cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", interactive=False).style(height=480)
 
-                
+                with gr.Tab("ControlNet Inpainting"):
+                    if sam_dict["cnet"] is not None and len(cn_module_ids) > 0 and len(cn_model_ids) > 0:
+                        cn_prompt = gr.Textbox(label="Inpainting prompt", elem_id="cn_sd_prompt")
+                        cn_n_prompt = gr.Textbox(label="Negative prompt", elem_id="cn_sd_n_prompt")
+                        with gr.Accordion("Advanced options", open=False):
+                            cn_ddim_steps = gr.Slider(label="Sampling Steps", elem_id="cn_ddim_steps", minimum=1, maximum=50, value=20, step=1)
+                            cn_cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
+                            cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.05, label='Denoising Strength', value=0.75, elem_id="cn_strength")
+                            cn_seed = gr.Slider(
+                                label="Seed",
+                                elem_id="cn_sd_seed",
+                                minimum=-1,
+                                maximum=2147483647,
+                                step=1,
+                                value=-1,
+                                # randomize=True,
+                            )
+                        with gr.Row():
+                            with gr.Column():
+                                cn_module_id = gr.Dropdown(label="ControlNet Preprocessor", elem_id="cn_module_id", choices=cn_module_ids, value=cn_module_ids[0], show_label=True)
+                                cn_model_id = gr.Dropdown(label="ControlNet Model ID", elem_id="cn_model_id", choices=cn_model_ids, value=cn_model_ids[0], show_label=True)
+                            with gr.Column():
+                                with gr.Row():
+                                    cn_inpaint_btn = gr.Button("Run Inpainting", elem_id="cn_inpaint_btn")
+                                with gr.Row():
+                                    cn_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cn_save_mask_chk", show_label=True, interactive=True)
+                        
+                        cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", interactive=False).style(height=480)
+                    else:
+                        if sam_dict["cnet"] is None:
+                            gr.Markdown("ControlNet is not available.")
+                        else:
+                            gr.Markdown("ControlNet inpaint model is not available.")
+
             with gr.Column():
                 sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
                                      interactive=True).style(height=480)
@@ -557,9 +653,18 @@ def on_ui_tabs():
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask])
             expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask], outputs=[sel_mask])
             apply_mask_btn.click(apply_mask, inputs=[input_image, sel_mask], outputs=[sel_mask])
-            inpaint_btn.click(run_inpaint, inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk],
-                              outputs=[out_image])
-            cleaner_btn.click(run_cleaner, inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk], outputs=[cleaner_out_image])
+            inpaint_btn.click(
+                run_inpaint,
+                inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk],
+                outputs=[out_image])
+            cleaner_btn.click(
+                run_cleaner,
+                inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk],
+                outputs=[cleaner_out_image])
+            cn_inpaint_btn.click(
+                run_cn_inpaint,
+                inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk],
+                outputs=[cn_out_image])
     
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
