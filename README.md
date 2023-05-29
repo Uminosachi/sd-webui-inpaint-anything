@@ -63,6 +63,7 @@ To download the model:
 ## Auto-saving images
 
 * The inpainted image will be automatically saved in the folder that matches the current date within the `outputs/inpaint-anything` directory.
+* You can switch to the `outputs/img2img-images` directory via the "Inpaint Anything" section found in the "Settings" tab on the Web UI.
 
 ## License
 
