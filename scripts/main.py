@@ -6,6 +6,7 @@ import gradio as gr
 from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler, UniPCMultistepScheduler
 from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
 from scripts.get_dataset_colormap import create_pascal_label_colormap
+from scripts.webui_controlnet import find_controlnet
 from torch.hub import download_url_to_file
 from torchvision import transforms
 from datetime import datetime
@@ -29,8 +30,7 @@ except Exception:
 from modules.devices import device, torch_gc
 from modules.safe import unsafe_torch_load, load
 
-from scripts.webui_controlnet import find_controlnet
-from modules.processing import StableDiffusionProcessingImg2Img
+from modules.processing import StableDiffusionProcessingImg2Img, process_images
 from modules.shared import opts, sd_model
 from modules.sd_samplers import samplers_for_img2img
 
@@ -505,27 +505,55 @@ def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_ddim_steps,
         outpath_samples = opts.outdir_samples or opts.outdir_img2img_samples,
     )
     
+    p.is_img2img = True
+    p.scripts = scripts.scripts_img2img
+
+    p.init_images = [init_image]
+    p.image_mask = mask_image
     p.width, p.height = (width, height)
+    p.prompt = cn_prompt
+    p.negative_prompt = cn_n_prompt
+    p.denoising_strength = cn_strength
     p.steps = cn_ddim_steps
     p.seed = cn_seed
+    p.cfg_scale = cn_cfg_scale
     p.sampler_name = "DDIM"
-    p.tiling = False
-    p.restore_faces = False
-    p.subseed = -1
-    p.subseed_strength = 0
-    p.seed_resize_from_w = 0
-    p.seed_resize_from_h = 0
-    p.fill = "original"
     p.batch_size = 1
     p.do_not_save_samples = True
-    p.mask_blur = 4
-    p.extra_generation_params["Mask blur"] = 4
-    p.n_iter = 1
-    p.denoising_strength = cn_strength
-    p.cfg_scale = cn_cfg_scale
-    p.image_cfg_scale = 1.5
+
+    cnet = sam_dict.get("cnet", None)
+    if cnet is not None:
+        cn_units = [cnet.ControlNetUnit(
+            enabled=True,
+            module=cn_module_id,
+            model=cn_model_id,
+            weight=1.0,
+            image={"image": np.array(init_image), "mask": np.array(mask_image)},
+            resize_mode=cnet.ResizeMode.INNER_FIT,
+            low_vram=False,
+            processor_res=512,
+            threshold_a=64,
+            threshold_b=64,
+            guidance_start=0.0,
+            guidance_end=1.0,
+            pixel_perfect=True,
+            control_mode=cnet.ControlMode.BALANCED,
+        )]
+        
+        p.script_args = {"enabled": True}
+        cnet.update_cn_script_in_processing(p, cn_units, is_img2img=True, is_ui=False)
+
+    processed = process_images(p)
     
-    return None
+    if processed is not None:
+        if len(processed.images) > 0:
+            results = processed.images[0]
+        else:
+            results = None
+    else:
+        results = None
+
+    return results
 
 class Script(scripts.Script):
   def __init__(self) -> None:
@@ -605,7 +633,7 @@ def on_ui_tabs():
                     cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", interactive=False).style(height=480)
 
                 with gr.Tab("ControlNet Inpainting"):
-                    if sam_dict["cnet"] is not None and len(cn_module_ids) > 0 and len(cn_model_ids) > 0:
+                    if sam_dict.get("cnet", None) is not None and len(cn_module_ids) > 0 and len(cn_model_ids) > 0:
                         cn_prompt = gr.Textbox(label="Inpainting prompt", elem_id="cn_sd_prompt")
                         cn_n_prompt = gr.Textbox(label="Negative prompt", elem_id="cn_sd_n_prompt")
                         with gr.Accordion("Advanced options", open=False):
@@ -633,7 +661,7 @@ def on_ui_tabs():
                         
                         cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", interactive=False).style(height=480)
                     else:
-                        if sam_dict["cnet"] is None:
+                        if sam_dict.get("cnet", None) is None:
                             gr.Markdown("ControlNet is not available.")
                         else:
                             gr.Markdown("ControlNet inpaint model is not available.")
