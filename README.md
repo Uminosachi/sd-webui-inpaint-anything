@@ -43,7 +43,7 @@ To download the model:
 ### Mask Adjustment
 
 * "Expand mask region" button: Use this to slightly expand the area of the mask for broader coverage.
-* "Apply sketch to mask" button: Clicking this will exclude the sketched area from the mask.
+* "Trim mask by sketch" button: Clicking this will exclude the sketched area from the mask.
 
 ### Inpainting Tab
 
