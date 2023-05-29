@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from PIL import Image
 import gradio as gr
-from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler, UniPCMultistepScheduler
+from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler
 from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
 from scripts.get_dataset_colormap import create_pascal_label_colormap
 from torch.hub import download_url_to_file
@@ -349,9 +349,8 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     else:
         pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
     pipe.safety_checker = None
-
+    
     pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
-    # pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
     
     if seed < 0:
         seed = random.randint(0, 2147483647)
@@ -558,16 +557,21 @@ def on_ui_tabs():
                     with gr.Column():
                         # expand_iteration = gr.Slider(label="Iterations", elem_id="expand_iteration", minimum=1, maximum=5, value=1,
                         #                              step=1, visible=False)
-                        apply_mask_btn = gr.Button("Apply sketch to mask", elem_id="apply_mask_btn")
+                        apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text])
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask])
             expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask], outputs=[sel_mask])
             apply_mask_btn.click(apply_mask, inputs=[input_image, sel_mask], outputs=[sel_mask])
-            inpaint_btn.click(run_inpaint, inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk],
-                              outputs=[out_image])
-            cleaner_btn.click(run_cleaner, inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk], outputs=[cleaner_out_image])
+            inpaint_btn.click(
+                run_inpaint,
+                inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk],
+                outputs=[out_image])
+            cleaner_btn.click(
+                run_cleaner,
+                inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk],
+                outputs=[cleaner_out_image])
     
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
