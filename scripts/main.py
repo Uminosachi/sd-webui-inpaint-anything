@@ -473,7 +473,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     clear_cache()
     return output_image
 
-def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk):
+def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk):
     clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
@@ -517,7 +517,7 @@ def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_ddim_steps,
     p.steps = cn_ddim_steps
     p.seed = cn_seed
     p.cfg_scale = cn_cfg_scale
-    p.sampler_name = "DDIM"
+    p.sampler_name = cn_sampler_id
     p.batch_size = 1
     p.do_not_save_samples = True
 
@@ -578,6 +578,10 @@ def on_ui_tabs():
     if sam_dict["cnet"] is not None:
         cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint" in cn]
         cn_model_ids = [cn for cn in sam_dict["cnet"].get_models() if "inpaint" in cn]
+    if samplers_for_img2img is not None and len(samplers_for_img2img) > 0:
+        cn_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
+    else:
+        cn_sampler_ids = ["DDIM"]
     
     with gr.Blocks(analytics_enabled=False) as inpaint_anything_interface:
         with gr.Row():
@@ -637,9 +641,13 @@ def on_ui_tabs():
                         cn_prompt = gr.Textbox(label="Inpainting prompt", elem_id="cn_sd_prompt")
                         cn_n_prompt = gr.Textbox(label="Negative prompt", elem_id="cn_sd_n_prompt")
                         with gr.Accordion("Advanced options", open=False):
-                            cn_ddim_steps = gr.Slider(label="Sampling Steps", elem_id="cn_ddim_steps", minimum=1, maximum=50, value=20, step=1)
+                            with gr.Row():
+                                with gr.Column():
+                                    cn_sampler_id = gr.Dropdown(label="Sampler", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[0], show_label=True)
+                                with gr.Column():
+                                    cn_ddim_steps = gr.Slider(label="Sampling Steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=20, step=1)
                             cn_cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
-                            cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.05, label='Denoising Strength', value=0.75, elem_id="cn_strength")
+                            cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising Strength', value=0.75, elem_id="cn_strength")
                             cn_seed = gr.Slider(
                                 label="Seed",
                                 elem_id="cn_sd_seed",
@@ -701,7 +709,7 @@ def on_ui_tabs():
                 outputs=[cleaner_out_image])
             cn_inpaint_btn.click(
                 run_cn_inpaint,
-                inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk],
+                inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk],
                 outputs=[cn_out_image])
     
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
