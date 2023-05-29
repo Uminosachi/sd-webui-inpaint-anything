@@ -331,6 +331,11 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         return None
 
     global ia_outputs_dir
+    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+    if config_save_folder in ["inpaint-anything", "img2img-images"]:
+        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
+                                      "outputs", config_save_folder,
+                                      datetime.now().strftime("%Y-%m-%d"))
     if save_mask_chk:
         if not os.path.isdir(ia_outputs_dir):
             os.makedirs(ia_outputs_dir, exist_ok=True)
@@ -378,29 +383,28 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     
     output_image = pipe(**pipe_args_dict).images[0]
     
-    if True:
-        generation_params = {
-            "Steps": ddim_steps,
-            "Sampler": pipe.scheduler.__class__.__name__,
-            "CFG scale": cfg_scale,
-            "Seed": seed,
-            "Size": f"{width}x{height}",
-            "Model": model_id,
-            }
+    generation_params = {
+        "Steps": ddim_steps,
+        "Sampler": pipe.scheduler.__class__.__name__,
+        "CFG scale": cfg_scale,
+        "Seed": seed,
+        "Size": f"{width}x{height}",
+        "Model": model_id,
+        }
 
-        generation_params_text = ", ".join([k if k == v else f'{k}: {v}' for k, v in generation_params.items() if v is not None])
-        prompt_text = prompt if prompt else ""
-        negative_prompt_text = "Negative prompt: " + n_prompt if n_prompt else ""
-        infotext = f"{prompt_text}\n{negative_prompt_text}\n{generation_params_text}".strip()
-        
-        metadata = PngInfo()
-        metadata.add_text("parameters", infotext)
-        
-        if not os.path.isdir(ia_outputs_dir):
-            os.makedirs(ia_outputs_dir, exist_ok=True)
-        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(model_id) + "_" + str(seed) + ".png"
-        save_name = os.path.join(ia_outputs_dir, save_name)
-        output_image.save(save_name, pnginfo=metadata)
+    generation_params_text = ", ".join([k if k == v else f'{k}: {v}' for k, v in generation_params.items() if v is not None])
+    prompt_text = prompt if prompt else ""
+    negative_prompt_text = "Negative prompt: " + n_prompt if n_prompt else ""
+    infotext = f"{prompt_text}\n{negative_prompt_text}\n{generation_params_text}".strip()
+    
+    metadata = PngInfo()
+    metadata.add_text("parameters", infotext)
+    
+    if not os.path.isdir(ia_outputs_dir):
+        os.makedirs(ia_outputs_dir, exist_ok=True)
+    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(model_id) + "_" + str(seed) + ".png"
+    save_name = os.path.join(ia_outputs_dir, save_name)
+    output_image.save(save_name, pnginfo=metadata)
     
     clear_cache()
     return output_image
@@ -417,6 +421,11 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
         return None
 
     global ia_outputs_dir
+    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+    if config_save_folder in ["inpaint-anything", "img2img-images"]:
+        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
+                                      "outputs", config_save_folder,
+                                      datetime.now().strftime("%Y-%m-%d"))
     if cleaner_save_mask_chk:
         if not os.path.isdir(ia_outputs_dir):
             os.makedirs(ia_outputs_dir, exist_ok=True)
@@ -449,13 +458,12 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     # print(output_image.shape, output_image.dtype, np.min(output_image), np.max(output_image))
     output_image = cv2.cvtColor(output_image.astype(np.uint8), cv2.COLOR_BGR2RGB)
     output_image = Image.fromarray(output_image)
-    
-    if True:
-        if not os.path.isdir(ia_outputs_dir):
-            os.makedirs(ia_outputs_dir, exist_ok=True)
-        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(cleaner_model_id) + ".png"
-        save_name = os.path.join(ia_outputs_dir, save_name)
-        output_image.save(save_name)
+
+    if not os.path.isdir(ia_outputs_dir):
+        os.makedirs(ia_outputs_dir, exist_ok=True)
+    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(cleaner_model_id) + ".png"
+    save_name = os.path.join(ia_outputs_dir, save_name)
+    output_image.save(save_name)
     
     clear_cache()
     return output_image
@@ -563,4 +571,10 @@ def on_ui_tabs():
     
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
+def on_ui_settings():
+    section = ("inpaint_anything", "Inpaint Anything")
+    shared.opts.add_option("inpaint_anything_save_folder", shared.OptionInfo(
+        "inpaint-anything", "Folder name where output images will be saved", gr.Radio, {"choices": ["inpaint-anything", "img2img-images"]}, section=section))
+
+script_callbacks.on_ui_settings(on_ui_settings)
 script_callbacks.on_ui_tabs(on_ui_tabs)
