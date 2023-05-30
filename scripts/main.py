@@ -550,8 +550,9 @@ def on_ui_tabs():
                                 inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn")
                             with gr.Row():
                                 save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk", show_label=True, interactive=True)
-                                        
-                    out_image = gr.Image(label="Inpainted image", elem_id="out_image", interactive=False).style(height=480)
+                    
+                    with gr.Row():
+                        out_image = gr.Image(label="Inpainted image", elem_id="out_image", type="pil", interactive=False).style(height=480)
                 
                 with gr.Tab("Cleaner"):
                     with gr.Row():
@@ -563,14 +564,15 @@ def on_ui_tabs():
                             with gr.Row():
                                 cleaner_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cleaner_save_mask_chk", show_label=True, interactive=True)
                     
-                    cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", interactive=False).style(height=480)
+                    with gr.Row():
+                        cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil", interactive=False).style(height=480)
 
                 with gr.Tab("Mask only"):
                     with gr.Row():
                         get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
                     
                     with gr.Row():
-                        mask_out_image = gr.Image(label="Mask image", elem_id="mask_out_image", interactive=False).style(height=480)
+                        mask_out_image = gr.Image(label="Mask image", elem_id="mask_out_image", type="numpy", interactive=False).style(height=480)
 
                     with gr.Row():
                         mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
