@@ -470,6 +470,31 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     clear_cache()
     return output_image
 
+def run_get_mask():
+    clear_cache()
+    global sam_dict
+
+    if sam_dict["mask_image"] is None:
+        return None
+    
+    mask_image = sam_dict["mask_image"]
+
+    global ia_outputs_dir
+    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+    if config_save_folder in ["inpaint-anything", "img2img-images"]:
+        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
+                                      "outputs", config_save_folder,
+                                      datetime.now().strftime("%Y-%m-%d"))
+    
+    if not os.path.isdir(ia_outputs_dir):
+        os.makedirs(ia_outputs_dir, exist_ok=True)
+    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
+    save_name = os.path.join(ia_outputs_dir, save_name)
+    Image.fromarray(mask_image).save(save_name)
+    
+    clear_cache()
+    return mask_image
+
 class Script(scripts.Script):
   def __init__(self) -> None:
     super().__init__()
@@ -541,6 +566,14 @@ def on_ui_tabs():
                     
                     cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", interactive=False).style(height=480)
 
+                with gr.Tab("Mask only"):
+                    with gr.Row():
+                        with gr.Column():
+                            with gr.Row():
+                                get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
+                    
+                    mask_out_image = gr.Image(label="Mask image", elem_id="mask_out_image", interactive=False).style(height=480)
+
                 
             with gr.Column():
                 sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
@@ -575,6 +608,10 @@ def on_ui_tabs():
                 run_cleaner,
                 inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk],
                 outputs=[cleaner_out_image])
+            get_mask_btn.click(
+                run_get_mask,
+                inputs=[],
+                outputs=[mask_out_image])
     
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
