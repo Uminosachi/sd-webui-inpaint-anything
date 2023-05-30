@@ -362,7 +362,10 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     else:
         # pipe.enable_model_cpu_offload()
         pipe = pipe.to(device)
-        pipe.enable_xformers_memory_efficient_attention()
+        if shared.xformers_available:
+            pipe.enable_xformers_memory_efficient_attention()
+        else:
+            pipe.enable_attention_slicing()
         generator = torch.Generator(device).manual_seed(seed)
     
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
