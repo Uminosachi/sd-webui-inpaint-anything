@@ -567,11 +567,13 @@ def on_ui_tabs():
 
                 with gr.Tab("Mask only"):
                     with gr.Row():
-                        with gr.Column():
-                            with gr.Row():
-                                get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
+                        get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
                     
-                    mask_out_image = gr.Image(label="Mask image", elem_id="mask_out_image", interactive=False).style(height=480)
+                    with gr.Row():
+                        mask_out_image = gr.Image(label="Mask image", elem_id="mask_out_image", interactive=False).style(height=480)
+
+                    with gr.Row():
+                        mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
 
                 
             with gr.Column():
@@ -611,6 +613,11 @@ def on_ui_tabs():
                 run_get_mask,
                 inputs=[sel_mask],
                 outputs=[mask_out_image])
+            mask_send_to_inpaint_btn.click(
+                fn=None,
+                _js="inpaintAnything_sendToInpaint",
+                inputs=None,
+                outputs=None)
     
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
