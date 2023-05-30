@@ -470,11 +470,10 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     clear_cache()
     return output_image
 
-def run_get_mask():
+def run_get_mask(sel_mask):
     clear_cache()
     global sam_dict
-
-    if sam_dict["mask_image"] is None:
+    if sam_dict["mask_image"] is None or sel_mask is None:
         return None
     
     mask_image = sam_dict["mask_image"]
@@ -610,7 +609,7 @@ def on_ui_tabs():
                 outputs=[cleaner_out_image])
             get_mask_btn.click(
                 run_get_mask,
-                inputs=[],
+                inputs=[sel_mask],
                 outputs=[mask_out_image])
     
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
