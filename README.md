@@ -60,6 +60,10 @@ To download the model:
 
 ![UI image](images/inpaint_anything_ui_image_1.png)
 
+### Mask only Tab
+
+* Gives ability to just save mask without any other processing, so it's then possible to use the mask in img2img's `Inpaint upload` with any model/extensions/tools you already have in your AUTOMATIC1111.
+
 ## Auto-saving images
 
 * The inpainted image will be automatically saved in the folder that matches the current date within the `outputs/inpaint-anything` directory.
