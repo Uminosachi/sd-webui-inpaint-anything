@@ -1,9 +1,9 @@
 import os
 import torch
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 import gradio as gr
-from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler, UniPCMultistepScheduler
+from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler
 from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
 from scripts.get_dataset_colormap import create_pascal_label_colormap
 from scripts.webui_controlnet import find_controlnet
@@ -324,7 +324,7 @@ def auto_resize_to_pil(input_image, mask_image):
     
     return init_image, mask_image
 
-def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk):
+def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk):
     clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
@@ -356,7 +356,6 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     pipe.safety_checker = None
 
     pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
-    # pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
     
     if seed < 0:
         seed = random.randint(0, 2147483647)
@@ -368,7 +367,10 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     else:
         # pipe.enable_model_cpu_offload()
         pipe = pipe.to(device)
-        pipe.enable_xformers_memory_efficient_attention()
+        if shared.xformers_available:
+            pipe.enable_xformers_memory_efficient_attention()
+        else:
+            pipe.enable_attention_slicing()
         generator = torch.Generator(device).manual_seed(seed)
     
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
@@ -388,6 +390,9 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     
     output_image = pipe(**pipe_args_dict).images[0]
     
+    if composite_chk:
+        output_image = Image.composite(output_image, init_image, mask_image.convert("L").filter(ImageFilter.GaussianBlur(1)))
+
     generation_params = {
         "Steps": ddim_steps,
         "Sampler": pipe.scheduler.__class__.__name__,
@@ -472,6 +477,30 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     
     clear_cache()
     return output_image
+
+def run_get_mask(sel_mask):
+    clear_cache()
+    global sam_dict
+    if sam_dict["mask_image"] is None or sel_mask is None:
+        return None
+    
+    mask_image = sam_dict["mask_image"]
+
+    global ia_outputs_dir
+    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+    if config_save_folder in ["inpaint-anything", "img2img-images"]:
+        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
+                                      "outputs", config_save_folder,
+                                      datetime.now().strftime("%Y-%m-%d"))
+    
+    if not os.path.isdir(ia_outputs_dir):
+        os.makedirs(ia_outputs_dir, exist_ok=True)
+    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
+    save_name = os.path.join(ia_outputs_dir, save_name)
+    Image.fromarray(mask_image).save(save_name)
+    
+    clear_cache()
+    return mask_image
 
 def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk):
     clear_cache()
@@ -620,9 +649,11 @@ def on_ui_tabs():
                             with gr.Row():
                                 inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn")
                             with gr.Row():
+                                composite_chk = gr.Checkbox(label="Mask area Only", elem_id="composite_chk", show_label=True, interactive=True)
                                 save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk", show_label=True, interactive=True)
 
-                    out_image = gr.Image(label="Inpainted image", elem_id="out_image", interactive=False).style(height=480)
+                    with gr.Row():
+                        out_image = gr.Image(label="Inpainted image", elem_id="out_image", type="pil", interactive=False).style(height=480)
                 
                 with gr.Tab("Cleaner"):
                     with gr.Row():
@@ -634,7 +665,18 @@ def on_ui_tabs():
                             with gr.Row():
                                 cleaner_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cleaner_save_mask_chk", show_label=True, interactive=True)
                     
-                    cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", interactive=False).style(height=480)
+                    with gr.Row():
+                        cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil", interactive=False).style(height=480)
+
+                with gr.Tab("Mask only"):
+                    with gr.Row():
+                        get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
+                    
+                    with gr.Row():
+                        mask_out_image = gr.Image(label="Mask image", elem_id="mask_out_image", type="numpy", interactive=False).style(height=480)
+
+                    with gr.Row():
+                        mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
 
                 with gr.Tab("ControlNet Inpainting"):
                     if sam_dict.get("cnet", None) is not None and len(cn_module_ids) > 0 and len(cn_model_ids) > 0:
@@ -690,9 +732,7 @@ def on_ui_tabs():
                     with gr.Column():
                         expand_mask_btn = gr.Button("Expand mask region", elem_id="expand_mask_btn")
                     with gr.Column():
-                        # expand_iteration = gr.Slider(label="Iterations", elem_id="expand_iteration", minimum=1, maximum=5, value=1,
-                        #                              step=1, visible=False)
-                        apply_mask_btn = gr.Button("Apply sketch to mask", elem_id="apply_mask_btn")
+                        apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text])
@@ -701,17 +741,26 @@ def on_ui_tabs():
             apply_mask_btn.click(apply_mask, inputs=[input_image, sel_mask], outputs=[sel_mask])
             inpaint_btn.click(
                 run_inpaint,
-                inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk],
+                inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk],
                 outputs=[out_image])
             cleaner_btn.click(
                 run_cleaner,
                 inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk],
                 outputs=[cleaner_out_image])
+            get_mask_btn.click(
+                run_get_mask,
+                inputs=[sel_mask],
+                outputs=[mask_out_image])
+            mask_send_to_inpaint_btn.click(
+                fn=None,
+                _js="inpaintAnything_sendToInpaint",
+                inputs=None,
+                outputs=None)
             cn_inpaint_btn.click(
                 run_cn_inpaint,
                 inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk],
                 outputs=[cn_out_image])
-    
+
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
 def on_ui_settings():
