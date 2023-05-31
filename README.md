@@ -11,10 +11,10 @@ Using Segment Anything enables users to specify masks by simply pointing to the 
 
 To install the software, please follow these steps:
 
-* Open the "Extensions" tab on the AUTOMATIC1111's [Stable Diffusion Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui.git).
-* Select the "Install from URL" option.
-* Enter `https://github.com/Uminosachi/sd-webui-inpaint-anything.git` in the "URL for extension's git repository" field.
-* Click the "Install" button.
+* Open the `Extensions` tab on the AUTOMATIC1111's [Stable Diffusion Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui.git).
+* Select the `Install from URL` option.
+* Enter `https://github.com/Uminosachi/sd-webui-inpaint-anything.git` in the `URL for extension's git repository` field.
+* Click the `Install` button.
 * Once installation is complete, restart the Web UI.
 
 ## Running the application
@@ -27,8 +27,8 @@ To install the software, please follow these steps:
 
 To download the model:
 
-* Go to the "Inpaint Anything" tab of the Web UI.
-* Click on the "Download model" button next to the [Segment Anything Model ID](https://github.com/facebookresearch/segment-anything#model-checkpoints).
+* Go to the `Inpaint Anything` tab of the Web UI.
+* Click on the `Download model` button next to the [Segment Anything Model ID](https://github.com/facebookresearch/segment-anything#model-checkpoints).
   * The SAM is available in three sizes. The sizes are: Base < Large < Huge. Please note that larger sizes consume more VRAM.
 * Wait for the download to complete.
 * The downloaded model file will be stored in the `models` directory of this application's repository.
@@ -36,39 +36,40 @@ To download the model:
 ## Usage
 
 * Drag and drop your image onto the input image area.
-* Click the "Run Segment Anything" button.
+* Click the `Run Segment Anything` button.
 * Use sketching to point the area you want to inpaint. You can undo and adjust the pen size.
-* Click the "Create mask" button. The mask will appear in the selected mask image area.
+* Click the `Create mask` button. The mask will appear in the selected mask image area.
 
 ### Mask Adjustment
 
-* "Expand mask region" button: Use this to slightly expand the area of the mask for broader coverage.
-* "Trim mask by sketch" button: Clicking this will exclude the sketched area from the mask.
+* `Expand mask region` button: Use this to slightly expand the area of the mask for broader coverage.
+* `Trim mask by sketch` button: Clicking this will exclude the sketched area from the mask.
 
 ### Inpainting Tab
 
 * Enter the Prompt and Negative Prompt, Choose the Inpainting Model ID.
-* Click the "Run Inpainting" button (**Please note that it may take some time to download the model for the first time**).
+* Click the `Run Inpainting` button (**Please note that it may take some time to download the model for the first time**).
 * You can change the Sampling Steps, the Guidance Scale and the Seed in the Advanced options.
+* If you enable the `Mask area Only` option, the modifications will be confined to the designated mask area.
 * Inpainting process is performed using [diffusers](https://github.com/huggingface/diffusers).
 
 ### Cleaner Tab
 
 * Choose the Cleaner Model ID.
-* Click the "Run Cleaner" button (**Please note that it may take some time to download the model for the first time**).
+* Click the `Run Cleaner` button (**Please note that it may take some time to download the model for the first time**).
 * Cleaner process is performed using [Lama Cleaner](https://github.com/Sanster/lama-cleaner).
-
-![UI image](images/inpaint_anything_ui_image_1.png)
 
 ### Mask only Tab
 
 * Gives ability to just save mask without any other processing, so it's then possible to use the mask in img2img's `Inpaint upload` with any model/extensions/tools you already have in your AUTOMATIC1111.
 * After the `Get mask` button press you can use `Send to img2img inpaint` button under the mask image to send both input image and mask to the img2img tab.
 
+![UI image](images/inpaint_anything_ui_image_1.png)
+
 ## Auto-saving images
 
 * The inpainted image will be automatically saved in the folder that matches the current date within the `outputs/inpaint-anything` directory.
-* You can switch to the `outputs/img2img-images` directory via the "Inpaint Anything" section found in the "Settings" tab on the Web UI.
+* You can switch to the `outputs/img2img-images` directory via the `Inpaint Anything` section found in the `Settings` tab on the Web UI.
 
 ## License
 
