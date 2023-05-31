@@ -6,7 +6,6 @@ import gradio as gr
 from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler
 from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
 from scripts.get_dataset_colormap import create_pascal_label_colormap
-from scripts.webui_controlnet import find_controlnet
 from torch.hub import download_url_to_file
 from torchvision import transforms
 from datetime import datetime
@@ -30,6 +29,7 @@ except Exception:
 from modules.devices import device, torch_gc
 from modules.safe import unsafe_torch_load, load
 
+from scripts.webui_controlnet import find_controlnet
 from modules.processing import StableDiffusionProcessingImg2Img, process_images
 from modules.shared import opts, sd_model
 from modules.sd_samplers import samplers_for_img2img
@@ -513,6 +513,10 @@ def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id,
         print("The size of image and mask do not match")
         return None
 
+    if (shared.sd_model.parameterization == "v" and "sd15" in cn_model_id):
+        print("The SD model is not compatible with the ControlNet model")
+        return None
+
     global ia_outputs_dir
     if cn_save_mask_chk:
         if not os.path.isdir(ia_outputs_dir):
@@ -532,6 +536,7 @@ def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id,
     p = StableDiffusionProcessingImg2Img(
         sd_model=sd_model,
         outpath_samples = opts.outdir_samples or opts.outdir_img2img_samples,
+        inpaint_full_res = False,
     )
     
     p.is_img2img = True
@@ -712,9 +717,9 @@ def on_ui_tabs():
                         cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", interactive=False).style(height=480)
                     else:
                         if sam_dict.get("cnet", None) is None:
-                            gr.Markdown("ControlNet is not available.")
+                            gr.Markdown("ControlNet is not available.<br>Requires the [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension.")
                         else:
-                            gr.Markdown("ControlNet inpaint model is not available.")
+                            gr.Markdown("ControlNet inpaint model is not available.<br>Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model.")
 
             with gr.Column():
                 sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
