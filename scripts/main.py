@@ -558,7 +558,7 @@ def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id,
             model=cn_model_id,
             weight=1.0,
             image={"image": np.array(init_image), "mask": np.array(mask_image)},
-            resize_mode=cnet.ResizeMode.INNER_FIT,
+            resize_mode=cnet.ResizeMode.RESIZE,
             low_vram=False,
             processor_res=512,
             threshold_a=64,
@@ -569,7 +569,7 @@ def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id,
             control_mode=cnet.ControlMode.BALANCED,
         )]
         
-        p.script_args = {"enabled": True}
+        p.script_args = (0,)
         cnet.update_cn_script_in_processing(p, cn_units, is_img2img=True, is_ui=False)
 
     processed = process_images(p)
