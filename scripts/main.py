@@ -616,16 +616,22 @@ def on_ui_tabs():
     sam_model_ids = get_sam_model_ids()
     model_ids = get_model_ids()
     cleaner_model_ids = get_cleaner_model_ids()
-    sam_dict["cnet"] = find_controlnet() 
+    sam_dict["cnet"] = find_controlnet()
+
+    cn_enabled = False
     if sam_dict["cnet"] is not None:
         cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint_only" in cn]
         cn_model_ids = [cn for cn in sam_dict["cnet"].get_models() if "inpaint" in cn]
         cn_modes = [mode.value for mode in sam_dict["cnet"].ControlMode]
+
+        if len(cn_module_ids) > 0 and len(cn_model_ids) > 0:
+            cn_enabled = True
+
     if samplers_for_img2img is not None and len(samplers_for_img2img) > 0:
         cn_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
     else:
         cn_sampler_ids = ["DDIM"]
-    
+
     with gr.Blocks(analytics_enabled=False) as inpaint_anything_interface:
         with gr.Row():
             with gr.Column():
@@ -682,7 +688,7 @@ def on_ui_tabs():
                         cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil", interactive=False).style(height=480)
 
                 with gr.Tab("ControlNet Inpaint"):
-                    if sam_dict.get("cnet", None) is not None and len(cn_module_ids) > 0 and len(cn_model_ids) > 0:
+                    if cn_enabled:
                         cn_prompt = gr.Textbox(label="Inpainting prompt", elem_id="cn_sd_prompt")
                         cn_n_prompt = gr.Textbox(label="Negative prompt", elem_id="cn_sd_n_prompt")
                         with gr.Accordion("Advanced options", open=False):
@@ -721,9 +727,12 @@ def on_ui_tabs():
                         cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", interactive=False).style(height=480)
                     else:
                         if sam_dict.get("cnet", None) is None:
-                            gr.Markdown("ControlNet is not available.<br>Requires the [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension.")
+                            gr.Markdown("ControlNet extension is not available.<br>" + \
+                                        "Requires the [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension.")
                         else:
-                            gr.Markdown("ControlNet inpaint model is not available.<br>Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model.")
+                            cn_models_directory = os.path.join("extensions", "sd-webui-controlnet", "models")
+                            gr.Markdown("ControlNet inpaint model is not available.<br>" + \
+                                        f"Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model in the {cn_models_directory} directory.")
 
                 with gr.Tab("Mask only"):
                     with gr.Row():
@@ -775,11 +784,12 @@ def on_ui_tabs():
                 _js="inpaintAnything_sendToInpaint",
                 inputs=None,
                 outputs=None)
-            cn_inpaint_btn.click(
-                run_cn_inpaint,
-                inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
-                        cn_weight, cn_mode],
-                outputs=[cn_out_image])
+            if cn_enabled:
+                cn_inpaint_btn.click(
+                    run_cn_inpaint,
+                    inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
+                            cn_weight, cn_mode],
+                    outputs=[cn_out_image])
 
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
