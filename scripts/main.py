@@ -726,7 +726,9 @@ def on_ui_tabs():
                                 with gr.Row():
                                     cn_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cn_save_mask_chk", show_label=True, interactive=True)
                         
-                        cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", interactive=False).style(height=480)
+                        with gr.Row():
+                            cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", type="pil", interactive=False).style(height=480)
+                        
                     else:
                         if sam_dict["cnet"] is None:
                             gr.Markdown("ControlNet extension is not available.<br>" + \
