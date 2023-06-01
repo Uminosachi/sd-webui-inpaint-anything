@@ -621,6 +621,8 @@ def on_ui_tabs():
     cn_enabled = False
     if sam_dict["cnet"] is not None:
         cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint_only" in cn]
+        if len(cn_module_ids) == 0:
+            cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint" in cn]
         cn_model_ids = [cn for cn in sam_dict["cnet"].get_models() if "inpaint" in cn]
         cn_modes = [mode.value for mode in sam_dict["cnet"].ControlMode]
 
