@@ -14,7 +14,7 @@ To install the software, please follow these steps:
 * Open the `Extensions` tab on the AUTOMATIC1111's [Stable Diffusion Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui.git).
 * Select the `Install from URL` option.
 * Enter `https://github.com/Uminosachi/sd-webui-inpaint-anything.git` in the `URL for extension's git repository` field.
-* Click the `Install` button.
+* Click on the `Install` button.
 * Once installation is complete, restart the Web UI.
 
 ## Running the application
@@ -36,9 +36,9 @@ To download the model:
 ## Usage
 
 * Drag and drop your image onto the input image area.
-* Click the `Run Segment Anything` button.
+* Click on the `Run Segment Anything` button.
 * Use sketching to point the area you want to inpaint. You can undo and adjust the pen size.
-* Click the `Create mask` button. The mask will appear in the selected mask image area.
+* Click on the `Create mask` button. The mask will appear in the selected mask image area.
 
 ### Mask Adjustment
 
@@ -47,17 +47,26 @@ To download the model:
 
 ### Inpainting Tab
 
-* Enter the Prompt and Negative Prompt, Choose the Inpainting Model ID.
-* Click the `Run Inpainting` button (**Please note that it may take some time to download the model for the first time**).
-* You can change the Sampling Steps, the Guidance Scale and the Seed in the Advanced options.
-* If you enable the `Mask area Only` option, the modifications will be confined to the designated mask area.
+* Enter your desired Prompt and Negative Prompt, then choose the Inpainting Model ID.
+* Click on the `Run Inpainting` button (**Please note that it may take some time to download the model for the first time**).
+* In the Advanced options, you can adjust the Sampling Steps, Guidance Scale, and Seed.
+* If you enable the `Mask area Only` option, modifications will be confined to the designated mask area only.
 * Inpainting process is performed using [diffusers](https://github.com/huggingface/diffusers).
 
 ### Cleaner Tab
 
 * Choose the Cleaner Model ID.
-* Click the `Run Cleaner` button (**Please note that it may take some time to download the model for the first time**).
+* Click on the `Run Cleaner` button (**Please note that it may take some time to download the model for the first time**).
 * Cleaner process is performed using [Lama Cleaner](https://github.com/Sanster/lama-cleaner).
+
+### ControlNet Inpaint Tab
+
+* To execute inpainting, use the Stable Diffusion checkpoint, located in the upper left of the Web UI, with the ControlNet inpaint model.
+* Enter your desired Prompt and Negative Prompt.
+* Click on the `Run ControlNet Inpaint` button to start the process.
+* In the Advanced options, you can adjust the Sampler, Sampling Steps, Guidance Scale, Denoising Strength, and Seed.
+* The Control Weight and Control Mode can be modified in the ControlNet options.
+* Note: Make sure to install the ControlNet extension that supports the `inpaint_only` preprocessor and the ControlNet inpaint model.
 
 ### Mask only Tab
 

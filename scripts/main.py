@@ -29,6 +29,12 @@ except Exception:
 from modules.devices import device, torch_gc
 from modules.safe import unsafe_torch_load, load
 
+import re
+from scripts.webui_controlnet import (find_controlnet, get_sd_img2img_processing, backup_alwayson_scripts,
+                                      disable_alwayson_scripts, restore_alwayson_scripts, get_controlnet_args_to)
+from modules.processing import StableDiffusionProcessingImg2Img, process_images, create_infotext
+from modules.sd_samplers import samplers_for_img2img
+
 def get_sam_model_ids():
     """Get SAM model ids list.
 
@@ -116,7 +122,7 @@ ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
                           "outputs", "inpaint-anything",
                           datetime.now().strftime("%Y-%m-%d"))
 
-sam_dict = dict(sam_masks=None, mask_image=None)
+sam_dict = dict(sam_masks=None, mask_image=None, cnet=None)
 
 def get_model_ids():
     """Get inpainting model ids list.
@@ -497,6 +503,100 @@ def run_get_mask(sel_mask):
     clear_cache()
     return mask_image
 
+def run_cn_inpaint(input_image, sel_mask,
+                   cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
+                   cn_weight, cn_mode):
+    clear_cache()
+    global sam_dict
+    if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
+        return None
+
+    mask_image = sam_dict["mask_image"]
+    if input_image.shape != mask_image.shape:
+        print("The size of image and mask do not match")
+        return None
+
+    if (shared.sd_model.parameterization == "v" and "sd15" in cn_model_id):
+        print("The SD model is not compatible with the ControlNet model")
+        return None
+
+    cnet = sam_dict.get("cnet", None)
+    if cnet is None:
+        print("The ControlNet extension is not loaded")
+        return None
+
+    global ia_outputs_dir
+    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+    if config_save_folder in ["inpaint-anything", "img2img-images"]:
+        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
+                                      "outputs", config_save_folder,
+                                      datetime.now().strftime("%Y-%m-%d"))
+    if cn_save_mask_chk:
+        if not os.path.isdir(ia_outputs_dir):
+            os.makedirs(ia_outputs_dir, exist_ok=True)
+        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
+        save_name = os.path.join(ia_outputs_dir, save_name)
+        Image.fromarray(mask_image).save(save_name)
+
+    print(cn_model_id)
+
+    if cn_seed < 0:
+        cn_seed = random.randint(0, 2147483647)
+    
+    init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
+    width, height = init_image.size
+
+    p = get_sd_img2img_processing(init_image, mask_image, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed)
+
+    backup_alwayson_scripts(p.scripts)
+    disable_alwayson_scripts(p.scripts)
+
+    cn_units = [cnet.ControlNetUnit(
+        enabled=True,
+        module=cn_module_id,
+        model=cn_model_id,
+        weight=cn_weight,
+        image={"image": np.array(init_image), "mask": np.array(mask_image)},
+        resize_mode=cnet.ResizeMode.RESIZE,
+        low_vram=False,
+        processor_res=min(width, height),
+        guidance_start=0.0,
+        guidance_end=1.0,
+        pixel_perfect=True,
+        control_mode=cn_mode,
+    )]
+    
+    p.script_args = np.zeros(get_controlnet_args_to(p.scripts))
+    cnet.update_cn_script_in_processing(p, cn_units, is_img2img=True, is_ui=False)
+
+    processed = process_images(p)
+    
+    restore_alwayson_scripts(p.scripts)
+
+    no_hash_cn_model_id = re.sub("\s\[[0-9a-f]{8}\]", "", cn_model_id).strip()
+
+    if processed is not None:
+        if len(processed.images) > 0:
+            output_image = processed.images[0]
+
+            infotext = create_infotext(p, all_prompts=[cn_prompt], all_seeds=[cn_seed], all_subseeds=[-1])
+
+            metadata = PngInfo()
+            metadata.add_text("parameters", infotext)
+
+            if not os.path.isdir(ia_outputs_dir):
+                os.makedirs(ia_outputs_dir, exist_ok=True)
+            save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(no_hash_cn_model_id) + ".png"
+            save_name = os.path.join(ia_outputs_dir, save_name)
+            output_image.save(save_name, pnginfo=metadata)
+        else:
+            output_image = None
+    else:
+        output_image = None
+
+    clear_cache()
+    return output_image
+
 class Script(scripts.Script):
   def __init__(self) -> None:
     super().__init__()
@@ -511,10 +611,29 @@ class Script(scripts.Script):
     return ()
 
 def on_ui_tabs():
+    global sam_dict
+    
     sam_model_ids = get_sam_model_ids()
     model_ids = get_model_ids()
     cleaner_model_ids = get_cleaner_model_ids()
-    
+    sam_dict["cnet"] = find_controlnet()
+
+    cn_enabled = False
+    if sam_dict["cnet"] is not None:
+        cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint_only" in cn]
+        if len(cn_module_ids) == 0:
+            cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint" in cn]
+        cn_model_ids = [cn for cn in sam_dict["cnet"].get_models() if "inpaint" in cn]
+        cn_modes = [mode.value for mode in sam_dict["cnet"].ControlMode]
+
+        if len(cn_module_ids) > 0 and len(cn_model_ids) > 0:
+            cn_enabled = True
+
+    if samplers_for_img2img is not None and len(samplers_for_img2img) > 0:
+        cn_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
+    else:
+        cn_sampler_ids = ["DDIM"]
+
     with gr.Blocks(analytics_enabled=False) as inpaint_anything_interface:
         with gr.Row():
             with gr.Column():
@@ -543,7 +662,6 @@ def on_ui_tabs():
                             maximum=2147483647,
                             step=1,
                             value=-1,
-                            # randomize=True,
                         )
                     with gr.Row():
                         with gr.Column():
@@ -571,6 +689,58 @@ def on_ui_tabs():
                     with gr.Row():
                         cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil", interactive=False).style(height=480)
 
+                with gr.Tab("ControlNet Inpaint"):
+                    if cn_enabled:
+                        cn_prompt = gr.Textbox(label="Inpainting prompt", elem_id="cn_sd_prompt")
+                        cn_n_prompt = gr.Textbox(label="Negative prompt", elem_id="cn_sd_n_prompt")
+                        with gr.Accordion("Advanced options", open=False):
+                            with gr.Row():
+                                with gr.Column():
+                                    cn_sampler_id = gr.Dropdown(label="Sampler", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[0], show_label=True)
+                                with gr.Column():
+                                    cn_ddim_steps = gr.Slider(label="Sampling Steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=20, step=1)
+                            cn_cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
+                            cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising Strength', value=0.75, elem_id="cn_strength")
+                            cn_seed = gr.Slider(
+                                label="Seed",
+                                elem_id="cn_sd_seed",
+                                minimum=-1,
+                                maximum=2147483647,
+                                step=1,
+                                value=-1,
+                            )
+                        with gr.Accordion("ControlNet options", open=False):
+                            with gr.Row():
+                                with gr.Column():
+                                    cn_weight = gr.Slider(label="Control Weight", elem_id="cn_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
+                                with gr.Column():
+                                    cn_mode = gr.Dropdown(label="Control Mode", elem_id="cn_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
+
+                        with gr.Row():
+                            with gr.Column():
+                                cn_module_id = gr.Dropdown(label="ControlNet Preprocessor", elem_id="cn_module_id", choices=cn_module_ids, value=cn_module_ids[0], show_label=True)
+                                cn_model_id = gr.Dropdown(label="ControlNet Model ID", elem_id="cn_model_id", choices=cn_model_ids, value=cn_model_ids[0], show_label=True)
+                            with gr.Column():
+                                with gr.Row():
+                                    cn_inpaint_btn = gr.Button("Run ControlNet Inpaint", elem_id="cn_inpaint_btn")
+                                with gr.Row():
+                                    cn_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cn_save_mask_chk", show_label=True, interactive=True)
+                        
+                        with gr.Row():
+                            cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", type="pil", interactive=False).style(height=480)
+                        
+                    else:
+                        if sam_dict["cnet"] is None:
+                            gr.Markdown("ControlNet extension is not available.<br>" + \
+                                        "Requires the [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension.")
+                        elif len(cn_module_ids) > 0:
+                            cn_models_directory = os.path.join("extensions", "sd-webui-controlnet", "models")
+                            gr.Markdown("ControlNet inpaint model is not available.<br>" + \
+                                        f"Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model in the {cn_models_directory} directory.")
+                        else:
+                            gr.Markdown("ControlNet inpaint preprocessor is not available.<br>" + \
+                                        "The local version of [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension may be old.")
+
                 with gr.Tab("Mask only"):
                     with gr.Row():
                         get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
@@ -580,8 +750,7 @@ def on_ui_tabs():
 
                     with gr.Row():
                         mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
-
-                
+            
             with gr.Column():
                 sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
                                      interactive=True).style(height=480)
@@ -622,7 +791,13 @@ def on_ui_tabs():
                 _js="inpaintAnything_sendToInpaint",
                 inputs=None,
                 outputs=None)
-    
+            if cn_enabled:
+                cn_inpaint_btn.click(
+                    run_cn_inpaint,
+                    inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
+                            cn_weight, cn_mode],
+                    outputs=[cn_out_image])
+
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
 def on_ui_settings():
