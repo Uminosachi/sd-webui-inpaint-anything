@@ -726,13 +726,16 @@ def on_ui_tabs():
                         
                         cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", interactive=False).style(height=480)
                     else:
-                        if sam_dict.get("cnet", None) is None:
+                        if sam_dict["cnet"] is None:
                             gr.Markdown("ControlNet extension is not available.<br>" + \
                                         "Requires the [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension.")
-                        else:
+                        elif len(cn_module_ids) > 0:
                             cn_models_directory = os.path.join("extensions", "sd-webui-controlnet", "models")
                             gr.Markdown("ControlNet inpaint model is not available.<br>" + \
                                         f"Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model in the {cn_models_directory} directory.")
+                        else:
+                            gr.Markdown("ControlNet inpaint preprocessor is not available.<br>" + \
+                                        "The local version of [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension may be old.")
 
                 with gr.Tab("Mask only"):
                     with gr.Row():
