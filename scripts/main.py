@@ -132,6 +132,7 @@ def get_model_ids():
     """
     model_ids = [
         "stabilityai/stable-diffusion-2-inpainting",
+        "Uminosachi/dreamshaper_6Inpainting",
         "Uminosachi/dreamshaper_5-inpainting",
         "saik0s/realistic_vision_inpainting",
         "Uminosachi/revAnimated_v121Inp-inpainting",
