@@ -260,11 +260,14 @@ def expand_mask(input_image, sel_mask, expand_iteration=1):
         return None
     
     new_sel_mask = sam_dict["mask_image"]
-    
-    expand_iteration = int(np.clip(expand_iteration, 1, 5))
-    
-    for i in range(expand_iteration):
-        new_sel_mask = np.array(cv2.dilate(new_sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=1))
+
+    drawn_mask = sel_mask["mask"][:,:,0:3].astype(bool).astype(np.uint8)
+    if np.any(drawn_mask):
+        new_sel_mask = new_sel_mask - drawn_mask
+    else:
+        expand_iteration = int(np.clip(expand_iteration, 1, 5))
+        for i in range(expand_iteration):
+            new_sel_mask = np.array(cv2.dilate(new_sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=1))
     
     sam_dict["mask_image"] = new_sel_mask
 
