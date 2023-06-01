@@ -29,9 +29,10 @@ except Exception:
 from modules.devices import device, torch_gc
 from modules.safe import unsafe_torch_load, load
 
-from scripts.webui_controlnet import find_controlnet
-from modules.processing import StableDiffusionProcessingImg2Img, process_images
-from modules.shared import opts, sd_model
+import re
+from scripts.webui_controlnet import (find_controlnet, get_sd_img2img_processing, backup_alwayson_scripts,
+                                      disable_alwayson_scripts, restore_alwayson_scripts, get_controlnet_args_to)
+from modules.processing import StableDiffusionProcessingImg2Img, process_images, create_infotext
 from modules.sd_samplers import samplers_for_img2img
 
 def get_sam_model_ids():
@@ -502,7 +503,9 @@ def run_get_mask(sel_mask):
     clear_cache()
     return mask_image
 
-def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk):
+def run_cn_inpaint(input_image, sel_mask,
+                   cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
+                   cn_weight, cn_mode):
     clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
@@ -517,7 +520,17 @@ def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id,
         print("The SD model is not compatible with the ControlNet model")
         return None
 
+    cnet = sam_dict.get("cnet", None)
+    if cnet is None:
+        print("The ControlNet extension is not loaded")
+        return None
+
     global ia_outputs_dir
+    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+    if config_save_folder in ["inpaint-anything", "img2img-images"]:
+        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
+                                      "outputs", config_save_folder,
+                                      datetime.now().strftime("%Y-%m-%d"))
     if cn_save_mask_chk:
         if not os.path.isdir(ia_outputs_dir):
             os.makedirs(ia_outputs_dir, exist_ok=True)
@@ -532,62 +545,57 @@ def run_cn_inpaint(input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id,
     
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
-    
-    p = StableDiffusionProcessingImg2Img(
-        sd_model=sd_model,
-        outpath_samples = opts.outdir_samples or opts.outdir_img2img_samples,
-        inpaint_full_res = False,
-    )
-    
-    p.is_img2img = True
-    p.scripts = scripts.scripts_img2img
 
-    p.init_images = [init_image]
-    p.image_mask = mask_image
-    p.width, p.height = (width, height)
-    p.prompt = cn_prompt
-    p.negative_prompt = cn_n_prompt
-    p.denoising_strength = cn_strength
-    p.steps = cn_ddim_steps
-    p.seed = cn_seed
-    p.cfg_scale = cn_cfg_scale
-    p.sampler_name = cn_sampler_id
-    p.batch_size = 1
-    p.do_not_save_samples = True
+    p = get_sd_img2img_processing(init_image, mask_image, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed)
 
-    cnet = sam_dict.get("cnet", None)
-    if cnet is not None:
-        cn_units = [cnet.ControlNetUnit(
-            enabled=True,
-            module=cn_module_id,
-            model=cn_model_id,
-            weight=1.0,
-            image={"image": np.array(init_image), "mask": np.array(mask_image)},
-            resize_mode=cnet.ResizeMode.RESIZE,
-            low_vram=False,
-            processor_res=512,
-            threshold_a=64,
-            threshold_b=64,
-            guidance_start=0.0,
-            guidance_end=1.0,
-            pixel_perfect=True,
-            control_mode=cnet.ControlMode.BALANCED,
-        )]
-        
-        p.script_args = (0,)
-        cnet.update_cn_script_in_processing(p, cn_units, is_img2img=True, is_ui=False)
+    backup_alwayson_scripts(p.scripts)
+    disable_alwayson_scripts(p.scripts)
+
+    cn_units = [cnet.ControlNetUnit(
+        enabled=True,
+        module=cn_module_id,
+        model=cn_model_id,
+        weight=cn_weight,
+        image={"image": np.array(init_image), "mask": np.array(mask_image)},
+        resize_mode=cnet.ResizeMode.RESIZE,
+        low_vram=False,
+        processor_res=min(width, height),
+        guidance_start=0.0,
+        guidance_end=1.0,
+        pixel_perfect=True,
+        control_mode=cn_mode,
+    )]
+    
+    p.script_args = np.zeros(get_controlnet_args_to(p.scripts))
+    cnet.update_cn_script_in_processing(p, cn_units, is_img2img=True, is_ui=False)
 
     processed = process_images(p)
     
+    restore_alwayson_scripts(p.scripts)
+
+    no_hash_cn_model_id = re.sub("\s\[[0-9a-f]{8}\]", "", cn_model_id).strip()
+
     if processed is not None:
         if len(processed.images) > 0:
-            results = processed.images[0]
-        else:
-            results = None
-    else:
-        results = None
+            output_image = processed.images[0]
 
-    return results
+            infotext = create_infotext(p, all_prompts=[cn_prompt], all_seeds=[cn_seed], all_subseeds=[-1])
+
+            metadata = PngInfo()
+            metadata.add_text("parameters", infotext)
+
+            if not os.path.isdir(ia_outputs_dir):
+                os.makedirs(ia_outputs_dir, exist_ok=True)
+            save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(no_hash_cn_model_id) + ".png"
+            save_name = os.path.join(ia_outputs_dir, save_name)
+            output_image.save(save_name, pnginfo=metadata)
+        else:
+            output_image = None
+    else:
+        output_image = None
+
+    clear_cache()
+    return output_image
 
 class Script(scripts.Script):
   def __init__(self) -> None:
@@ -610,8 +618,9 @@ def on_ui_tabs():
     cleaner_model_ids = get_cleaner_model_ids()
     sam_dict["cnet"] = find_controlnet() 
     if sam_dict["cnet"] is not None:
-        cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint" in cn]
+        cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint_only" in cn]
         cn_model_ids = [cn for cn in sam_dict["cnet"].get_models() if "inpaint" in cn]
+        cn_modes = [mode.value for mode in sam_dict["cnet"].ControlMode]
     if samplers_for_img2img is not None and len(samplers_for_img2img) > 0:
         cn_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
     else:
@@ -645,7 +654,6 @@ def on_ui_tabs():
                             maximum=2147483647,
                             step=1,
                             value=-1,
-                            # randomize=True,
                         )
                     with gr.Row():
                         with gr.Column():
@@ -673,17 +681,7 @@ def on_ui_tabs():
                     with gr.Row():
                         cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil", interactive=False).style(height=480)
 
-                with gr.Tab("Mask only"):
-                    with gr.Row():
-                        get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
-                    
-                    with gr.Row():
-                        mask_out_image = gr.Image(label="Mask image", elem_id="mask_out_image", type="numpy", interactive=False).style(height=480)
-
-                    with gr.Row():
-                        mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
-
-                with gr.Tab("ControlNet Inpainting"):
+                with gr.Tab("ControlNet Inpaint"):
                     if sam_dict.get("cnet", None) is not None and len(cn_module_ids) > 0 and len(cn_model_ids) > 0:
                         cn_prompt = gr.Textbox(label="Inpainting prompt", elem_id="cn_sd_prompt")
                         cn_n_prompt = gr.Textbox(label="Negative prompt", elem_id="cn_sd_n_prompt")
@@ -702,15 +700,21 @@ def on_ui_tabs():
                                 maximum=2147483647,
                                 step=1,
                                 value=-1,
-                                # randomize=True,
                             )
+                        with gr.Accordion("ControlNet options", open=False):
+                            with gr.Row():
+                                with gr.Column():
+                                    cn_weight = gr.Slider(label="Control Weight", elem_id="cn_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
+                                with gr.Column():
+                                    cn_mode = gr.Dropdown(label="Control Mode", elem_id="cn_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
+
                         with gr.Row():
                             with gr.Column():
                                 cn_module_id = gr.Dropdown(label="ControlNet Preprocessor", elem_id="cn_module_id", choices=cn_module_ids, value=cn_module_ids[0], show_label=True)
                                 cn_model_id = gr.Dropdown(label="ControlNet Model ID", elem_id="cn_model_id", choices=cn_model_ids, value=cn_model_ids[0], show_label=True)
                             with gr.Column():
                                 with gr.Row():
-                                    cn_inpaint_btn = gr.Button("Run Inpainting", elem_id="cn_inpaint_btn")
+                                    cn_inpaint_btn = gr.Button("Run ControlNet Inpaint", elem_id="cn_inpaint_btn")
                                 with gr.Row():
                                     cn_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cn_save_mask_chk", show_label=True, interactive=True)
                         
@@ -721,6 +725,16 @@ def on_ui_tabs():
                         else:
                             gr.Markdown("ControlNet inpaint model is not available.<br>Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model.")
 
+                with gr.Tab("Mask only"):
+                    with gr.Row():
+                        get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
+                    
+                    with gr.Row():
+                        mask_out_image = gr.Image(label="Mask image", elem_id="mask_out_image", type="numpy", interactive=False).style(height=480)
+
+                    with gr.Row():
+                        mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
+            
             with gr.Column():
                 sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
                                      interactive=True).style(height=480)
@@ -763,7 +777,8 @@ def on_ui_tabs():
                 outputs=None)
             cn_inpaint_btn.click(
                 run_cn_inpaint,
-                inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk],
+                inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
+                        cn_weight, cn_mode],
                 outputs=[cn_out_image])
 
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
