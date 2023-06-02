@@ -9,6 +9,11 @@ import copy
 original_alwayson_scripts = None
 
 def find_controlnet():
+    """Find ControlNet external_code
+
+    Returns:
+        module: ControlNet external_code module
+    """
     try:
         cnet = importlib.import_module('extensions.sd-webui-controlnet.scripts.external_code', 'external_code')
     except:
@@ -20,6 +25,11 @@ def find_controlnet():
     return cnet
 
 def list_default_scripts():
+    """Get list of default scripts
+
+    Returns:
+        list: List of default scripts
+    """
     scripts_list = []
 
     basedir = os.path.join(paths.script_path, "scripts")
@@ -31,10 +41,20 @@ def list_default_scripts():
     return scripts_list
 
 def backup_alwayson_scripts(input_scripts):
+    """Backup alwayson scripts
+
+    Args:
+        input_scripts (ScriptRunner): scripts to backup alwayson scripts
+    """
     global original_alwayson_scripts
     original_alwayson_scripts = copy.copy(input_scripts.alwayson_scripts)
 
 def disable_alwayson_scripts(input_scripts):
+    """Disable alwayson scripts
+    
+    Args:
+        input_scripts (ScriptRunner): scripts to disable alwayson scripts
+    """
     default_scripts = list_default_scripts()
 
     disabled_scripts = []
@@ -50,18 +70,62 @@ def disable_alwayson_scripts(input_scripts):
         input_scripts.alwayson_scripts.remove(script)
 
 def restore_alwayson_scripts(input_scripts):
+    """Restore alwayson scripts
+    
+    Args:
+        input_scripts (ScriptRunner): scripts to restore alwayson scripts
+    """
     global original_alwayson_scripts
     if original_alwayson_scripts is not None:
         input_scripts.alwayson_scripts = original_alwayson_scripts
         original_alwayson_scripts = None
 
+def get_max_args_to(input_scripts):
+    """Get max args_to of scripts
+    
+    Args:
+        input_scripts (ScriptRunner): scripts to get max args_to of scripts
+    
+    Returns:
+        int: max args_to of scripts
+    """
+    max_args_to = 0
+    for script in input_scripts.alwayson_scripts:
+        if max_args_to < script.args_to:
+            max_args_to = script.args_to
+    return max_args_to
+
 def get_controlnet_args_to(input_scripts):
+    """Get args_to of ControlNet script
+
+    Args:
+        input_scripts (ScriptRunner): scripts to get args_to of ControlNet script
+
+    Returns:
+        int: args_to of ControlNet script
+    """
     for script in input_scripts.alwayson_scripts:
         if "controlnet" in os.path.basename(script.filename):
             return script.args_to
-    return 1
+    return get_max_args_to(input_scripts)
 
 def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_id, ddim_steps, cfg_scale, strength, seed):
+    """Get StableDiffusionProcessingImg2Img instance
+    
+    Args:
+        init_image (PIL.Image): Initial image
+        mask_image (PIL.Image): Mask image
+        prompt (str): Prompt
+        n_prompt (int): Negative prompt
+        sampler_id (str): Sampler ID
+        ddim_steps (int): Steps
+        cfg_scale (float): CFG scale
+        strength (float): Denoising strength
+        seed (int): Seed
+
+    Returns:
+        StableDiffusionProcessingImg2Img: StableDiffusionProcessingImg2Img instance
+    """
     width, height = init_image.size
 
     sd_img2img_args = dict(

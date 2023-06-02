@@ -539,8 +539,7 @@ def run_cn_inpaint(input_image, sel_mask,
         save_name = os.path.join(ia_outputs_dir, save_name)
         Image.fromarray(mask_image).save(save_name)
 
-    print(cn_model_id)
-
+    # print(cn_model_id)
     if cn_seed < 0:
         cn_seed = random.randint(0, 2147483647)
     
