@@ -567,7 +567,7 @@ def run_cn_inpaint(input_image, sel_mask,
     )]
     
     p.script_args = np.zeros(get_controlnet_args_to(p.scripts))
-    cnet.update_cn_script_in_processing(p, cn_units, is_img2img=True, is_ui=False)
+    cnet.update_cn_script_in_processing(p, cn_units)
 
     processed = process_images(p)
     
