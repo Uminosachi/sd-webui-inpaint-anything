@@ -670,7 +670,7 @@ def on_ui_tabs():
                             with gr.Row():
                                 inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn")
                             with gr.Row():
-                                composite_chk = gr.Checkbox(label="Mask area Only", elem_id="composite_chk", show_label=True, interactive=True)
+                                composite_chk = gr.Checkbox(label="Mask area Only", elem_id="composite_chk", value=True, show_label=True, interactive=True)
                                 save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk", show_label=True, interactive=True)
 
                     with gr.Row():
