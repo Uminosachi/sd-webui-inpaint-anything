@@ -61,7 +61,7 @@ def disable_alwayson_scripts(input_scripts):
     for script in input_scripts.alwayson_scripts:
         if os.path.basename(script.filename) in default_scripts:
             continue
-        if "controlnet" in os.path.basename(script.filename):
+        if "controlnet" in os.path.basename(script.filename) or script.title().lower() == "controlnet":
             continue
         # print("Disabled script: {}".format(os.path.basename(script.filename)))
         disabled_scripts.append(script)
@@ -105,7 +105,7 @@ def get_controlnet_args_to(input_scripts):
         int: args_to of ControlNet script
     """
     for script in input_scripts.alwayson_scripts:
-        if "controlnet" in os.path.basename(script.filename):
+        if "controlnet" in os.path.basename(script.filename) or script.title().lower() == "controlnet":
             return script.args_to
     return get_max_args_to(input_scripts)
 
