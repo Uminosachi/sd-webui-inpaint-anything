@@ -386,12 +386,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     local_file_status = download_model_from_hf(model_id, local_files_only=True)
     if local_file_status != _DOWNLOAD_COMPLETE:
         if not config_offline_inpainting:
-            download_status = download_model_from_hf(model_id)
-            if download_status != _DOWNLOAD_COMPLETE:
-                print(download_status)
-                return None
-            else:
-                local_files_only = True
+            local_files_only = False
         else:
             print(local_file_status)
             return None
