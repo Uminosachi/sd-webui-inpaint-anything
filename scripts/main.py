@@ -751,10 +751,10 @@ def on_ui_tabs():
                 input_image = gr.Image(label="Input image", elem_id="input_image", source="upload", type="numpy", interactive=True)
                 sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
                 
-                with gr.Tab("Inpainting"):
-                    prompt = gr.Textbox(label="Inpainting prompt", elem_id="sd_prompt")
-                    n_prompt = gr.Textbox(label="Negative prompt", elem_id="sd_n_prompt")
-                    with gr.Accordion("Advanced options", open=False):
+                with gr.Tab("Inpainting", elem_id="inpainting_tab"):
+                    prompt = gr.Textbox(label="Inpainting Prompt", elem_id="sd_prompt")
+                    n_prompt = gr.Textbox(label="Negative Prompt", elem_id="sd_n_prompt")
+                    with gr.Accordion("Advanced options", elem_id="inp_advanced_options", open=False):
                         with gr.Row():
                             with gr.Column():
                                 sampler_name = gr.Dropdown(label="Sampler", elem_id="sampler_name", choices=sampler_names,
@@ -783,7 +783,7 @@ def on_ui_tabs():
                     with gr.Row():
                         out_image = gr.Image(label="Inpainted image", elem_id="out_image", type="pil", interactive=False).style(height=480)
                 
-                with gr.Tab("Cleaner"):
+                with gr.Tab("Cleaner", elem_id="cleaner_tab"):
                     with gr.Row():
                         with gr.Column():
                             cleaner_model_id = gr.Dropdown(label="Cleaner Model ID", elem_id="cleaner_model_id", choices=cleaner_model_ids, value=cleaner_model_ids[0], show_label=True)
@@ -796,14 +796,14 @@ def on_ui_tabs():
                     with gr.Row():
                         cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil", interactive=False).style(height=480)
 
-                with gr.Tab("ControlNet Inpaint"):
+                with gr.Tab("ControlNet Inpaint", elem_id="cn_inpaint_tab"):
                     if cn_enabled:
-                        cn_prompt = gr.Textbox(label="Inpainting prompt", elem_id="cn_sd_prompt")
-                        cn_n_prompt = gr.Textbox(label="Negative prompt", elem_id="cn_sd_n_prompt")
-                        with gr.Accordion("Advanced options", open=False):
+                        cn_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="cn_sd_prompt")
+                        cn_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="cn_sd_n_prompt")
+                        with gr.Accordion("Advanced options", elem_id="cn_advanced_options", open=False):
                             with gr.Row():
                                 with gr.Column():
-                                    cn_sampler_id = gr.Dropdown(label="Sampler", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[0], show_label=True)
+                                    cn_sampler_id = gr.Dropdown(label="Sampling method", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[0], show_label=True)
                                 with gr.Column():
                                     cn_ddim_steps = gr.Slider(label="Sampling Steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=20, step=1)
                             cn_cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
@@ -816,7 +816,7 @@ def on_ui_tabs():
                                 step=1,
                                 value=-1,
                             )
-                        with gr.Accordion("ControlNet options", open=False):
+                        with gr.Accordion("ControlNet options", elem_id="cn_cn_options", open=False):
                             with gr.Row():
                                 with gr.Column():
                                     cn_weight = gr.Slider(label="Control Weight", elem_id="cn_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
@@ -848,7 +848,7 @@ def on_ui_tabs():
                             gr.Markdown("ControlNet inpaint preprocessor is not available.<br>" + \
                                         "The local version of [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension may be old.")
 
-                with gr.Tab("Mask only"):
+                with gr.Tab("Mask only", elem_id="mask_only_tab"):
                     with gr.Row():
                         with gr.Column():
                             get_alpha_image_btn = gr.Button("Get mask as alpha of image", elem_id="get_alpha_image_btn")
