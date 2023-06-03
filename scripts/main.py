@@ -16,6 +16,7 @@ from PIL.PngImagePlugin import PngInfo
 import time
 import random
 import cv2
+from huggingface_hub import snapshot_download
 from lama_cleaner.model_manager import ModelManager
 from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
 # print("platform:", platform.system())
@@ -34,6 +35,8 @@ from scripts.webui_controlnet import (find_controlnet, get_sd_img2img_processing
                                       disable_alwayson_scripts, restore_alwayson_scripts, get_controlnet_args_to)
 from modules.processing import StableDiffusionProcessingImg2Img, process_images, create_infotext
 from modules.sd_samplers import samplers_for_img2img
+
+_DOWNLOAD_COMPLETE = "Download complete"
 
 def get_sam_model_ids():
     """Get SAM model ids list.
@@ -68,9 +71,30 @@ def download_model(sam_model_id):
         
         download_url_to_file(url_sam, sam_checkpoint)
         
-        return "Download complete"
+        return _DOWNLOAD_COMPLETE
     else:
         return "Model already exists"
+
+def download_model_from_hf(hf_model_id, local_files_only=False):
+    """Download model from HuggingFace Hub.
+
+    Args:
+        sam_model_id (str): HuggingFace model id
+        local_files_only (bool, optional): If True, use only local files. Defaults to False.
+
+    Returns:
+        str: download status
+    """
+    if not local_files_only:
+        print(f"Downloading {hf_model_id}")
+    try:
+        snapshot_download(repo_id=hf_model_id, local_files_only=local_files_only)
+    except FileNotFoundError:
+        return f"{hf_model_id} not found, please download"
+    except Exception as e:
+        return str(e)
+
+    return _DOWNLOAD_COMPLETE
 
 def get_sam_mask_generator(sam_checkpoint):
     """Get SAM mask generator.
@@ -355,10 +379,29 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         Image.fromarray(mask_image).save(save_name)
 
     print(model_id)
-    if platform.system() == "Darwin":
-        pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float32)
+    config_offline_inpainting = shared.opts.data.get("inpaint_anything_offline_inpainting", False)
+    if config_offline_inpainting:
+        print("Enable offline network Inpainting:", config_offline_inpainting)
+    local_files_only = False
+    local_file_status = download_model_from_hf(model_id, local_files_only=True)
+    if local_file_status != _DOWNLOAD_COMPLETE:
+        if not config_offline_inpainting:
+            download_status = download_model_from_hf(model_id)
+            if download_status != _DOWNLOAD_COMPLETE:
+                print(download_status)
+                return None
+            else:
+                local_files_only = True
+        else:
+            print(local_file_status)
+            return None
     else:
-        pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
+        local_files_only = True
+    
+    if platform.system() == "Darwin":
+        pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float32, local_files_only=local_files_only)
+    else:
+        pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float16, local_files_only=local_files_only)
     pipe.safety_checker = None
 
     pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
@@ -851,6 +894,8 @@ def on_ui_settings():
     section = ("inpaint_anything", "Inpaint Anything")
     shared.opts.add_option("inpaint_anything_save_folder", shared.OptionInfo(
         "inpaint-anything", "Folder name where output images will be saved", gr.Radio, {"choices": ["inpaint-anything", "img2img-images"]}, section=section))
+    shared.opts.add_option("inpaint_anything_offline_inpainting", shared.OptionInfo(
+        False, "Enable offline network Inpainting", gr.Checkbox, {"interactive": True}, section=section))
 
 script_callbacks.on_ui_settings(on_ui_settings)
 script_callbacks.on_ui_tabs(on_ui_tabs)
