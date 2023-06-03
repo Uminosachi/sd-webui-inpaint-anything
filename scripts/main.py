@@ -755,9 +755,12 @@ def on_ui_tabs():
                     prompt = gr.Textbox(label="Inpainting prompt", elem_id="sd_prompt")
                     n_prompt = gr.Textbox(label="Negative prompt", elem_id="sd_n_prompt")
                     with gr.Accordion("Advanced options", open=False):
-                        sampler_name = gr.Dropdown(label="Sampler", elem_id="sampler_name", choices=sampler_names,
-                                                   value=sampler_names[0], show_label=True)
-                        ddim_steps = gr.Slider(label="Sampling Steps", elem_id="ddim_steps", minimum=1, maximum=50, value=20, step=1)
+                        with gr.Row():
+                            with gr.Column():
+                                sampler_name = gr.Dropdown(label="Sampler", elem_id="sampler_name", choices=sampler_names,
+                                                           value=sampler_names[0], show_label=True)
+                            with gr.Column():
+                                ddim_steps = gr.Slider(label="Sampling Steps", elem_id="ddim_steps", minimum=1, maximum=50, value=20, step=1)
                         cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
                         seed = gr.Slider(
                             label="Seed",
