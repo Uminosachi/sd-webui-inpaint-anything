@@ -1,7 +1,7 @@
 import os
 import torch
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageOps
 import gradio as gr
 from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler
 from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
@@ -123,6 +123,14 @@ ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
                           datetime.now().strftime("%Y-%m-%d"))
 
 sam_dict = dict(sam_masks=None, mask_image=None, cnet=None)
+
+def update_ia_outputs_dir():
+    global ia_outputs_dir
+    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+    if config_save_folder in ["inpaint-anything", "img2img-images"]:
+        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
+                                      "outputs", config_save_folder,
+                                      datetime.now().strftime("%Y-%m-%d"))
 
 def get_model_ids():
     """Get inpainting model ids list.
@@ -338,11 +346,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         return None
 
     global ia_outputs_dir
-    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
-    if config_save_folder in ["inpaint-anything", "img2img-images"]:
-        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
-                                      "outputs", config_save_folder,
-                                      datetime.now().strftime("%Y-%m-%d"))
+    update_ia_outputs_dir()
     if save_mask_chk:
         if not os.path.isdir(ia_outputs_dir):
             os.makedirs(ia_outputs_dir, exist_ok=True)
@@ -433,11 +437,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
         return None
 
     global ia_outputs_dir
-    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
-    if config_save_folder in ["inpaint-anything", "img2img-images"]:
-        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
-                                      "outputs", config_save_folder,
-                                      datetime.now().strftime("%Y-%m-%d"))
+    update_ia_outputs_dir()
     if cleaner_save_mask_chk:
         if not os.path.isdir(ia_outputs_dir):
             os.makedirs(ia_outputs_dir, exist_ok=True)
@@ -480,6 +480,49 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     clear_cache()
     return output_image
 
+def run_get_alpha_image(input_image, sel_mask):
+    clear_cache()
+    global sam_dict
+    if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
+        return None
+    
+    mask_image = sam_dict["mask_image"]
+    if input_image.shape != mask_image.shape:
+        print("The size of image and mask do not match")
+        return None
+
+    alpha_image = Image.fromarray(input_image).convert("RGBA")
+    mask_image = Image.fromarray(mask_image).convert("L")
+    
+    alpha_image.putalpha(mask_image)
+    
+    global ia_outputs_dir
+    update_ia_outputs_dir()
+    if not os.path.isdir(ia_outputs_dir):
+        os.makedirs(ia_outputs_dir, exist_ok=True)
+    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "rgba_image" + ".png"
+    save_name = os.path.join(ia_outputs_dir, save_name)
+    alpha_image.save(save_name)
+    
+    def make_checkerboard(n_rows, n_columns, square_size):
+        n_rows_, n_columns_ = int(n_rows/square_size + 1), int(n_columns/square_size + 1)
+        rows_grid, columns_grid = np.meshgrid(range(n_rows_), range(n_columns_), indexing='ij')
+        high_res_checkerboard = (np.mod(rows_grid, 2) + np.mod(columns_grid, 2)) == 1
+        square = np.ones((square_size,square_size))
+        checkerboard = np.kron(high_res_checkerboard, square)[:n_rows,:n_columns]
+
+        return checkerboard
+    
+    checkerboard = make_checkerboard(alpha_image.size[1], alpha_image.size[0], 16)
+    checkerboard = np.clip((checkerboard * 255), 128, 192).astype(np.uint8)
+    checkerboard = Image.fromarray(checkerboard).convert("RGBA")
+    checkerboard.putalpha(ImageOps.invert(mask_image))
+    
+    output_image = Image.alpha_composite(alpha_image, checkerboard)
+    
+    clear_cache()
+    return output_image
+
 def run_get_mask(sel_mask):
     clear_cache()
     global sam_dict
@@ -489,12 +532,7 @@ def run_get_mask(sel_mask):
     mask_image = sam_dict["mask_image"]
 
     global ia_outputs_dir
-    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
-    if config_save_folder in ["inpaint-anything", "img2img-images"]:
-        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
-                                      "outputs", config_save_folder,
-                                      datetime.now().strftime("%Y-%m-%d"))
-    
+    update_ia_outputs_dir()
     if not os.path.isdir(ia_outputs_dir):
         os.makedirs(ia_outputs_dir, exist_ok=True)
     save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
@@ -527,11 +565,7 @@ def run_cn_inpaint(input_image, sel_mask,
         return None
 
     global ia_outputs_dir
-    config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
-    if config_save_folder in ["inpaint-anything", "img2img-images"]:
-        ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
-                                      "outputs", config_save_folder,
-                                      datetime.now().strftime("%Y-%m-%d"))
+    update_ia_outputs_dir()
     if cn_save_mask_chk:
         if not os.path.isdir(ia_outputs_dir):
             os.makedirs(ia_outputs_dir, exist_ok=True)
@@ -743,13 +777,22 @@ def on_ui_tabs():
 
                 with gr.Tab("Mask only"):
                     with gr.Row():
-                        get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
+                        with gr.Column():
+                            get_alpha_image_btn = gr.Button("Get mask as alpha of image", elem_id="get_alpha_image_btn")
+                        with gr.Column():
+                            get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
                     
                     with gr.Row():
-                        mask_out_image = gr.Image(label="Mask image", elem_id="mask_out_image", type="numpy", interactive=False).style(height=480)
+                        with gr.Column():
+                            alpha_out_image = gr.Image(label="Alpha channel image", elem_id="alpha_out_image", type="pil", interactive=False)
+                        with gr.Column():
+                            mask_out_image = gr.Image(label="Mask image", elem_id="mask_out_image", type="numpy", interactive=False)
 
                     with gr.Row():
-                        mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
+                        with gr.Column():
+                            gr.Markdown("")
+                        with gr.Column():
+                            mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
             
             with gr.Column():
                 sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
@@ -782,6 +825,10 @@ def on_ui_tabs():
                 run_cleaner,
                 inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk],
                 outputs=[cleaner_out_image])
+            get_alpha_image_btn.click(
+                run_get_alpha_image,
+                inputs=[input_image, sel_mask],
+                outputs=[alpha_out_image])
             get_mask_btn.click(
                 run_get_mask,
                 inputs=[sel_mask],
