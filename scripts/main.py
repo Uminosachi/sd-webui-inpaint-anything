@@ -417,7 +417,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 
     print("Using sampler", sampler_name)
     if sampler_name == "DDIM":
-        pipe.scheduler = KDPM2AncestralDiscreteScheduler.from_config(pipe.scheduler.config)
+        pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
     elif sampler_name == "Euler":
         pipe.scheduler = EulerDiscreteScheduler.from_config(pipe.scheduler.config)
     elif sampler_name == "Euler a":
