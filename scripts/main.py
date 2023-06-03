@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from PIL import Image, ImageFilter, ImageOps
 import gradio as gr
-from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler
+from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler, EulerDiscreteScheduler, EulerAncestralDiscreteScheduler, KDPM2DiscreteScheduler, KDPM2AncestralDiscreteScheduler
 from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
 from scripts.get_dataset_colormap import create_pascal_label_colormap
 from torch.hub import download_url_to_file
@@ -37,6 +37,21 @@ from modules.processing import StableDiffusionProcessingImg2Img, process_images,
 from modules.sd_samplers import samplers_for_img2img
 
 _DOWNLOAD_COMPLETE = "Download complete"
+
+def get_sampler_names():
+    """Get sampler name list.
+
+    Returns:
+        list: sampler name list
+    """
+    sampler_names = [
+        "DDIM",
+        "Euler",
+        "Euler a",
+        "DPM2 Karras",
+        "DPM2 a Karras",
+        ]
+    return sampler_names
 
 def get_sam_model_ids():
     """Get SAM model ids list.
@@ -358,7 +373,7 @@ def auto_resize_to_pil(input_image, mask_image):
     
     return init_image, mask_image
 
-def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk):
+def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk, sampler_name="DDIM"):
     clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
@@ -399,7 +414,20 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float16, local_files_only=local_files_only)
     pipe.safety_checker = None
 
-    pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
+    print("Using sampler", sampler_name)
+    if sampler_name == "DDIM":
+        pipe.scheduler = KDPM2AncestralDiscreteScheduler.from_config(pipe.scheduler.config)
+    elif sampler_name == "Euler":
+        pipe.scheduler = EulerDiscreteScheduler.from_config(pipe.scheduler.config)
+    elif sampler_name == "Euler a":
+        pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
+    elif sampler_name == "DPM2 Karras":
+        pipe.scheduler = KDPM2DiscreteScheduler.from_config(pipe.scheduler.config)
+    elif sampler_name == "DPM2 a Karras":
+        pipe.scheduler = KDPM2AncestralDiscreteScheduler.from_config(pipe.scheduler.config)
+    else:
+        print("Sampler fallback to DDIM")
+        pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
     
     if seed < 0:
         seed = random.randint(0, 2147483647)
@@ -685,6 +713,7 @@ class Script(scripts.Script):
 def on_ui_tabs():
     global sam_dict
     
+    sampler_names = get_sampler_names()
     sam_model_ids = get_sam_model_ids()
     model_ids = get_model_ids()
     cleaner_model_ids = get_cleaner_model_ids()
@@ -725,6 +754,8 @@ def on_ui_tabs():
                     prompt = gr.Textbox(label="Inpainting prompt", elem_id="sd_prompt")
                     n_prompt = gr.Textbox(label="Negative prompt", elem_id="sd_n_prompt")
                     with gr.Accordion("Advanced options", open=False):
+                        sampler_name = gr.Dropdown(label="Sampler", elem_id="sampler_name", choices=sampler_names,
+                                                   value=sampler_names[0], show_label=True)
                         ddim_steps = gr.Slider(label="Sampling Steps", elem_id="ddim_steps", minimum=1, maximum=50, value=20, step=1)
                         cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
                         seed = gr.Slider(
@@ -857,7 +888,7 @@ def on_ui_tabs():
             apply_mask_btn.click(apply_mask, inputs=[input_image, sel_mask], outputs=[sel_mask])
             inpaint_btn.click(
                 run_inpaint,
-                inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk],
+                inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk, sampler_name],
                 outputs=[out_image])
             cleaner_btn.click(
                 run_cleaner,
