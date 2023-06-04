@@ -855,10 +855,11 @@ def on_ui_tabs():
                                         cn_ref_module_id = gr.Dropdown(label="Reference Type", elem_id="cn_ref_module_id", choices=cn_ref_module_ids, value=cn_ref_module_ids[-1], show_label=True)
                                         cn_ref_weight = gr.Slider(label="Reference Control Weight", elem_id="cn_ref_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
                                         cn_ref_mode = gr.Dropdown(label="Reference Control Mode", elem_id="cn_ref_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
+                                        gr.Markdown("The Reference-only Control is enabled only when a left reference image is present.")
                             else:
                                 with gr.Row():
                                     gr.Markdown("The Multi ControlNet setting is currently set to 1.<br>" + \
-                                        "If you wish to use Reference-Only Control, please adjust the ControlNet setting.")
+                                        "If you wish to use the Reference-Only Control, please adjust the ControlNet setting.")
 
                         with gr.Row():
                             with gr.Column():
