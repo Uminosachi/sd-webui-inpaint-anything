@@ -611,7 +611,7 @@ def run_get_mask(sel_mask):
 
 def run_cn_inpaint(input_image, sel_mask,
                    cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
-                   cn_weight, cn_mode):
+                   cn_weight, cn_mode, cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced"):
     clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
@@ -666,6 +666,24 @@ def run_cn_inpaint(input_image, sel_mask,
         pixel_perfect=True,
         control_mode=cn_mode,
     )]
+    
+    if cn_ref_module_id is not None and cn_ref_image is not None:
+        cn_ref_image = cv2.resize(cn_ref_image, (width, height), interpolation=cv2.INTER_AREA)
+        
+        cn_units.append(cnet.ControlNetUnit(
+            enabled=True,
+            module=cn_ref_module_id,
+            model=None,
+            weight=cn_ref_weight,
+            image=np.array(cn_ref_image),
+            resize_mode=cnet.ResizeMode.RESIZE,
+            low_vram=False,
+            processor_res=min(width, height),
+            guidance_start=0.0,
+            guidance_end=1.0,
+            pixel_perfect=True,
+            control_mode=cn_ref_mode,
+        ))
     
     p.script_args = np.zeros(get_controlnet_args_to(p.scripts))
     cnet.update_cn_script_in_processing(p, cn_units)
@@ -735,6 +753,12 @@ def on_ui_tabs():
         cn_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
     else:
         cn_sampler_ids = ["DDIM"]
+
+    cn_ref_only = False
+    if cn_enabled and sam_dict["cnet"].get_max_models_num() > 1:
+        cn_ref_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "reference" in cn]
+        if len(cn_ref_module_ids) > 0:
+            cn_ref_only = True
 
     with gr.Blocks(analytics_enabled=False) as inpaint_anything_interface:
         with gr.Row():
@@ -822,6 +846,19 @@ def on_ui_tabs():
                                     cn_weight = gr.Slider(label="Control Weight", elem_id="cn_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
                                 with gr.Column():
                                     cn_mode = gr.Dropdown(label="Control Mode", elem_id="cn_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
+                                
+                            if cn_ref_only:
+                                with gr.Row():
+                                    with gr.Column():
+                                        cn_ref_image = gr.Image(label="Reference Image", elem_id="cn_ref_image", source="upload", type="numpy", interactive=True)
+                                    with gr.Column():
+                                        cn_ref_module_id = gr.Dropdown(label="Reference Type", elem_id="cn_ref_module_id", choices=cn_ref_module_ids, value=cn_ref_module_ids[-1], show_label=True)
+                                        cn_ref_weight = gr.Slider(label="Reference Control Weight", elem_id="cn_ref_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
+                                        cn_ref_mode = gr.Dropdown(label="Reference Control Mode", elem_id="cn_ref_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
+                            else:
+                                with gr.Row():
+                                    gr.Markdown("The Multi ControlNet setting is currently set to 1.<br>" + \
+                                        "If you wish to use Reference-Only Control, please adjust the ControlNet setting.")
 
                         with gr.Row():
                             with gr.Column():
@@ -911,12 +948,18 @@ def on_ui_tabs():
                 _js="inpaintAnything_sendToInpaint",
                 inputs=None,
                 outputs=None)
-            if cn_enabled:
+            if cn_enabled and not cn_ref_only:
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
                     inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_weight, cn_mode],
                     outputs=[cn_out_image])
+            elif cn_enabled and cn_ref_only:
+                cn_inpaint_btn.click(
+                    run_cn_inpaint,
+                    inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
+                            cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode],
+                    outputs=[cn_out_image])                
 
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
