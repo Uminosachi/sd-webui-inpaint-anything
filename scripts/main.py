@@ -760,7 +760,7 @@ def on_ui_tabs():
                                 sampler_name = gr.Dropdown(label="Sampler", elem_id="sampler_name", choices=sampler_names,
                                                            value=sampler_names[0], show_label=True)
                             with gr.Column():
-                                ddim_steps = gr.Slider(label="Sampling Steps", elem_id="ddim_steps", minimum=1, maximum=50, value=20, step=1)
+                                ddim_steps = gr.Slider(label="Sampling Steps", elem_id="ddim_steps", minimum=1, maximum=100, value=20, step=1)
                         cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
                         seed = gr.Slider(
                             label="Seed",
@@ -805,7 +805,7 @@ def on_ui_tabs():
                                 with gr.Column():
                                     cn_sampler_id = gr.Dropdown(label="Sampling method", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[0], show_label=True)
                                 with gr.Column():
-                                    cn_ddim_steps = gr.Slider(label="Sampling Steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=20, step=1)
+                                    cn_ddim_steps = gr.Slider(label="Sampling steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=20, step=1)
                             cn_cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
                             cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising Strength', value=0.75, elem_id="cn_strength")
                             cn_seed = gr.Slider(
