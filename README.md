@@ -49,7 +49,7 @@ To download the model:
 
 * Enter your desired Prompt and Negative Prompt, then choose the Inpainting Model ID.
 * Click on the `Run Inpainting` button (**Please note that it may take some time to download the model for the first time**).
-* In the Advanced options, you can adjust the Sampling Steps, Guidance Scale, and Seed.
+* In the Advanced options, you can adjust the Sampler, Sampling Steps, Guidance Scale, and Seed.
 * If you enable the `Mask area Only` option, modifications will be confined to the designated mask area only.
 * Inpainting process is performed using [diffusers](https://github.com/huggingface/diffusers).
 
@@ -65,7 +65,10 @@ To download the model:
 * Enter your desired Prompt and Negative Prompt.
 * Click on the `Run ControlNet Inpaint` button to start the process.
 * In the Advanced options, you can adjust the Sampler, Sampling Steps, Guidance Scale, Denoising Strength, and Seed.
+
 * The Control Weight and Control Mode can be modified in the ControlNet options.
+  * The Reference-Only Control can be utilized if the Multi ControlNet setting is configured to 2 or higher.
+
 * Make sure to install the ControlNet extension that supports the `inpaint_only` preprocessor and the ControlNet inpaint model.
 * Requires: The [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension and the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model in the `extensions/sd-webui-controlnet/models` directory.
 
