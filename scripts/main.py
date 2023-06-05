@@ -832,7 +832,7 @@ def on_ui_tabs():
                                 with gr.Column():
                                     cn_sampler_id = gr.Dropdown(label="Sampling method", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[-1], show_label=True)
                                 with gr.Column():
-                                    cn_ddim_steps = gr.Slider(label="Sampling steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=20, step=1)
+                                    cn_ddim_steps = gr.Slider(label="Sampling steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=30, step=1)
                             cn_cfg_scale = gr.Slider(label="Guidance scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
                             cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength', value=0.5, elem_id="cn_strength")
                             cn_seed = gr.Slider(
