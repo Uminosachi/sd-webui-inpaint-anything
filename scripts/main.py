@@ -31,8 +31,9 @@ from modules.devices import device, torch_gc
 from modules.safe import unsafe_torch_load, load
 
 import re
-from scripts.webui_controlnet import (find_controlnet, get_sd_img2img_processing, backup_alwayson_scripts,
-                                      disable_alwayson_scripts, restore_alwayson_scripts, get_controlnet_args_to)
+from scripts.webui_controlnet import (find_controlnet, get_sd_img2img_processing,
+                                      backup_alwayson_scripts, disable_alwayson_scripts, restore_alwayson_scripts,
+                                      get_controlnet_args_to, clear_controlnet_cache)
 from modules.processing import StableDiffusionProcessingImg2Img, process_images, create_infotext
 from modules.sd_samplers import samplers_for_img2img
 
@@ -689,7 +690,8 @@ def run_cn_inpaint(input_image, sel_mask,
     cnet.update_cn_script_in_processing(p, cn_units)
 
     processed = process_images(p)
-    
+
+    clear_controlnet_cache(p.scripts)
     restore_alwayson_scripts(p.scripts)
 
     no_hash_cn_model_id = re.sub("\s\[[0-9a-f]{8}\]", "", cn_model_id).strip()
@@ -716,18 +718,18 @@ def run_cn_inpaint(input_image, sel_mask,
     clear_cache()
     return output_image
 
-class Script(scripts.Script):
-  def __init__(self) -> None:
-    super().__init__()
+# class Script(scripts.Script):
+#   def __init__(self) -> None:
+#     super().__init__()
 
-  def title(self):
-    return "Inpaint Anything"
+#   def title(self):
+#     return "Inpaint Anything"
 
-  def show(self, is_img2img):
-    return scripts.AlwaysVisible
+#   def show(self, is_img2img):
+#     return scripts.AlwaysVisible
 
-  def ui(self, is_img2img):
-    return ()
+#   def ui(self, is_img2img):
+#     return ()
 
 def on_ui_tabs():
     global sam_dict
@@ -849,17 +851,18 @@ def on_ui_tabs():
                                 
                             if cn_ref_only:
                                 with gr.Row():
+                                    gr.Markdown("Reference-Only Control (enabled only when a reference image below is present)")
+                                with gr.Row():
                                     with gr.Column():
                                         cn_ref_image = gr.Image(label="Reference Image", elem_id="cn_ref_image", source="upload", type="numpy", interactive=True)
                                     with gr.Column():
                                         cn_ref_module_id = gr.Dropdown(label="Reference Type", elem_id="cn_ref_module_id", choices=cn_ref_module_ids, value=cn_ref_module_ids[-1], show_label=True)
                                         cn_ref_weight = gr.Slider(label="Reference Control Weight", elem_id="cn_ref_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
                                         cn_ref_mode = gr.Dropdown(label="Reference Control Mode", elem_id="cn_ref_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
-                                        gr.Markdown("The Reference-only Control is enabled only when a left reference image is present.")
                             else:
                                 with gr.Row():
                                     gr.Markdown("The Multi ControlNet setting is currently set to 1.<br>" + \
-                                        "If you wish to use the Reference-Only Control, please adjust the ControlNet setting.")
+                                        "If you wish to use the Reference-Only Control, please adjust the Multi ControlNet setting to 2 or more and restart the Web UI.")
 
                         with gr.Row():
                             with gr.Column():

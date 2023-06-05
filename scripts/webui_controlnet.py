@@ -63,7 +63,7 @@ def disable_alwayson_scripts(input_scripts):
             continue
         if "controlnet" in os.path.basename(script.filename) or script.title().lower() == "controlnet":
             continue
-        # print("Disabled script: {}".format(os.path.basename(script.filename)))
+        # print("Disabled script: {}".format(script.title()))
         disabled_scripts.append(script)
     
     for script in disabled_scripts:
@@ -108,6 +108,18 @@ def get_controlnet_args_to(input_scripts):
         if "controlnet" in os.path.basename(script.filename) or script.title().lower() == "controlnet":
             return script.args_to
     return get_max_args_to(input_scripts)
+
+def clear_controlnet_cache(input_scripts):
+    """Clear ControlNet cache
+
+    Args:
+        input_scripts (ScriptRunner): scripts to clear ControlNet cache
+    """
+    for script in input_scripts.alwayson_scripts:
+        if "controlnet" in os.path.basename(script.filename) or script.title().lower() == "controlnet":
+            if hasattr(script, "model_cache"):
+                # print("Clear ControlNet cache: {}".format(script.title()))
+                script.model_cache.clear()
 
 def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_id, ddim_steps, cfg_scale, strength, seed):
     """Get StableDiffusionProcessingImg2Img instance
