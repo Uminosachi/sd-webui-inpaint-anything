@@ -830,11 +830,11 @@ def on_ui_tabs():
                         with gr.Accordion("Advanced options", elem_id="cn_advanced_options", open=False):
                             with gr.Row():
                                 with gr.Column():
-                                    cn_sampler_id = gr.Dropdown(label="Sampling method", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[0], show_label=True)
+                                    cn_sampler_id = gr.Dropdown(label="Sampling method", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[cn_sampler_ids.index("DDIM")], show_label=True)
                                 with gr.Column():
                                     cn_ddim_steps = gr.Slider(label="Sampling steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=20, step=1)
-                            cn_cfg_scale = gr.Slider(label="Guidance Scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
-                            cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising Strength', value=0.75, elem_id="cn_strength")
+                            cn_cfg_scale = gr.Slider(label="Guidance scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
+                            cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength', value=0.5, elem_id="cn_strength")
                             cn_seed = gr.Slider(
                                 label="Seed",
                                 elem_id="cn_sd_seed",
@@ -848,7 +848,7 @@ def on_ui_tabs():
                                 with gr.Column():
                                     cn_weight = gr.Slider(label="Control Weight", elem_id="cn_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
                                 with gr.Column():
-                                    cn_mode = gr.Dropdown(label="Control Mode", elem_id="cn_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
+                                    cn_mode = gr.Dropdown(label="Control Mode", elem_id="cn_mode", choices=cn_modes, value=cn_modes[-1], show_label=True)
                                 
                             if cn_ref_only:
                                 with gr.Row():
