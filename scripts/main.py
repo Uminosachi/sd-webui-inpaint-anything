@@ -36,6 +36,7 @@ from scripts.webui_controlnet import (find_controlnet, get_sd_img2img_processing
                                       get_controlnet_args_to, clear_controlnet_cache)
 from modules.processing import StableDiffusionProcessingImg2Img, process_images, create_infotext
 from modules.sd_samplers import samplers_for_img2img
+from modules.images import resize_image
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -669,7 +670,7 @@ def run_cn_inpaint(input_image, sel_mask,
     )]
     
     if cn_ref_module_id is not None and cn_ref_image is not None:
-        cn_ref_image = cv2.resize(cn_ref_image, (width, height), interpolation=cv2.INTER_AREA)
+        cn_ref_image = resize_image(1, Image.fromarray(cn_ref_image), width=width, height=height)
         
         cn_units.append(cnet.ControlNetUnit(
             enabled=True,
@@ -963,7 +964,7 @@ def on_ui_tabs():
                     run_cn_inpaint,
                     inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode],
-                    outputs=[cn_out_image])                
+                    outputs=[cn_out_image])
 
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
