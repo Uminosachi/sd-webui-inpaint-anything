@@ -931,7 +931,7 @@ def on_ui_tabs():
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text])
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask])
             expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask], outputs=[sel_mask])
-            apply_mask_btn.click(apply_mask, inputs=[input_image, sel_mask], outputs=[sel_mask])
+            apply_mask_btn.click(apply_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(None, None, None, _js="inpaintAnything_clearSelMask")
             inpaint_btn.click(
                 run_inpaint,
                 inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk, sampler_name],

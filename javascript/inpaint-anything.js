@@ -75,3 +75,8 @@ async function inpaintAnything_sendToInpaint() {
 	await updateGradioImage(document.querySelector("#img_inpaint_base"), inputImgDataUrl, "input.png");
 	await updateGradioImage(document.querySelector("#img_inpaint_mask"), maskImgDataUrl, "mask.png");
 }
+
+async function inpaintAnything_clearSelMask() {
+	const sel_mask = document.querySelector("#sel_mask");
+	sel_mask.dispatch("clear_mask");
+}
