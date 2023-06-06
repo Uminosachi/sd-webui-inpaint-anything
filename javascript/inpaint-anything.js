@@ -77,6 +77,11 @@ async function inpaintAnything_sendToInpaint() {
 }
 
 async function inpaintAnything_clearSelMask() {
-	const sel_mask = document.querySelector("#sel_mask");
-	sel_mask.dispatch("clear_mask");
+	const sel_mask_clear = document.querySelector("#sel_mask").querySelector("button[aria-label='Clear']");
+	sel_mask_clear.dispatchEvent(
+		new Event('click', {
+			bubbles: true,
+			composed: true,
+		})
+	);
 }
