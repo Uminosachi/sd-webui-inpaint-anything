@@ -649,7 +649,7 @@ def run_cn_inpaint(input_image, sel_mask,
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
-    p = get_sd_img2img_processing(init_image, mask_image, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed)
+    p = get_sd_img2img_processing(init_image, None, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed)
 
     backup_alwayson_scripts(p.scripts)
     disable_alwayson_scripts(p.scripts)
@@ -834,7 +834,7 @@ def on_ui_tabs():
                                 with gr.Column():
                                     cn_ddim_steps = gr.Slider(label="Sampling steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=30, step=1)
                             cn_cfg_scale = gr.Slider(label="Guidance scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
-                            cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength', value=0.5, elem_id="cn_strength")
+                            cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength', value=0.6, elem_id="cn_strength")
                             cn_seed = gr.Slider(
                                 label="Seed",
                                 elem_id="cn_sd_seed",
