@@ -76,8 +76,24 @@ async function inpaintAnything_sendToInpaint() {
 	await updateGradioImage(document.querySelector("#img_inpaint_mask"), maskImgDataUrl, "mask.png");
 }
 
+async function inpaintAnything_clearSamMask() {
+	const sam_mask_clear = document.querySelector("#sam_image").querySelector("button[aria-label='Clear']");
+	if (!sam_mask_clear) {
+		return;
+	}
+	sam_mask_clear.dispatchEvent(
+		new Event('click', {
+			bubbles: true,
+			composed: true,
+		})
+	);
+}
+
 async function inpaintAnything_clearSelMask() {
 	const sel_mask_clear = document.querySelector("#sel_mask").querySelector("button[aria-label='Clear']");
+	if (!sel_mask_clear) {
+		return;
+	}
 	sel_mask_clear.dispatchEvent(
 		new Event('click', {
 			bubbles: true,
