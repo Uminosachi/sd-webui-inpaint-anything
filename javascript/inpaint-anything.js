@@ -77,6 +77,8 @@ async function inpaintAnything_sendToInpaint() {
 }
 
 async function inpaintAnything_clearSamMask() {
+	await new Promise(s => setTimeout(s, 300))
+
 	const sam_mask_clear = document.querySelector("#sam_image").querySelector("button[aria-label='Clear']");
 	if (!sam_mask_clear) {
 		return;
@@ -90,6 +92,8 @@ async function inpaintAnything_clearSamMask() {
 }
 
 async function inpaintAnything_clearSelMask() {
+	await new Promise(s => setTimeout(s, 300))
+
 	const sel_mask_clear = document.querySelector("#sel_mask").querySelector("button[aria-label='Clear']");
 	if (!sel_mask_clear) {
 		return;
