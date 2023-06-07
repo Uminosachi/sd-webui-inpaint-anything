@@ -411,10 +411,26 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     else:
         local_files_only = True
     
-    if platform.system() == "Darwin":
-        pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float32, local_files_only=local_files_only)
-    else:
-        pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float16, local_files_only=local_files_only)
+    try:
+        if platform.system() == "Darwin":
+            pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float32, local_files_only=local_files_only)
+        else:
+            pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float16, local_files_only=local_files_only)
+    except Exception as e:
+        if not config_offline_inpainting:
+            try:
+                if platform.system() == "Darwin":
+                    pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float32, resume_download=True)
+                else:
+                    pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float16, resume_download=True)
+            except Exception as e:
+                if platform.system() == "Darwin":
+                    pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float32, force_download=True)
+                else:
+                    pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch.float16, force_download=True)
+        else:
+            print(e)
+            return None
     pipe.safety_checker = None
 
     print("Using sampler", sampler_name)
