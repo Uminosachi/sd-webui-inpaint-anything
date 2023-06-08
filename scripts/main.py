@@ -212,6 +212,10 @@ def clear_cache():
     gc.collect()
     torch_gc()
 
+def sleep_clear_cache():
+    time.sleep(0.3)
+    clear_cache()    
+
 def run_sam(input_image, sam_model_id, sam_image):
     unload_model_weights()
     clear_cache()
@@ -949,7 +953,7 @@ def on_ui_tabs():
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask").then(
-                fn=clear_cache, inputs=None, outputs=None)
+                fn=sleep_clear_cache, inputs=None, outputs=None)
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
             expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
@@ -960,12 +964,12 @@ def on_ui_tabs():
                 run_inpaint,
                 inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk, sampler_name],
                 outputs=[out_image]).then(
-                fn=clear_cache, inputs=None, outputs=None)
+                fn=sleep_clear_cache, inputs=None, outputs=None)
             cleaner_btn.click(
                 run_cleaner,
                 inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk],
                 outputs=[cleaner_out_image]).then(
-                fn=clear_cache, inputs=None, outputs=None)
+                fn=sleep_clear_cache, inputs=None, outputs=None)
             get_alpha_image_btn.click(
                 run_get_alpha_image,
                 inputs=[input_image, sel_mask],
@@ -985,14 +989,14 @@ def on_ui_tabs():
                     inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_weight, cn_mode],
                     outputs=[cn_out_image]).then(
-                    fn=clear_cache, inputs=None, outputs=None)
+                    fn=sleep_clear_cache, inputs=None, outputs=None)
             elif cn_enabled and cn_ref_only:
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
                     inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode],
                     outputs=[cn_out_image]).then(
-                    fn=clear_cache, inputs=None, outputs=None)
+                    fn=sleep_clear_cache, inputs=None, outputs=None)
 
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
