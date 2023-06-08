@@ -214,7 +214,7 @@ def clear_cache():
 
 def sleep_clear_cache():
     time.sleep(0.3)
-    clear_cache()    
+    clear_cache()
 
 def run_sam(input_image, sam_model_id, sam_image):
     unload_model_weights()
@@ -254,6 +254,7 @@ def run_sam(input_image, sam_model_id, sam_image):
     
     sam_dict["sam_masks"] = sam_masks
 
+    del sam_mask_generator
     clear_cache()
     reload_model_weights()
     if sam_image is None:
