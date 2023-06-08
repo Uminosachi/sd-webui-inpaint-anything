@@ -217,7 +217,6 @@ def sleep_clear_cache():
     clear_cache()
 
 def run_sam(input_image, sam_model_id, sam_image):
-    unload_model_weights()
     clear_cache()
     global sam_dict
     if sam_dict["sam_masks"] is not None:
@@ -230,6 +229,9 @@ def run_sam(input_image, sam_model_id, sam_image):
     
     if input_image is None:
         return None, "Input image not found"
+    
+    unload_model_weights()
+    clear_cache()
     print("input_image:", input_image.shape, input_image.dtype)
     
     cm_pascal = create_pascal_label_colormap()
@@ -419,6 +421,9 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     else:
         local_files_only = True
     
+    unload_model_weights()
+    clear_cache()
+
     if platform.system() == "Darwin":
         torch_dtype = torch.float32
     else:
@@ -435,9 +440,13 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
                     pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch_dtype, force_download=True)
                 except Exception as e:
                     print(e)
+                    clear_cache()
+                    reload_model_weights()
                     return None
         else:
             print(e)
+            clear_cache()
+            reload_model_weights()
             return None
     pipe.safety_checker = None
 
@@ -516,6 +525,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     output_image.save(save_name, pnginfo=metadata)
     
     clear_cache()
+    reload_model_weights()
     return output_image
 
 def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
@@ -537,6 +547,9 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
         save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
         save_name = os.path.join(ia_outputs_dir, save_name)
         Image.fromarray(mask_image).save(save_name)
+
+    unload_model_weights()
+    clear_cache()
 
     print(cleaner_model_id)
     model = ModelManager(name=cleaner_model_id, device=device)
@@ -571,6 +584,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     output_image.save(save_name)
     
     clear_cache()
+    reload_model_weights()
     return output_image
 
 def run_get_alpha_image(input_image, sel_mask):
