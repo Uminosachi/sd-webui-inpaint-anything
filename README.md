@@ -53,6 +53,7 @@ To download the model:
 * In the Advanced options, you can adjust the Sampler, Sampling Steps, Guidance Scale, and Seed.
 * If you enable the `Mask area Only` option, modifications will be confined to the designated mask area only.
 * Inpainting process is performed using [diffusers](https://github.com/huggingface/diffusers).
+* Tips: You can directly drag and drop the inpainted image into the input image field on the Web UI.
 
 ### Cleaner Tab
 
