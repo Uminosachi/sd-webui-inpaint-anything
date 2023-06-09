@@ -738,7 +738,7 @@ def run_cn_inpaint(input_image, sel_mask,
     clear_controlnet_cache(p.scripts)
     restore_alwayson_scripts(p.scripts)
 
-    no_hash_cn_model_id = re.sub("\s\[[0-9a-f]{8}\]", "", cn_model_id).strip()
+    no_hash_cn_model_id = re.sub("\s\[[0-9a-f]{8,10}\]", "", cn_model_id).strip()
 
     if processed is not None:
         if len(processed.images) > 0:
@@ -751,7 +751,7 @@ def run_cn_inpaint(input_image, sel_mask,
 
             if not os.path.isdir(ia_outputs_dir):
                 os.makedirs(ia_outputs_dir, exist_ok=True)
-            save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(no_hash_cn_model_id) + ".png"
+            save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(no_hash_cn_model_id) + "_" + str(cn_seed) + ".png"
             save_name = os.path.join(ia_outputs_dir, save_name)
             output_image.save(save_name, pnginfo=metadata)
         else:
@@ -785,9 +785,11 @@ def on_ui_tabs():
 
     cn_enabled = False
     if sam_dict["cnet"] is not None:
-        cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint_only" in cn]
-        if len(cn_module_ids) == 0:
-            cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint" in cn]
+        cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint" in cn]
+        cn_module_index = 0
+        if "inpaint_only" in cn_module_ids:
+            cn_module_index = cn_module_ids.index("inpaint_only")
+
         cn_model_ids = [cn for cn in sam_dict["cnet"].get_models() if "inpaint" in cn]
         cn_modes = [mode.value for mode in sam_dict["cnet"].ControlMode]
 
@@ -909,7 +911,7 @@ def on_ui_tabs():
 
                         with gr.Row():
                             with gr.Column():
-                                cn_module_id = gr.Dropdown(label="ControlNet Preprocessor", elem_id="cn_module_id", choices=cn_module_ids, value=cn_module_ids[0], show_label=True)
+                                cn_module_id = gr.Dropdown(label="ControlNet Preprocessor", elem_id="cn_module_id", choices=cn_module_ids, value=cn_module_ids[cn_module_index], show_label=True)
                                 cn_model_id = gr.Dropdown(label="ControlNet Model ID", elem_id="cn_model_id", choices=cn_model_ids, value=cn_model_ids[0], show_label=True)
                             with gr.Column():
                                 with gr.Row():
