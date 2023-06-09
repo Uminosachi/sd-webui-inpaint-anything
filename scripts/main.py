@@ -37,7 +37,7 @@ from scripts.webui_controlnet import (find_controlnet, get_sd_img2img_processing
 from modules.processing import StableDiffusionProcessingImg2Img, process_images, create_infotext
 from modules.sd_samplers import samplers_for_img2img
 from modules.images import resize_image
-from modules.sd_models import unload_model_weights, reload_model_weights
+from modules.sd_models import unload_model_weights, reload_model_weights, model_data
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -167,12 +167,39 @@ ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
 sam_dict = dict(sam_masks=None, mask_image=None, cnet=None)
 
 def update_ia_outputs_dir():
+    """Update inpaint-anything outputs directory.
+    
+    Returns:
+        None
+    """
     global ia_outputs_dir
     config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
     if config_save_folder in ["inpaint-anything", "img2img-images"]:
         ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
                                       "outputs", config_save_folder,
                                       datetime.now().strftime("%Y-%m-%d"))
+
+def save_mask_image(mask_image, save_mask_chk=False):
+    """Save mask image.
+    
+    Args:
+        mask_image (np.ndarray): mask image
+        save_mask_chk (bool, optional): If True, save mask image. Defaults to False.
+    
+    Returns:
+        None
+    """
+    global ia_outputs_dir
+    if save_mask_chk:
+        if not os.path.isdir(ia_outputs_dir):
+            os.makedirs(ia_outputs_dir, exist_ok=True)
+        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
+        save_name = os.path.join(ia_outputs_dir, save_name)
+        Image.fromarray(mask_image).save(save_name)
+
+def post_reload_model_weights():
+    if model_data.get_sd_model() is None:
+        reload_model_weights()
 
 def get_model_ids():
     """Get inpainting model ids list.
@@ -258,7 +285,7 @@ def run_sam(input_image, sam_model_id, sam_image):
 
     del sam_mask_generator
     clear_cache()
-    reload_model_weights()
+    post_reload_model_weights()
     if sam_image is None:
         return seg_image, "Segment Anything complete"
     else:
@@ -399,14 +426,8 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 
     global ia_outputs_dir
     update_ia_outputs_dir()
-    if save_mask_chk:
-        if not os.path.isdir(ia_outputs_dir):
-            os.makedirs(ia_outputs_dir, exist_ok=True)
-        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
-        save_name = os.path.join(ia_outputs_dir, save_name)
-        Image.fromarray(mask_image).save(save_name)
+    save_mask_image(mask_image, save_mask_chk)
 
-    print(model_id)
     config_offline_inpainting = shared.opts.data.get("inpaint_anything_offline_inpainting", False)
     if config_offline_inpainting:
         print("Enable offline network Inpainting:", config_offline_inpainting)
@@ -424,6 +445,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     unload_model_weights()
     clear_cache()
 
+    print(model_id)
     if platform.system() == "Darwin":
         torch_dtype = torch.float32
     else:
@@ -441,12 +463,12 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
                 except Exception as e:
                     print(e)
                     clear_cache()
-                    reload_model_weights()
+                    post_reload_model_weights()
                     return None
         else:
             print(e)
             clear_cache()
-            reload_model_weights()
+            post_reload_model_weights()
             return None
     pipe.safety_checker = None
 
@@ -524,8 +546,9 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     save_name = os.path.join(ia_outputs_dir, save_name)
     output_image.save(save_name, pnginfo=metadata)
     
+    del pipe
     clear_cache()
-    reload_model_weights()
+    post_reload_model_weights()
     return output_image
 
 def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
@@ -541,12 +564,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
 
     global ia_outputs_dir
     update_ia_outputs_dir()
-    if cleaner_save_mask_chk:
-        if not os.path.isdir(ia_outputs_dir):
-            os.makedirs(ia_outputs_dir, exist_ok=True)
-        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
-        save_name = os.path.join(ia_outputs_dir, save_name)
-        Image.fromarray(mask_image).save(save_name)
+    save_mask_image(mask_image, cleaner_save_mask_chk)
 
     unload_model_weights()
     clear_cache()
@@ -583,8 +601,9 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     save_name = os.path.join(ia_outputs_dir, save_name)
     output_image.save(save_name)
     
+    del model
     clear_cache()
-    reload_model_weights()
+    post_reload_model_weights()
     return output_image
 
 def run_get_alpha_image(input_image, sel_mask):
@@ -673,12 +692,7 @@ def run_cn_inpaint(input_image, sel_mask,
 
     global ia_outputs_dir
     update_ia_outputs_dir()
-    if cn_save_mask_chk:
-        if not os.path.isdir(ia_outputs_dir):
-            os.makedirs(ia_outputs_dir, exist_ok=True)
-        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
-        save_name = os.path.join(ia_outputs_dir, save_name)
-        Image.fromarray(mask_image).save(save_name)
+    save_mask_image(mask_image, cn_save_mask_chk)
 
     # print(cn_model_id)
     if cn_seed < 0:
@@ -967,8 +981,7 @@ def on_ui_tabs():
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text]).then(
-                fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask").then(
-                fn=sleep_clear_cache, inputs=None, outputs=None)
+                fn=sleep_clear_cache, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
             expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
