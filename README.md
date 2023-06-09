@@ -16,6 +16,7 @@ To install the software, please follow these steps:
 * Enter `https://github.com/Uminosachi/sd-webui-inpaint-anything.git` in the `URL for extension's git repository` field.
 * Click on the `Install` button.
 * Once installation is complete, restart the Web UI.
+* Note: This extension supports v1.3.0 or higher of AUTOMATIC1111's Stable Diffusion Web UI.
 
 ## Running the application
 
