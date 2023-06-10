@@ -197,6 +197,10 @@ def save_mask_image(mask_image, save_mask_chk=False):
         save_name = os.path.join(ia_outputs_dir, save_name)
         Image.fromarray(mask_image).save(save_name)
 
+def pre_unload_model_weights():
+    unload_model_weights()
+    clear_cache()
+
 def post_reload_model_weights():
     if model_data.get_sd_model() is None:
         reload_model_weights()
@@ -258,8 +262,7 @@ def run_sam(input_image, sam_model_id, sam_image):
     if input_image is None:
         return None, "Input image not found"
     
-    unload_model_weights()
-    clear_cache()
+    pre_unload_model_weights()
     print("input_image:", input_image.shape, input_image.dtype)
     
     cm_pascal = create_pascal_label_colormap()
@@ -441,8 +444,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     else:
         local_files_only = True
     
-    unload_model_weights()
-    clear_cache()
+    pre_unload_model_weights()
 
     print(model_id)
     if platform.system() == "Darwin":
@@ -559,8 +561,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     update_ia_outputs_dir()
     save_mask_image(mask_image, cleaner_save_mask_chk)
 
-    unload_model_weights()
-    clear_cache()
+    pre_unload_model_weights()
 
     print(cleaner_model_id)
     model = ModelManager(name=cleaner_model_id, device=device)
