@@ -129,7 +129,10 @@ def get_sam_mask_generator(sam_checkpoint):
     if os.path.isfile(sam_checkpoint):
         torch.load = unsafe_torch_load
         sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
-        sam.to(device=device)
+        if platform.system() == "Darwin":
+            sam.to(device="cpu")
+        else:
+            sam.to(device=device)
         sam_mask_generator = SamAutomaticMaskGenerator(sam)
         torch.load = load
     else:
@@ -152,7 +155,10 @@ def get_sam_predictor(sam_checkpoint):
     if os.path.isfile(sam_checkpoint):
         torch.load = unsafe_torch_load
         sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
-        sam.to(device=device)
+        if platform.system() == "Darwin":
+            sam.to(device="cpu")
+        else:
+            sam.to(device=device)
         sam_predictor = SamPredictor(sam)
         torch.load = load
     else:
@@ -564,7 +570,10 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     pre_unload_model_weights()
 
     print(cleaner_model_id)
-    model = ModelManager(name=cleaner_model_id, device=device)
+    if platform.system() == "Darwin":
+        model = ModelManager(name=cleaner_model_id, device="cpu")
+    else:
+        model = ModelManager(name=cleaner_model_id, device=device)
     
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
