@@ -671,7 +671,7 @@ def run_get_mask(sel_mask):
 
 def run_cn_inpaint(input_image, sel_mask,
                    cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
-                   cn_weight, cn_mode, cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced"):
+                   cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced"):
     clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
@@ -714,7 +714,7 @@ def run_cn_inpaint(input_image, sel_mask,
         weight=cn_weight,
         image={"image": np.array(init_image), "mask": np.array(mask_image)},
         resize_mode=cnet.ResizeMode.RESIZE,
-        low_vram=False,
+        low_vram=cn_low_vram_chk,
         processor_res=min(width, height),
         guidance_start=0.0,
         guidance_end=1.0,
@@ -732,7 +732,7 @@ def run_cn_inpaint(input_image, sel_mask,
             weight=cn_ref_weight,
             image=np.array(cn_ref_image),
             resize_mode=cnet.ResizeMode.RESIZE,
-            low_vram=False,
+            low_vram=cn_low_vram_chk,
             processor_res=min(width, height),
             guidance_start=0.0,
             guidance_end=1.0,
@@ -900,6 +900,7 @@ def on_ui_tabs():
                         with gr.Accordion("ControlNet options", elem_id="cn_cn_options", open=False):
                             with gr.Row():
                                 with gr.Column():
+                                    cn_low_vram_chk = gr.Checkbox(label="Low VRAM", elem_id="cn_low_vram_chk", show_label=True, interactive=True)
                                     cn_weight = gr.Slider(label="Control Weight", elem_id="cn_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
                                 with gr.Column():
                                     cn_mode = gr.Dropdown(label="Control Mode", elem_id="cn_mode", choices=cn_modes, value=cn_modes[-1], show_label=True)
@@ -1017,14 +1018,14 @@ def on_ui_tabs():
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
                     inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
-                            cn_weight, cn_mode],
+                            cn_low_vram_chk, cn_weight, cn_mode],
                     outputs=[cn_out_image]).then(
                     fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None)
             elif cn_enabled and cn_ref_only:
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
                     inputs=[input_image, sel_mask, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
-                            cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode],
+                            cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode],
                     outputs=[cn_out_image]).then(
                     fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None)
 
