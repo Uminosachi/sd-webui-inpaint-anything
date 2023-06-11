@@ -250,7 +250,7 @@ def clear_cache():
     torch_gc()
 
 def sleep_clear_cache_and_reload_model():
-    time.sleep(0.3)
+    time.sleep(0.1)
     clear_cache()
     post_reload_model_weights()
 
