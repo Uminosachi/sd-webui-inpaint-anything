@@ -38,6 +38,9 @@ from modules.processing import process_images, create_infotext
 from modules.sd_samplers import samplers_for_img2img
 from modules.images import resize_image
 from modules.sd_models import unload_model_weights, reload_model_weights
+from segment_anything_hq import sam_model_registry as sam_model_registry_hq
+from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
+from segment_anything_hq import SamPredictor as SamPredictorHQ
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -66,6 +69,9 @@ def get_sam_model_ids():
         "sam_vit_h_4b8939.pth",
         "sam_vit_l_0b3195.pth",
         "sam_vit_b_01ec64.pth",
+        "sam_hq_vit_h.pth",
+        "sam_hq_vit_l.pth",
+        "sam_hq_vit_b.pth",
         ]
     return sam_model_ids
 
@@ -124,16 +130,23 @@ def get_sam_mask_generator(sam_checkpoint):
         SamAutomaticMaskGenerator or None: SAM mask generator
     """
     # model_type = "vit_h"
-    model_type = os.path.basename(sam_checkpoint)[4:9]
+    if "_hq_" in os.path.basename(sam_checkpoint):
+        model_type = os.path.basename(sam_checkpoint)[7:12]
+        sam_model_registry_local = sam_model_registry_hq
+        SamAutomaticMaskGeneratorLocal = SamAutomaticMaskGeneratorHQ
+    else:
+        model_type = os.path.basename(sam_checkpoint)[4:9]
+        sam_model_registry_local = sam_model_registry
+        SamAutomaticMaskGeneratorLocal = SamAutomaticMaskGenerator
 
     if os.path.isfile(sam_checkpoint):
         torch.load = unsafe_torch_load
-        sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+        sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
             sam.to(device="cpu")
         else:
             sam.to(device=device)
-        sam_mask_generator = SamAutomaticMaskGenerator(sam)
+        sam_mask_generator = SamAutomaticMaskGeneratorLocal(sam)
         torch.load = load
     else:
         sam_mask_generator = None
@@ -150,16 +163,23 @@ def get_sam_predictor(sam_checkpoint):
         SamPredictor or None: SAM predictor
     """
     # model_type = "vit_h"
-    model_type = os.path.basename(sam_checkpoint)[4:9]
+    if "_hq_" in os.path.basename(sam_checkpoint):
+        model_type = os.path.basename(sam_checkpoint)[7:12]
+        sam_model_registry_local = sam_model_registry_hq
+        SamPredictorLocal = SamPredictorHQ
+    else:
+        model_type = os.path.basename(sam_checkpoint)[4:9]
+        sam_model_registry_local = sam_model_registry
+        SamPredictorLocal = SamPredictor
 
     if os.path.isfile(sam_checkpoint):
         torch.load = unsafe_torch_load
-        sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+        sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
             sam.to(device="cpu")
         else:
             sam.to(device=device)
-        sam_predictor = SamPredictor(sam)
+        sam_predictor = SamPredictorLocal(sam)
         torch.load = load
     else:
         sam_predictor = None
