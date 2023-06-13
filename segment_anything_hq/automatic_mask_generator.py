@@ -235,6 +235,10 @@ class SamAutomaticMaskGenerator:
         cropped_im_size = cropped_im.shape[:2]
         self.predictor.set_image(cropped_im)
 
+        # CPU Offloading
+        self.predictor.model.image_encoder.to("cpu")
+        self.predictor.features.to(self.predictor.device)
+
         # Get points for this crop
         points_scale = np.array(cropped_im_size)[None, ::-1]
         points_for_image = self.point_grids[crop_layer_idx] * points_scale

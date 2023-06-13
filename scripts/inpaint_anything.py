@@ -85,8 +85,11 @@ def download_model(sam_model_id):
         str: download status
     """
     # print(sam_model_id)
-    # url_sam_vit_h_4b8939 = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
-    url_sam = "https://dl.fbaipublicfiles.com/segment_anything/" + sam_model_id
+    if "_hq_" in sam_model_id:
+        url_sam = "https://huggingface.co/Uminosachi/sam-hq/resolve/main/" + sam_model_id
+    else:
+        # url_sam_vit_h_4b8939 = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
+        url_sam = "https://dl.fbaipublicfiles.com/segment_anything/" + sam_model_id
     models_dir = os.path.join(extensions_dir, "sd-webui-inpaint-anything", "models")
     sam_checkpoint = os.path.join(models_dir, sam_model_id)
     if not os.path.isfile(sam_checkpoint):
@@ -812,6 +815,7 @@ def on_ui_tabs():
     
     sampler_names = get_sampler_names()
     sam_model_ids = get_sam_model_ids()
+    sam_model_index =  sam_model_ids.index("sam_vit_l_0b3195.pth") if "sam_vit_l_0b3195.pth" in sam_model_ids else 1
     model_ids = get_model_ids()
     cleaner_model_ids = get_cleaner_model_ids()
     sam_dict["cnet"] = find_controlnet()
@@ -846,7 +850,7 @@ def on_ui_tabs():
                 with gr.Row():
                     with gr.Column():
                         sam_model_id = gr.Dropdown(label="Segment Anything Model ID", elem_id="sam_model_id", choices=sam_model_ids,
-                                                   value=sam_model_ids[1], show_label=True)
+                                                   value=sam_model_ids[sam_model_index], show_label=True)
                     with gr.Column():
                         with gr.Row():
                             load_model_btn = gr.Button("Download model", elem_id="load_model_btn")
