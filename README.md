@@ -31,6 +31,7 @@ To download the model:
 * Go to the `Inpaint Anything` tab of the Web UI.
 * Click on the `Download model` button located next to the [Segment Anything Model ID](https://github.com/facebookresearch/segment-anything#model-checkpoints) that include [Segment Anything in High Quality Model ID](https://github.com/SysCV/sam-hq).
   * The SAM is available in three sizes. The sizes are: Base < Large < Huge. Please note that larger sizes consume more VRAM.
+  * The HQ-SAM requires more VRAM than Facebook's SAM.
 * Wait for the download to complete.
 * The downloaded model file will be stored in the `models` directory of this application's repository.
 
