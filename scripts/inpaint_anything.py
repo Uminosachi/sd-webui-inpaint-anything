@@ -383,8 +383,7 @@ def expand_mask(input_image, sel_mask, expand_iteration=1):
     
     expand_iteration = int(np.clip(expand_iteration, 1, 5))
     
-    for i in range(expand_iteration):
-        new_sel_mask = np.array(cv2.dilate(new_sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=1))
+    new_sel_mask = cv2.dilate(new_sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=expand_iteration)
     
     sam_dict["mask_image"] = new_sel_mask
 
@@ -549,7 +548,8 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     output_image = pipe(**pipe_args_dict).images[0]
     
     if composite_chk:
-        output_image = Image.composite(output_image, init_image, mask_image.convert("L").filter(ImageFilter.GaussianBlur(1)))
+        mask_image = Image.fromarray(cv2.dilate(np.array(mask_image), np.ones((3, 3), dtype=np.uint8), iterations=2))
+        output_image = Image.composite(output_image, init_image, mask_image.convert("L").filter(ImageFilter.GaussianBlur(5)))
 
     generation_params = {
         "Steps": ddim_steps,
