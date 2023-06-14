@@ -823,9 +823,7 @@ def on_ui_tabs():
     cn_enabled = False
     if sam_dict["cnet"] is not None:
         cn_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "inpaint" in cn]
-        cn_module_index = 0
-        if "inpaint_only" in cn_module_ids:
-            cn_module_index = cn_module_ids.index("inpaint_only")
+        cn_module_index = cn_module_ids.index("inpaint_only") if "inpaint_only" in cn_module_ids else 0
 
         cn_model_ids = [cn for cn in sam_dict["cnet"].get_models() if "inpaint" in cn]
         cn_modes = [mode.value for mode in sam_dict["cnet"].ControlMode]
@@ -837,6 +835,7 @@ def on_ui_tabs():
         cn_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
     else:
         cn_sampler_ids = ["DDIM"]
+    cn_sampler_index = cn_sampler_ids.index("DDIM") if "DDIM" in cn_sampler_ids else -1
 
     cn_ref_only = False
     if cn_enabled and sam_dict["cnet"].get_max_models_num() > 1:
@@ -911,7 +910,7 @@ def on_ui_tabs():
                         with gr.Accordion("Advanced options", elem_id="cn_advanced_options", open=False):
                             with gr.Row():
                                 with gr.Column():
-                                    cn_sampler_id = gr.Dropdown(label="Sampling method", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[-1], show_label=True)
+                                    cn_sampler_id = gr.Dropdown(label="Sampling method", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[cn_sampler_index], show_label=True)
                                 with gr.Column():
                                     cn_ddim_steps = gr.Slider(label="Sampling steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=30, step=1)
                             cn_cfg_scale = gr.Slider(label="Guidance scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
