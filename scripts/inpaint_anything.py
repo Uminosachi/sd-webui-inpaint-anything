@@ -41,6 +41,7 @@ from modules.sd_models import unload_model_weights, reload_model_weights
 from segment_anything_hq import sam_model_registry as sam_model_registry_hq
 from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
 from segment_anything_hq import SamPredictor as SamPredictorHQ
+from ia_logging import ia_logging
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -113,7 +114,7 @@ def download_model_from_hf(hf_model_id, local_files_only=False):
         str: download status
     """
     if not local_files_only:
-        print(f"Downloading {hf_model_id}")
+        ia_logging.info(f"Downloading {hf_model_id}")
     try:
         snapshot_download(repo_id=hf_model_id, local_files_only=local_files_only)
     except FileNotFoundError:
@@ -294,7 +295,7 @@ def run_sam(input_image, sam_model_id, sam_image):
         return None, "Input image not found"
     
     pre_unload_model_weights()
-    print("input_image:", input_image.shape, input_image.dtype)
+    ia_logging.info(f"input_image: {input_image.shape} {input_image.dtype}")
     
     cm_pascal = create_pascal_label_colormap()
     seg_colormap = cm_pascal
@@ -302,7 +303,7 @@ def run_sam(input_image, sam_model_id, sam_image):
     # print(len(seg_colormap))
     
     sam_mask_generator = get_sam_mask_generator(sam_checkpoint)
-    print(f"{sam_mask_generator.__class__.__name__} {sam_model_id}")
+    ia_logging.info(f"{sam_mask_generator.__class__.__name__} {sam_model_id}")
     sam_masks = sam_mask_generator.generate(input_image)
 
     canvas_image = np.zeros_like(input_image)
@@ -435,10 +436,10 @@ def auto_resize_to_pil(input_image, mask_image):
             scale = new_height / height
         else:
             scale = new_width / width
-        print("resize:", f"({height}, {width})", "->", f"({int(height*scale+0.5)}, {int(width*scale+0.5)})")
+        ia_logging.info(f"resize: ({height}, {width}) -> ({int(height*scale+0.5)}, {int(width*scale+0.5)})")
         init_image = transforms.functional.resize(init_image, (int(height*scale+0.5), int(width*scale+0.5)), transforms.InterpolationMode.LANCZOS)
         mask_image = transforms.functional.resize(mask_image, (int(height*scale+0.5), int(width*scale+0.5)), transforms.InterpolationMode.LANCZOS)
-        print("center_crop:", f"({int(height*scale+0.5)}, {int(width*scale+0.5)})", "->", f"({new_height}, {new_width})")
+        ia_logging.info(f"center_crop: ({int(height*scale+0.5)}, {int(width*scale+0.5)}) -> ({new_height}, {new_width})")
         init_image = transforms.functional.center_crop(init_image, (new_height, new_width))
         mask_image = transforms.functional.center_crop(mask_image, (new_height, new_width))
         assert init_image.size == mask_image.size, "The size of image and mask do not match"
@@ -453,7 +454,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        print("The size of image and mask do not match")
+        ia_logging.warning("The size of image and mask do not match")
         return None
 
     global ia_outputs_dir
@@ -462,21 +463,21 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 
     config_offline_inpainting = shared.opts.data.get("inpaint_anything_offline_inpainting", False)
     if config_offline_inpainting:
-        print("Enable offline network Inpainting:", config_offline_inpainting)
+        ia_logging.info("Enable offline network Inpainting: {}".format(str(config_offline_inpainting)))
     local_files_only = False
     local_file_status = download_model_from_hf(model_id, local_files_only=True)
     if local_file_status != _DOWNLOAD_COMPLETE:
-        if not config_offline_inpainting:
-            local_files_only = False
-        else:
-            print(local_file_status)
+        if config_offline_inpainting:
+            ia_logging.warning(local_file_status)
             return None
     else:
-        local_files_only = True
+        if config_offline_inpainting:
+            local_files_only = True
+            ia_logging.info("local_files_only: {}".format(str(local_files_only)))
     
     pre_unload_model_weights()
 
-    print(model_id)
+    ia_logging.info(f"Loading model {model_id}")
     if platform.system() == "Darwin":
         torch_dtype = torch.float32
     else:
@@ -489,17 +490,18 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
             try:
                 pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch_dtype, resume_download=True)
             except Exception as e:
+                ia_logging.error(str(e))
                 try:
                     pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch_dtype, force_download=True)
                 except Exception as e:
-                    print(e)
+                    ia_logging.error(str(e))
                     return None
         else:
-            print(e)
+            ia_logging.error(str(e))
             return None
     pipe.safety_checker = None
 
-    print("Using sampler", sampler_name)
+    ia_logging.info(f"Using sampler {sampler_name}")
     if sampler_name == "DDIM":
         pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
     elif sampler_name == "Euler":
@@ -511,7 +513,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     elif sampler_name == "DPM2 a Karras":
         pipe.scheduler = KDPM2AncestralDiscreteScheduler.from_config(pipe.scheduler.config)
     else:
-        print("Sampler fallback to DDIM")
+        ia_logging.info("Sampler fallback to DDIM")
         pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
     
     if seed < 0:
@@ -585,7 +587,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        print("The size of image and mask do not match")
+        ia_logging.warning("The size of image and mask do not match")
         return None
 
     global ia_outputs_dir
@@ -594,7 +596,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
 
     pre_unload_model_weights()
 
-    print(cleaner_model_id)
+    ia_logging.info(f"Loading model {cleaner_model_id}")
     if platform.system() == "Darwin":
         model = ModelManager(name=cleaner_model_id, device="cpu")
     else:
@@ -640,7 +642,7 @@ def run_get_alpha_image(input_image, sel_mask):
     
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        print("The size of image and mask do not match")
+        ia_logging.warning("The size of image and mask do not match")
         return None
 
     alpha_image = Image.fromarray(input_image).convert("RGBA")
@@ -704,19 +706,19 @@ def run_cn_inpaint(input_image, sel_mask,
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        print("The size of image and mask do not match")
+        ia_logging.warning("The size of image and mask do not match")
         return None
 
     if shared.sd_model is None:
         reload_model_weights()
 
     if (shared.sd_model.parameterization == "v" and "sd15" in cn_model_id):
-        print("The SD model is not compatible with the ControlNet model")
+        ia_logging.warning("The SD model is not compatible with the ControlNet model")
         return None
 
     cnet = sam_dict.get("cnet", None)
     if cnet is None:
-        print("The ControlNet extension is not loaded")
+        ia_logging.warning("The ControlNet extension is not loaded")
         return None
 
     global ia_outputs_dir
