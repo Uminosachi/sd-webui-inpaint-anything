@@ -308,6 +308,7 @@ def run_sam(input_image, sam_model_id, sam_image):
 
     canvas_image = np.zeros_like(input_image)
 
+    ia_logging.info("sam_masks: {}".format(len(sam_masks)))
     sam_masks = sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(int)))
     sam_masks = sam_masks[:len(seg_colormap)]
     for idx, seg_dict in enumerate(sam_masks):
@@ -461,6 +462,9 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     update_ia_outputs_dir()
     save_mask_image(mask_image, save_mask_chk)
 
+    pre_unload_model_weights()
+
+    ia_logging.info(f"Loading model {model_id}")
     config_offline_inpainting = shared.opts.data.get("inpaint_anything_offline_inpainting", False)
     if config_offline_inpainting:
         ia_logging.info("Enable offline network Inpainting: {}".format(str(config_offline_inpainting)))
@@ -471,13 +475,9 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
             ia_logging.warning(local_file_status)
             return None
     else:
-        if config_offline_inpainting:
-            local_files_only = True
-            ia_logging.info("local_files_only: {}".format(str(local_files_only)))
+        local_files_only = True
+        ia_logging.info("local_files_only: {}".format(str(local_files_only)))
     
-    pre_unload_model_weights()
-
-    ia_logging.info(f"Loading model {model_id}")
     if platform.system() == "Darwin":
         torch_dtype = torch.float32
     else:
@@ -486,6 +486,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     try:
         pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch_dtype, local_files_only=local_files_only)
     except Exception as e:
+        ia_logging.error(str(e))
         if not config_offline_inpainting:
             try:
                 pipe = StableDiffusionInpaintPipeline.from_pretrained(model_id, torch_dtype=torch_dtype, resume_download=True)
@@ -497,7 +498,6 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
                     ia_logging.error(str(e))
                     return None
         else:
-            ia_logging.error(str(e))
             return None
     pipe.safety_checker = None
 
