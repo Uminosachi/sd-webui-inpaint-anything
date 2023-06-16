@@ -437,10 +437,12 @@ def auto_resize_to_pil(input_image, mask_image):
             scale = new_height / height
         else:
             scale = new_width / width
-        ia_logging.info(f"resize: ({height}, {width}) -> ({int(height*scale+0.5)}, {int(width*scale+0.5)})")
-        init_image = transforms.functional.resize(init_image, (int(height*scale+0.5), int(width*scale+0.5)), transforms.InterpolationMode.LANCZOS)
-        mask_image = transforms.functional.resize(mask_image, (int(height*scale+0.5), int(width*scale+0.5)), transforms.InterpolationMode.LANCZOS)
-        ia_logging.info(f"center_crop: ({int(height*scale+0.5)}, {int(width*scale+0.5)}) -> ({new_height}, {new_width})")
+        resize_height = int(height*scale+0.5)
+        resize_width = int(width*scale+0.5)
+        ia_logging.info(f"resize: ({height}, {width}) -> ({resize_height}, {resize_width})")
+        init_image = transforms.functional.resize(init_image, (resize_height, resize_width), transforms.InterpolationMode.LANCZOS)
+        mask_image = transforms.functional.resize(mask_image, (resize_height, resize_width), transforms.InterpolationMode.LANCZOS)
+        ia_logging.info(f"center_crop: ({resize_height}, {resize_width}) -> ({new_height}, {new_width})")
         init_image = transforms.functional.center_crop(init_image, (new_height, new_width))
         mask_image = transforms.functional.center_crop(mask_image, (new_height, new_width))
         assert init_image.size == mask_image.size, "The size of image and mask do not match"
