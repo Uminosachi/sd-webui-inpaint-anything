@@ -196,7 +196,7 @@ ia_outputs_dir = os.path.join(os.path.dirname(extensions_dir),
                           "outputs", "inpaint-anything",
                           datetime.now().strftime("%Y-%m-%d"))
 
-sam_dict = dict(sam_masks=None, mask_image=None, cnet=None)
+sam_dict = dict(sam_masks=None, mask_image=None, cnet=None, pad_mask=None)
 
 def update_ia_outputs_dir():
     """Update inpaint-anything outputs directory.
@@ -280,20 +280,39 @@ def sleep_clear_cache_and_reload_model():
     clear_cache()
     post_reload_model_weights()
 
-def run_padding(input_image, padding_x, padding_y):
+def input_image_upload(input_image):
     clear_cache()
+    global sam_dict
+    sam_dict["pad_mask"] = None
+
+def run_padding(input_image, outp_scale_x, outp_scale_y):
+    clear_cache()
+    global sam_dict
     if input_image is None:
         return None, "Input image not found"
     
     height, width = input_image.shape[:2]
-    padding_height = int(height * padding_y)
-    padding_width = int(width * padding_x)
+    padding_height = int(height * outp_scale_y)
+    padding_width = int(width * outp_scale_x)
     ia_logging.info(f"resize by padding: ({height}, {width}) -> ({padding_height}, {padding_width})")
 
     padding_size = ((padding_width - width) // 2, (padding_height - height) // 2,
                     -(-(padding_width - width) // 2), -(-(padding_height - height) // 2))
     transforms_pad = transforms.Pad(padding_size, fill=(127, 127, 127))
     input_image = np.array(transforms_pad(Image.fromarray(input_image)))
+
+    transforms_pad = transforms.Pad(padding_size, fill=255)
+    if sam_dict["pad_mask"] is None:
+        pad_mask = np.zeros((height, width), dtype=np.uint8)
+        pad_mask = np.array(transforms_pad(Image.fromarray(pad_mask)))
+        sam_dict["pad_mask"] = dict(segmentation=pad_mask.astype(np.bool))
+    else:
+        if sam_dict["pad_mask"]["segmentation"].shape[:2] != (height, width):
+            pad_mask = np.zeros((height, width), dtype=np.uint8)
+        else:
+            pad_mask = sam_dict["pad_mask"]["segmentation"].astype(np.uint8)
+        pad_mask = np.array(transforms_pad(Image.fromarray(pad_mask)))
+        sam_dict["pad_mask"].update(segmentation=pad_mask.astype(np.bool))
 
     return input_image, "Padding done"
 
@@ -327,9 +346,12 @@ def run_sam(input_image, sam_model_id, sam_image):
 
     ia_logging.info("sam_masks: {}".format(len(sam_masks)))
     sam_masks = sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(int)))
+    if sam_dict["pad_mask"] is not None:
+        sam_masks.insert(0, sam_dict["pad_mask"])
+        ia_logging.info("insert pad_mask to sam_masks")
     sam_masks = sam_masks[:len(seg_colormap)]
     for idx, seg_dict in enumerate(sam_masks):
-        seg_mask = np.expand_dims(seg_dict.get("segmentation").astype(int), axis=-1)
+        seg_mask = np.expand_dims(seg_dict["segmentation"].astype(int), axis=-1)
         canvas_mask = np.logical_not(np.sum(canvas_image, axis=-1, keepdims=True).astype(bool)).astype(int)
         seg_color = seg_colormap[idx] * seg_mask * canvas_mask
         canvas_image = canvas_image + seg_color
@@ -878,15 +900,16 @@ def on_ui_tabs():
                             load_model_btn = gr.Button("Download model", elem_id="load_model_btn")
                         with gr.Row():
                             status_text = gr.Textbox(label="", max_lines=1, show_label=False, interactive=False)
-                input_image = gr.Image(label="Input image", elem_id="input_image", source="upload", type="numpy", interactive=True)
                 with gr.Row():
                     with gr.Column():
-                        with gr.Accordion("Outpainting", elem_id="outpainting", open=False):
-                            padding_x = gr.Slider(label="Scale width", elem_id="padding_x", minimum=1.0, maximum=1.5, value=1.0, step=0.05)
-                            padding_y = gr.Slider(label="Scale height", elem_id="padding_y", minimum=1.0, maximum=1.5, value=1.0, step=0.05)
-                            padding_btn = gr.Button("Run Padding", elem_id="padding_btn")
+                        input_image = gr.Image(label="Input image", elem_id="input_image", source="upload", type="numpy", interactive=True)
                     with gr.Column():
-                        sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
+                        with gr.Accordion("Outpainting options", elem_id="outpainting_options", open=False):
+                            outp_scale_x = gr.Slider(label="Scale width", elem_id="outp_scale_x", minimum=1.0, maximum=1.5, value=1.0, step=0.05)
+                            outp_scale_y = gr.Slider(label="Scale height", elem_id="outp_scale_y", minimum=1.0, maximum=1.5, value=1.0, step=0.05)
+                            padding_btn = gr.Button("Run Padding", elem_id="padding_btn")
+                with gr.Row():
+                    sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
                 
                 with gr.Tab("Inpainting", elem_id="inpainting_tab"):
                     prompt = gr.Textbox(label="Inpainting Prompt", elem_id="sd_prompt")
@@ -1039,7 +1062,8 @@ def on_ui_tabs():
                         apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
-            padding_btn.click(run_padding, inputs=[input_image, padding_x, padding_y], outputs=[input_image, status_text])
+            input_image.upload(input_image_upload, inputs=None, outputs=None)
+            padding_btn.click(run_padding, inputs=[input_image, outp_scale_x, outp_scale_y], outputs=[input_image, status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text]).then(
                 fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask]).then(
