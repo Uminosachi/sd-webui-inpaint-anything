@@ -32,8 +32,8 @@ from modules.safe import unsafe_torch_load, load
 
 import re
 from webui_controlnet import (find_controlnet, get_sd_img2img_processing,
-                                      backup_alwayson_scripts, disable_alwayson_scripts, restore_alwayson_scripts,
-                                      get_controlnet_args_to, clear_controlnet_cache)
+                              backup_alwayson_scripts, disable_alwayson_scripts, restore_alwayson_scripts,
+                              get_controlnet_args_to, clear_controlnet_cache)
 from modules.processing import process_images, create_infotext
 from modules.sd_samplers import samplers_for_img2img
 from modules.images import resize_image
@@ -42,39 +42,9 @@ from segment_anything_hq import sam_model_registry as sam_model_registry_hq
 from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
 from segment_anything_hq import SamPredictor as SamPredictorHQ
 from ia_logging import ia_logging
+from ia_ui_items import (get_sampler_names, get_sam_model_ids, get_model_ids, get_cleaner_model_ids, get_padding_mode_names)
 
 _DOWNLOAD_COMPLETE = "Download complete"
-
-def get_sampler_names():
-    """Get sampler name list.
-
-    Returns:
-        list: sampler name list
-    """
-    sampler_names = [
-        "DDIM",
-        "Euler",
-        "Euler a",
-        "DPM2 Karras",
-        "DPM2 a Karras",
-        ]
-    return sampler_names
-
-def get_sam_model_ids():
-    """Get SAM model ids list.
-
-    Returns:
-        list: SAM model ids list
-    """
-    sam_model_ids = [
-        "sam_vit_h_4b8939.pth",
-        "sam_vit_l_0b3195.pth",
-        "sam_vit_b_01ec64.pth",
-        "sam_hq_vit_h.pth",
-        "sam_hq_vit_l.pth",
-        "sam_hq_vit_b.pth",
-        ]
-    return sam_model_ids
 
 def download_model(sam_model_id):
     """Download SAM model.
@@ -237,40 +207,6 @@ def post_reload_model_weights():
     if shared.sd_model is None:
         reload_model_weights()
 
-def get_model_ids():
-    """Get inpainting model ids list.
-
-    Returns:
-        list: model ids list
-    """
-    model_ids = [
-        "stabilityai/stable-diffusion-2-inpainting",
-        "Uminosachi/dreamshaper_6Inpainting",
-        "Uminosachi/dreamshaper_5-inpainting",
-        "Uminosachi/Deliberate-inpainting",
-        "saik0s/realistic_vision_inpainting",
-        "Uminosachi/revAnimated_v121Inp-inpainting",
-        "parlance/dreamlike-diffusion-1.0-inpainting",
-        "runwayml/stable-diffusion-inpainting",
-        ]
-    return model_ids
-
-def get_cleaner_model_ids():
-    """Get cleaner model ids list.
-
-    Returns:
-        list: model ids list
-    """
-    model_ids = [
-        "lama",
-        "ldm",
-        "zits",
-        "mat",
-        "fcf",
-        "manga",
-        ]
-    return model_ids
-
 def clear_cache():
     gc.collect()
     torch_gc()
@@ -289,34 +225,31 @@ def input_image_upload(input_image):
 def run_padding(input_image, outp_scale_x, outp_scale_y, padding_mode="edge"):
     clear_cache()
     global sam_dict
-    if sam_dict["orig_image"] is None:
+    if input_image is None or sam_dict["orig_image"] is None:
+        sam_dict["orig_image"] = None
+        sam_dict["pad_mask"] = None
         return None, "Input image not found"
+
     orig_image = sam_dict["orig_image"]
-    
+
     height, width = orig_image.shape[:2]
     padding_height = int(height * outp_scale_y)
     padding_width = int(width * outp_scale_x)
     ia_logging.info(f"resize by padding: ({height}, {width}) -> ({padding_height}, {padding_width})")
 
+    # left, top, right, bottom
     padding_size = ((padding_width - width) // 2, (padding_height - height) // 2,
                     -(-(padding_width - width) // 2), -(-(padding_height - height) // 2))
     
-    convert_padding_mode = dict(
-        constant="constant", edge="edge", reflect="reflect", symmetric="symmetric",
-        max="maximum", min="minimum", mean="mean", median="median")
-    padding_mode = convert_padding_mode.get(padding_mode, "edge")
-    
-    if padding_mode not in ["maximum", "minimum", "mean", "median"]:
-        transforms_pad = transforms.Pad(padding_size, fill=(127, 127, 127), padding_mode=padding_mode)
-        pad_image = np.array(transforms_pad(Image.fromarray(orig_image)))
+    pad_width=[(padding_size[1], padding_size[3]), (padding_size[0], padding_size[2]), (0, 0)]
+    if padding_mode == "constant":
+        pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode, constant_values=127)
     else:
-        pad_width=[(padding_size[1], padding_size[3]), (padding_size[0], padding_size[2]), (0, 0)]
         pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode)
 
-    transforms_pad = transforms.Pad(padding_size, fill=255)
-
+    mask_pad_width = [(padding_size[1], padding_size[3]), (padding_size[0], padding_size[2])]
     pad_mask = np.zeros((height, width), dtype=np.uint8)
-    pad_mask = np.array(transforms_pad(Image.fromarray(pad_mask)))
+    pad_mask = np.pad(pad_mask, pad_width=mask_pad_width, mode="constant", constant_values=255)
     sam_dict["pad_mask"] = dict(segmentation=pad_mask.astype(np.bool))
 
     return pad_image, "Padding done"
@@ -868,6 +801,7 @@ def on_ui_tabs():
     sam_model_index =  sam_model_ids.index("sam_vit_l_0b3195.pth") if "sam_vit_l_0b3195.pth" in sam_model_ids else 1
     model_ids = get_model_ids()
     cleaner_model_ids = get_cleaner_model_ids()
+    padding_mode_names = get_padding_mode_names()
     sam_dict["cnet"] = find_controlnet()
 
     cn_enabled = False
@@ -909,14 +843,18 @@ def on_ui_tabs():
                     input_image = gr.Image(label="Input image", elem_id="input_image", source="upload", type="numpy", interactive=True)
                 
                 with gr.Row():
-                    with gr.Column():
-                        with gr.Accordion("Outpainting options", elem_id="outpainting_options", open=False):
+                    with gr.Accordion("Padding options", elem_id="padding_options", open=False):
+                        with gr.Row():
                             outp_scale_x = gr.Slider(label="Scale width", elem_id="outp_scale_x", minimum=1.0, maximum=1.5, value=1.0, step=0.01)
                             outp_scale_y = gr.Slider(label="Scale height", elem_id="outp_scale_y", minimum=1.0, maximum=1.5, value=1.0, step=0.01)
-                            padding_mode = gr.Radio(label="Padding mode", elem_id="padding_mode", choices=["constant", "edge", "reflect", "max", "min", "mean", "median"], value="edge")
-                            padding_btn = gr.Button("Run Padding", elem_id="padding_btn")
-                    with gr.Column():
-                        sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
+                        with gr.Row():
+                            with gr.Column():
+                                padding_mode = gr.Dropdown(label="Padding mode", elem_id="padding_mode", choices=padding_mode_names, value="edge")
+                            with gr.Column():
+                                padding_btn = gr.Button("Run Padding", elem_id="padding_btn")
+                
+                with gr.Row():
+                    sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
                 
                 with gr.Tab("Inpainting", elem_id="inpainting_tab"):
                     prompt = gr.Textbox(label="Inpainting Prompt", elem_id="sd_prompt")
