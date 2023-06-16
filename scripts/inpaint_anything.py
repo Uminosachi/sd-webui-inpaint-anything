@@ -280,6 +280,23 @@ def sleep_clear_cache_and_reload_model():
     clear_cache()
     post_reload_model_weights()
 
+def run_padding(input_image, padding_x, padding_y):
+    clear_cache()
+    if input_image is None:
+        return None, "Input image not found"
+    
+    height, width = input_image.shape[:2]
+    padding_height = int(height * padding_y)
+    padding_width = int(width * padding_x)
+    ia_logging.info(f"resize by padding: ({height}, {width}) -> ({padding_height}, {padding_width})")
+
+    padding_size = ((padding_width - width) // 2, (padding_height - height) // 2,
+                    -(-(padding_width - width) // 2), -(-(padding_height - height) // 2))
+    transforms_pad = transforms.Pad(padding_size, fill=(127, 127, 127))
+    input_image = np.array(transforms_pad(Image.fromarray(input_image)))
+
+    return input_image, "Padding done"
+
 def run_sam(input_image, sam_model_id, sam_image):
     clear_cache()
     global sam_dict
@@ -862,7 +879,14 @@ def on_ui_tabs():
                         with gr.Row():
                             status_text = gr.Textbox(label="", max_lines=1, show_label=False, interactive=False)
                 input_image = gr.Image(label="Input image", elem_id="input_image", source="upload", type="numpy", interactive=True)
-                sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
+                with gr.Row():
+                    with gr.Column():
+                        with gr.Accordion("Outpainting", elem_id="outpainting", open=False):
+                            padding_x = gr.Slider(label="Scale width", elem_id="padding_x", minimum=1.0, maximum=1.5, value=1.0, step=0.05)
+                            padding_y = gr.Slider(label="Scale height", elem_id="padding_y", minimum=1.0, maximum=1.5, value=1.0, step=0.05)
+                            padding_btn = gr.Button("Run Padding", elem_id="padding_btn")
+                    with gr.Column():
+                        sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
                 
                 with gr.Tab("Inpainting", elem_id="inpainting_tab"):
                     prompt = gr.Textbox(label="Inpainting Prompt", elem_id="sd_prompt")
@@ -1015,6 +1039,7 @@ def on_ui_tabs():
                         apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
+            padding_btn.click(run_padding, inputs=[input_image, padding_x, padding_y], outputs=[input_image, status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text]).then(
                 fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask]).then(
