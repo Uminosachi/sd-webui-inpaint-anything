@@ -286,7 +286,7 @@ def input_image_upload(input_image):
     sam_dict["orig_image"] = input_image
     sam_dict["pad_mask"] = None
 
-def run_padding(input_image, outp_scale_x, outp_scale_y, padding_mode="constant"):
+def run_padding(input_image, outp_scale_x, outp_scale_y, padding_mode="edge"):
     clear_cache()
     global sam_dict
     if sam_dict["orig_image"] is None:
@@ -300,8 +300,18 @@ def run_padding(input_image, outp_scale_x, outp_scale_y, padding_mode="constant"
 
     padding_size = ((padding_width - width) // 2, (padding_height - height) // 2,
                     -(-(padding_width - width) // 2), -(-(padding_height - height) // 2))
-    transforms_pad = transforms.Pad(padding_size, fill=(127, 127, 127), padding_mode=padding_mode)
-    pad_image = np.array(transforms_pad(Image.fromarray(orig_image)))
+    
+    convert_padding_mode = dict(
+        constant="constant", edge="edge", reflect="reflect", symmetric="symmetric",
+        max="maximum", min="minimum", mean="mean", median="median")
+    padding_mode = convert_padding_mode.get(padding_mode, "edge")
+    
+    if padding_mode not in ["maximum", "minimum", "mean", "median"]:
+        transforms_pad = transforms.Pad(padding_size, fill=(127, 127, 127), padding_mode=padding_mode)
+        pad_image = np.array(transforms_pad(Image.fromarray(orig_image)))
+    else:
+        pad_width=[(padding_size[1], padding_size[3]), (padding_size[0], padding_size[2]), (0, 0)]
+        pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode)
 
     transforms_pad = transforms.Pad(padding_size, fill=255)
 
@@ -903,7 +913,7 @@ def on_ui_tabs():
                         with gr.Accordion("Outpainting options", elem_id="outpainting_options", open=False):
                             outp_scale_x = gr.Slider(label="Scale width", elem_id="outp_scale_x", minimum=1.0, maximum=1.5, value=1.0, step=0.01)
                             outp_scale_y = gr.Slider(label="Scale height", elem_id="outp_scale_y", minimum=1.0, maximum=1.5, value=1.0, step=0.01)
-                            padding_mode = gr.Radio(label="Padding mode", elem_id="padding_mode", choices=["constant", "edge", "reflect"], value="constant")
+                            padding_mode = gr.Radio(label="Padding mode", elem_id="padding_mode", choices=["constant", "edge", "reflect", "max", "min", "mean", "median"], value="edge")
                             padding_btn = gr.Button("Run Padding", elem_id="padding_btn")
                     with gr.Column():
                         sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
