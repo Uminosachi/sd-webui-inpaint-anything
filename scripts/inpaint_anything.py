@@ -244,7 +244,8 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
     
     pad_width=[(pad_size_t, pad_size_b), (pad_size_l, pad_size_r), (0, 0)]
     if padding_mode == "constant":
-        pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode, constant_values=127)
+        fill_value = shared.opts.data.get("inpaint_anything_padding_fill", 127)
+        pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode, constant_values=fill_value)
     else:
         pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode)
 
@@ -1072,6 +1073,8 @@ def on_ui_settings():
         "inpaint-anything", "Folder name where output images will be saved", gr.Radio, {"choices": ["inpaint-anything", "img2img-images"]}, section=section))
     shared.opts.add_option("inpaint_anything_offline_inpainting", shared.OptionInfo(
         False, "Enable offline network Inpainting", gr.Checkbox, {"interactive": True}, section=section))
+    shared.opts.add_option("inpaint_anything_padding_fill", shared.OptionInfo(
+        127, "Fill value used when Padding is set to constant", gr.Slider, {"minimum":0, "maximum":255, "step":1}, section=section))
 
 script_callbacks.on_ui_settings(on_ui_settings)
 script_callbacks.on_ui_tabs(on_ui_tabs)
