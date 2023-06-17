@@ -222,7 +222,7 @@ def input_image_upload(input_image):
     sam_dict["orig_image"] = input_image
     sam_dict["pad_mask"] = None
 
-def run_padding(input_image, outp_scale_x, outp_scale_y, padding_mode="edge"):
+def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode="edge"):
     clear_cache()
     global sam_dict
     if input_image is None or sam_dict["orig_image"] is None:
@@ -233,21 +233,22 @@ def run_padding(input_image, outp_scale_x, outp_scale_y, padding_mode="edge"):
     orig_image = sam_dict["orig_image"]
 
     height, width = orig_image.shape[:2]
-    padding_height = int(height * outp_scale_y)
-    padding_width = int(width * outp_scale_x)
-    ia_logging.info(f"resize by padding: ({height}, {width}) -> ({padding_height}, {padding_width})")
+    pad_width, pad_height = (int(width * pad_scale_width), int(height * pad_scale_height))
+    ia_logging.info(f"resize by padding: ({height}, {width}) -> ({pad_height}, {pad_width})")
 
-    # left, top, right, bottom
-    padding_size = ((padding_width - width) // 2, (padding_height - height) // 2,
-                    -(-(padding_width - width) // 2), -(-(padding_height - height) // 2))
+    pad_size_w, pad_size_h = (pad_width - width, pad_height - height)
+    pad_size_l = int(pad_size_w * pad_lr_barance)
+    pad_size_r = pad_size_w - pad_size_l
+    pad_size_t = int(pad_size_h * pad_tb_barance)
+    pad_size_b = pad_size_h - pad_size_t
     
-    pad_width=[(padding_size[1], padding_size[3]), (padding_size[0], padding_size[2]), (0, 0)]
+    pad_width=[(pad_size_t, pad_size_b), (pad_size_l, pad_size_r), (0, 0)]
     if padding_mode == "constant":
         pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode, constant_values=127)
     else:
         pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode)
 
-    mask_pad_width = [(padding_size[1], padding_size[3]), (padding_size[0], padding_size[2])]
+    mask_pad_width = [(pad_size_t, pad_size_b), (pad_size_l, pad_size_r)]
     pad_mask = np.zeros((height, width), dtype=np.uint8)
     pad_mask = np.pad(pad_mask, pad_width=mask_pad_width, mode="constant", constant_values=255)
     sam_dict["pad_mask"] = dict(segmentation=pad_mask.astype(np.bool))
@@ -404,7 +405,6 @@ def auto_resize_to_pil(input_image, mask_image):
     init_image = Image.fromarray(input_image).convert("RGB")
     mask_image = Image.fromarray(mask_image).convert("RGB")
     assert init_image.size == mask_image.size, "The size of image and mask do not match"
-    # print(init_image.size, mask_image.size)
     width, height = init_image.size
 
     new_height = (height // 8) * 8
@@ -845,11 +845,18 @@ def on_ui_tabs():
                 with gr.Row():
                     with gr.Accordion("Padding options", elem_id="padding_options", open=False):
                         with gr.Row():
-                            outp_scale_x = gr.Slider(label="Scale width", elem_id="outp_scale_x", minimum=1.0, maximum=1.5, value=1.0, step=0.01)
-                            outp_scale_y = gr.Slider(label="Scale height", elem_id="outp_scale_y", minimum=1.0, maximum=1.5, value=1.0, step=0.01)
+                            with gr.Column():
+                                pad_scale_width = gr.Slider(label="Scale Width", elem_id="pad_scale_width", minimum=1.0, maximum=1.5, value=1.0, step=0.01)
+                            with gr.Column():
+                                pad_lr_barance = gr.Slider(label="Left/Right Balance", elem_id="pad_lr_barance", minimum=0.0, maximum=1.0, value=0.5, step=0.01)
                         with gr.Row():
                             with gr.Column():
-                                padding_mode = gr.Dropdown(label="Padding mode", elem_id="padding_mode", choices=padding_mode_names, value="edge")
+                                pad_scale_height = gr.Slider(label="Scale Height", elem_id="pad_scale_height", minimum=1.0, maximum=1.5, value=1.0, step=0.01)
+                            with gr.Column():
+                                pad_tb_barance = gr.Slider(label="Top/Bottom Balance", elem_id="pad_tb_barance", minimum=0.0, maximum=1.0, value=0.5, step=0.01)
+                        with gr.Row():
+                            with gr.Column():
+                                padding_mode = gr.Dropdown(label="Padding Mode", elem_id="padding_mode", choices=padding_mode_names, value="edge")
                             with gr.Column():
                                 padding_btn = gr.Button("Run Padding", elem_id="padding_btn")
                 
@@ -1008,7 +1015,7 @@ def on_ui_tabs():
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             input_image.upload(input_image_upload, inputs=[input_image], outputs=None)
-            padding_btn.click(run_padding, inputs=[input_image, outp_scale_x, outp_scale_y, padding_mode], outputs=[input_image, status_text])
+            padding_btn.click(run_padding, inputs=[input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode], outputs=[input_image, status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text]).then(
                 fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask]).then(
