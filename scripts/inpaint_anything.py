@@ -287,8 +287,9 @@ def run_sam(input_image, sam_model_id, sam_image):
     ia_logging.info("sam_masks: {}".format(len(sam_masks)))
     sam_masks = sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(int)))
     if sam_dict["pad_mask"] is not None:
-        sam_masks.insert(0, sam_dict["pad_mask"])
-        ia_logging.info("insert pad_mask to sam_masks")
+        if len(sam_masks) > 0 and sam_masks[0]["segmentation"].shape == sam_dict["pad_mask"]["segmentation"].shape:
+            sam_masks.insert(0, sam_dict["pad_mask"])
+            ia_logging.info("insert pad_mask to sam_masks")
     sam_masks = sam_masks[:len(seg_colormap)]
     for idx, seg_dict in enumerate(sam_masks):
         seg_mask = np.expand_dims(seg_dict["segmentation"].astype(int), axis=-1)
