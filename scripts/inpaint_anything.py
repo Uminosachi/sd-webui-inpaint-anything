@@ -252,7 +252,7 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
     mask_pad_width = [(pad_size_t, pad_size_b), (pad_size_l, pad_size_r)]
     pad_mask = np.zeros((height, width), dtype=np.uint8)
     pad_mask = np.pad(pad_mask, pad_width=mask_pad_width, mode="constant", constant_values=255)
-    sam_dict["pad_mask"] = dict(segmentation=pad_mask.astype(np.bool))
+    sam_dict["pad_mask"] = dict(segmentation=pad_mask.astype(bool))
 
     return pad_image, "Padding done"
 
