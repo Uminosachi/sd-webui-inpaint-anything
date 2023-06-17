@@ -282,18 +282,18 @@ def run_sam(input_image, sam_model_id, sam_image):
     ia_logging.info(f"{sam_mask_generator.__class__.__name__} {sam_model_id}")
     sam_masks = sam_mask_generator.generate(input_image)
 
-    canvas_image = np.zeros_like(input_image)
+    canvas_image = np.zeros_like(input_image, dtype=np.uint8)
 
     ia_logging.info("sam_masks: {}".format(len(sam_masks)))
-    sam_masks = sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(int)))
+    sam_masks = sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(np.uint32)))
     if sam_dict["pad_mask"] is not None:
         if len(sam_masks) > 0 and sam_masks[0]["segmentation"].shape == sam_dict["pad_mask"]["segmentation"].shape:
             sam_masks.insert(0, sam_dict["pad_mask"])
             ia_logging.info("insert pad_mask to sam_masks")
     sam_masks = sam_masks[:len(seg_colormap)]
     for idx, seg_dict in enumerate(sam_masks):
-        seg_mask = np.expand_dims(seg_dict["segmentation"].astype(int), axis=-1)
-        canvas_mask = np.logical_not(np.sum(canvas_image, axis=-1, keepdims=True).astype(bool)).astype(int)
+        seg_mask = np.expand_dims(seg_dict["segmentation"].astype(np.uint8), axis=-1)
+        canvas_mask = np.logical_not(canvas_image.astype(bool).any(axis=-1, keepdims=True)).astype(np.uint8)
         seg_color = seg_colormap[idx] * seg_mask * canvas_mask
         canvas_image = canvas_image + seg_color
     seg_image = canvas_image.astype(np.uint8)
@@ -319,18 +319,18 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
     image = sam_image["image"]
     mask = sam_image["mask"][:,:,0:3]
     
-    canvas_image = np.zeros_like(image)
-    mask_region = np.zeros_like(image)
+    canvas_image = np.zeros_like(image, dtype=np.uint8)
+    mask_region = np.zeros_like(image, dtype=np.uint8)
     for idx, seg_dict in enumerate(sam_masks):
-        seg_mask = np.expand_dims(seg_dict["segmentation"].astype(int), axis=-1)
-        canvas_mask = np.logical_not(np.sum(canvas_image, axis=-1, keepdims=True).astype(bool)).astype(int)
+        seg_mask = np.expand_dims(seg_dict["segmentation"].astype(np.uint8), axis=-1)
+        canvas_mask = np.logical_not(canvas_image.astype(bool).any(axis=-1, keepdims=True)).astype(np.uint8)
         if (seg_mask * canvas_mask * mask).astype(bool).any():
             mask_region = mask_region + (seg_mask * canvas_mask * 255)
         # seg_color = seg_colormap[idx] * seg_mask * canvas_mask
         seg_color = [127, 127, 127] * seg_mask * canvas_mask
         canvas_image = canvas_image + seg_color
     
-    canvas_mask = np.logical_not(np.sum(canvas_image, axis=-1, keepdims=True).astype(bool)).astype(int)
+    canvas_mask = np.logical_not(canvas_image.astype(bool).any(axis=-1, keepdims=True)).astype(np.uint8)
     if (canvas_mask * mask).astype(bool).any():
         mask_region = mask_region + (canvas_mask * 255)
     
