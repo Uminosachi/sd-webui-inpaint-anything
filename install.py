@@ -1,11 +1,5 @@
 import launch
 
-if not launch.is_installed("gradio"):
-    try:
-        launch.run_pip("install gradio", "requirements for gradio")
-    except:
-        print("Can't install gradio. Please follow the readme to install manually")
-
 if not launch.is_installed("accelerate"):
     try:
         launch.run_pip("install accelerate", "requirements for accelerate")
@@ -23,12 +17,6 @@ if not launch.is_installed("huggingface_hub"):
         launch.run_pip("install huggingface-hub", "requirements for huggingface_hub")
     except:
         print("Can't install huggingface-hub. Please follow the readme to install manually")
-
-if not launch.is_installed("matplotlib"):
-    try:
-        launch.run_pip("install matplotlib", "requirements for matplotlib")
-    except:
-        print("Can't install matplotlib. Please follow the readme to install manually")
 
 if not launch.is_installed("numpy"):
     try:
@@ -59,12 +47,6 @@ if not launch.is_installed("transformers"):
         launch.run_pip("install transformers", "requirements for transformers")
     except:
         print("Can't install transformers. Please follow the readme to install manually")
-
-if not launch.is_installed("xformers"):
-    try:
-        launch.run_pip("install xformers", "requirements for xformers")
-    except:
-        print("Can't install xformers. Please follow the readme to install manually")
 
 if not launch.is_installed("lama_cleaner"):
     try:
