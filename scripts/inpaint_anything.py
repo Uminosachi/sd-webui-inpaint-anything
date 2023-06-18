@@ -32,12 +32,12 @@ from modules.safe import unsafe_torch_load, load
 
 import re
 from webui_controlnet import (find_controlnet, get_sd_img2img_processing,
-                              backup_alwayson_scripts, disable_alwayson_scripts, restore_alwayson_scripts,
-                              get_controlnet_args_to, clear_controlnet_cache)
+                              backup_alwayson_scripts, disable_alwayson_scripts, restore_alwayson_scripts, disable_all_alwayson_scripts,
+                              get_controlnet_args_to, clear_controlnet_cache, get_max_args_to)
 from modules.processing import process_images, create_infotext
 from modules.sd_samplers import samplers_for_img2img
 from modules.images import resize_image
-from modules.sd_models import unload_model_weights, reload_model_weights
+from modules.sd_models import unload_model_weights, reload_model_weights, get_closet_checkpoint_match
 from segment_anything_hq import sam_model_registry as sam_model_registry_hq
 from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
 from segment_anything_hq import SamPredictor as SamPredictorHQ
@@ -203,9 +203,16 @@ def pre_unload_model_weights():
     unload_model_weights()
     clear_cache()
 
+backup_ckpt_info = None
+
 def post_reload_model_weights():
+    global backup_ckpt_info
     if shared.sd_model is None:
         reload_model_weights()
+    elif backup_ckpt_info is not None:
+        unload_model_weights()
+        reload_model_weights(sd_model=None, info=backup_ckpt_info)
+        backup_ckpt_info = None
 
 def clear_cache():
     gc.collect()
@@ -782,6 +789,75 @@ def run_cn_inpaint(input_image, sel_mask,
 
     return output_image
 
+def run_webui_inpaint(input_image, sel_mask,
+                      webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk):
+    clear_cache()
+    global sam_dict
+    if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
+        return None
+
+    mask_image = sam_dict["mask_image"]
+    if input_image.shape != mask_image.shape:
+        ia_logging.warning("The size of image and mask do not match")
+        return None
+
+    global ia_outputs_dir
+    update_ia_outputs_dir()
+    save_mask_image(mask_image, webui_save_mask_chk)
+
+    info = get_closet_checkpoint_match(webui_model_id)
+    if info is None:
+        ia_logging.error(f"No model found: {webui_model_id}")
+        return None
+    
+    global backup_ckpt_info
+    if shared.sd_model is not None:
+        backup_ckpt_info = shared.sd_model.sd_checkpoint_info
+
+    unload_model_weights()
+    reload_model_weights(sd_model=None, info=info)
+    
+    if webui_seed < 0:
+        webui_seed = random.randint(0, 2147483647)
+    
+    init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
+    width, height = init_image.size
+
+    p = get_sd_img2img_processing(init_image, mask_image, webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed)
+
+    backup_alwayson_scripts(p.scripts)
+    disable_all_alwayson_scripts(p.scripts)
+
+    p.script_args = np.zeros(get_max_args_to(p.scripts))
+
+    processed = process_images(p)
+
+    restore_alwayson_scripts(p.scripts)
+
+    no_hash_webui_model_id = re.sub("\s\[[0-9a-f]{8,10}\]", "", webui_model_id).strip()
+    no_hash_webui_model_id = os.path.splitext(no_hash_webui_model_id)[0]
+
+    if processed is not None:
+        if len(processed.images) > 0:
+            output_image = processed.images[0]
+
+            infotext = create_infotext(p, all_prompts=[webui_prompt], all_seeds=[webui_seed], all_subseeds=[-1])
+
+            metadata = PngInfo()
+            metadata.add_text("parameters", infotext)
+
+            if not os.path.isdir(ia_outputs_dir):
+                os.makedirs(ia_outputs_dir, exist_ok=True)
+            save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(no_hash_webui_model_id) + "_" + str(webui_seed) + ".png"
+            save_name = os.path.join(ia_outputs_dir, save_name)
+            output_image.save(save_name, pnginfo=metadata)
+        else:
+            output_image = None
+    else:
+        output_image = None
+
+    return output_image
+
 # class Script(scripts.Script):
 #   def __init__(self) -> None:
 #     super().__init__()
@@ -829,6 +905,19 @@ def on_ui_tabs():
         if len(cn_ref_module_ids) > 0:
             cn_ref_only = True
 
+    webui_inpaint_enabled = False
+    list_ckpt = shared.list_checkpoint_tiles()
+    webui_model_ids = [ckpt for ckpt in list_ckpt if "inpaint" in ckpt]
+    print(webui_model_ids)
+    if len(webui_model_ids) > 0:
+        webui_inpaint_enabled = True
+
+    if samplers_for_img2img is not None and len(samplers_for_img2img) > 0:
+        webui_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
+    else:
+        webui_sampler_ids = ["DDIM"]
+    webui_sampler_index = webui_sampler_ids.index("DDIM") if "DDIM" in webui_sampler_ids else -1
+    
     with gr.Blocks(analytics_enabled=False) as inpaint_anything_interface:
         with gr.Row():
             with gr.Column():
@@ -909,6 +998,42 @@ def on_ui_tabs():
                     
                     with gr.Row():
                         cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil", interactive=False).style(height=480)
+
+                with gr.Tab("Inpainting webui", elem_id="webui_inpainting_tab"):
+                    if webui_inpaint_enabled:
+                        webui_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="webui_sd_prompt")
+                        webui_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="webui_sd_n_prompt")
+                        with gr.Accordion("Advanced options", elem_id="webui_advanced_options", open=False):
+                            with gr.Row():
+                                with gr.Column():
+                                    webui_sampler_id = gr.Dropdown(label="Sampling method", elem_id="webui_sampler_id", choices=webui_sampler_ids, value=webui_sampler_ids[webui_sampler_index], show_label=True)
+                                with gr.Column():
+                                    webui_ddim_steps = gr.Slider(label="Sampling steps", elem_id="webui_ddim_steps", minimum=1, maximum=150, value=30, step=1)
+                            webui_cfg_scale = gr.Slider(label="Guidance scale", elem_id="webui_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
+                            webui_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength', value=0.6, elem_id="webui_strength")
+                            webui_seed = gr.Slider(
+                                label="Seed",
+                                elem_id="webui_sd_seed",
+                                minimum=-1,
+                                maximum=2147483647,
+                                step=1,
+                                value=-1,
+                            )
+                        with gr.Row():
+                            with gr.Column():
+                                webui_model_id = gr.Dropdown(label="Inpainting Model ID", elem_id="webui_model_id", choices=webui_model_ids, value=webui_model_ids[0], show_label=True)
+                            with gr.Column():
+                                with gr.Row():
+                                    webui_inpaint_btn = gr.Button("Run Inpainting", elem_id="webui_inpaint_btn")
+                                with gr.Row():
+                                    webui_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="webui_save_mask_chk", show_label=True, interactive=True)
+                        
+                        with gr.Row():
+                            webui_out_image = gr.Image(label="Inpainted image", elem_id="webui_out_image", type="pil", interactive=False).style(height=480)
+                        
+                    else:
+                        webui_models_dir = os.path.join("models", "Stable-diffusion")
+                        gr.Markdown(f"SD checkpoint containing the string inpaint is not found in {webui_models_dir}.")
 
                 with gr.Tab("ControlNet Inpaint", elem_id="cn_inpaint_tab"):
                     if cn_enabled:
@@ -1064,6 +1189,13 @@ def on_ui_tabs():
                             cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode],
                     outputs=[cn_out_image]).then(
+                    fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None)
+            if webui_inpaint_enabled:
+                webui_inpaint_btn.click(
+                    run_webui_inpaint,
+                    inputs=[input_image, sel_mask,
+                            webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk],
+                    outputs=[webui_out_image]).then(
                     fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None)
 
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]

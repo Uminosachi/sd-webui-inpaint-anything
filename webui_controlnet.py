@@ -69,6 +69,24 @@ def disable_alwayson_scripts(input_scripts):
     for script in disabled_scripts:
         input_scripts.alwayson_scripts.remove(script)
 
+def disable_all_alwayson_scripts(input_scripts):
+    """Disable all alwayson scripts
+    
+    Args:
+        input_scripts (ScriptRunner): scripts to disable alwayson scripts
+    """
+    default_scripts = list_default_scripts()
+
+    disabled_scripts = []
+    for script in input_scripts.alwayson_scripts:
+        if os.path.basename(script.filename) in default_scripts:
+            continue
+        # print("Disabled script: {}".format(script.title()))
+        disabled_scripts.append(script)
+    
+    for script in disabled_scripts:
+        input_scripts.alwayson_scripts.remove(script)
+
 def restore_alwayson_scripts(input_scripts):
     """Restore alwayson scripts
     
