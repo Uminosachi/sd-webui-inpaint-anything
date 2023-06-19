@@ -19,7 +19,6 @@ import cv2
 from huggingface_hub import snapshot_download
 from lama_cleaner.model_manager import ModelManager
 from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
-# print("platform:", platform.system())
 
 import modules.scripts as scripts
 from modules import shared, script_callbacks
@@ -908,8 +907,7 @@ def on_ui_tabs():
 
     webui_inpaint_enabled = False
     list_ckpt = shared.list_checkpoint_tiles()
-    webui_model_ids = [ckpt for ckpt in list_ckpt if "inpaint" in ckpt]
-    print(webui_model_ids)
+    webui_model_ids = [ckpt for ckpt in list_ckpt if "inpaint" in ckpt.lower()]
     if len(webui_model_ids) > 0:
         webui_inpaint_enabled = True
 
