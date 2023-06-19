@@ -63,6 +63,12 @@ To download the model:
 * Click on the `Run Cleaner` button (**Please note that it may take some time to download the model for the first time**).
 * Cleaner process is performed using [Lama Cleaner](https://github.com/Sanster/lama-cleaner).
 
+### Inpainting webui Tab
+
+* This tab becomes accessible when you have an inpainting model.
+* The model required should have `inpaint` in its filename and must be located in the `stable-diffusion-webui/models` directory.
+* Once the model is recognized, it can be selected from the Inpainting Model ID dropdown list.
+
 ### ControlNet Inpaint Tab
 
 * To execute inpainting, use the Stable Diffusion checkpoint, located in the upper left of the Web UI, with the ControlNet inpaint model.

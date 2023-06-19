@@ -720,7 +720,7 @@ def run_cn_inpaint(input_image, sel_mask,
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
-    p = get_sd_img2img_processing(init_image, None, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed)
+    p = get_sd_img2img_processing(init_image, None, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, 1)
 
     backup_alwayson_scripts(p.scripts)
     disable_alwayson_scripts(p.scripts)
@@ -790,7 +790,8 @@ def run_cn_inpaint(input_image, sel_mask,
     return output_image
 
 def run_webui_inpaint(input_image, sel_mask,
-                      webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk):
+                      webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk,
+                      webui_fill_mode):
     clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
@@ -823,7 +824,7 @@ def run_webui_inpaint(input_image, sel_mask,
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
-    p = get_sd_img2img_processing(init_image, mask_image, webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed)
+    p = get_sd_img2img_processing(init_image, mask_image, webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_fill_mode)
 
     backup_alwayson_scripts(p.scripts)
     disable_all_alwayson_scripts(p.scripts)
@@ -999,11 +1000,13 @@ def on_ui_tabs():
                     with gr.Row():
                         cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil", interactive=False).style(height=480)
 
-                with gr.Tab("Inpainting webui", elem_id="webui_inpainting_tab"):
-                    if webui_inpaint_enabled:
+                if webui_inpaint_enabled:
+                    with gr.Tab("Inpainting webui", elem_id="webui_inpainting_tab"):
+                    
                         webui_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="webui_sd_prompt")
                         webui_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="webui_sd_n_prompt")
                         with gr.Accordion("Advanced options", elem_id="webui_advanced_options", open=False):
+                            webui_fill_mode = gr.Radio(label="Masked content", choices=["fill", "original", "latent noise", "latent nothing"], value="original", type="index", elem_id="webui_fill_mode")
                             with gr.Row():
                                 with gr.Column():
                                     webui_sampler_id = gr.Dropdown(label="Sampling method", elem_id="webui_sampler_id", choices=webui_sampler_ids, value=webui_sampler_ids[webui_sampler_index], show_label=True)
@@ -1030,10 +1033,6 @@ def on_ui_tabs():
                         
                         with gr.Row():
                             webui_out_image = gr.Image(label="Inpainted image", elem_id="webui_out_image", type="pil", interactive=False).style(height=480)
-                        
-                    else:
-                        webui_models_dir = os.path.join("models", "Stable-diffusion")
-                        gr.Markdown(f"SD checkpoint containing the string inpaint is not found in {webui_models_dir}.")
 
                 with gr.Tab("ControlNet Inpaint", elem_id="cn_inpaint_tab"):
                     if cn_enabled:
@@ -1194,7 +1193,8 @@ def on_ui_tabs():
                 webui_inpaint_btn.click(
                     run_webui_inpaint,
                     inputs=[input_image, sel_mask,
-                            webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk],
+                            webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk,
+                            webui_fill_mode],
                     outputs=[webui_out_image]).then(
                     fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None)
 
