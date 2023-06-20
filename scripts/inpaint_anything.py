@@ -946,7 +946,7 @@ def on_ui_tabs():
         webui_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
     else:
         webui_sampler_ids = ["DDIM"]
-    webui_sampler_index = webui_sampler_ids.index("DDIM") if "DDIM" in webui_sampler_ids else -1
+    webui_sampler_index = webui_sampler_ids.index("Euler a") if "Euler a" in webui_sampler_ids else 0
     
     with gr.Blocks(analytics_enabled=False) as inpaint_anything_interface:
         with gr.Row():
@@ -1038,11 +1038,11 @@ def on_ui_tabs():
                             webui_fill_mode = gr.Radio(label="Masked content", choices=["fill", "original", "latent noise", "latent nothing"], value="original", type="index", elem_id="webui_fill_mode")
                             with gr.Row():
                                 with gr.Column():
-                                    webui_sampler_id = gr.Dropdown(label="Sampling method", elem_id="webui_sampler_id", choices=webui_sampler_ids, value=webui_sampler_ids[webui_sampler_index], show_label=True)
+                                    webui_sampler_id = gr.Dropdown(label="Sampling method webui", elem_id="webui_sampler_id", choices=webui_sampler_ids, value=webui_sampler_ids[webui_sampler_index], show_label=True)
                                 with gr.Column():
-                                    webui_ddim_steps = gr.Slider(label="Sampling steps", elem_id="webui_ddim_steps", minimum=1, maximum=150, value=30, step=1)
-                            webui_cfg_scale = gr.Slider(label="Guidance scale", elem_id="webui_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
-                            webui_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength', value=0.6, elem_id="webui_strength")
+                                    webui_ddim_steps = gr.Slider(label="Sampling steps webui", elem_id="webui_ddim_steps", minimum=1, maximum=150, value=25, step=1)
+                            webui_cfg_scale = gr.Slider(label="Guidance scale webui", elem_id="webui_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
+                            webui_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength webui', value=0.75, elem_id="webui_strength")
                             webui_seed = gr.Slider(
                                 label="Seed",
                                 elem_id="webui_sd_seed",
