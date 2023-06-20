@@ -202,6 +202,10 @@ def save_mask_image(mask_image, save_mask_chk=False):
 backup_ckpt_info = None
 model_access_sem = threading.Semaphore(1)
 
+def clear_cache():
+    gc.collect()
+    torch_gc()
+
 def pre_unload_model_weights(sem):
     with sem:
         unload_model_weights()
@@ -226,7 +230,7 @@ def backup_reload_ckpt_info(sem, info):
     global backup_ckpt_info
     with sem:
         if shared.sd_model is not None:
-            if info != shared.sd_model.sd_checkpoint_info:
+            if info.title != shared.sd_model.sd_checkpoint_info.title:
                 backup_ckpt_info = shared.sd_model.sd_checkpoint_info
                 unload_model_weights()
                 reload_model_weights(sd_model=None, info=info)
@@ -247,10 +251,6 @@ def post_reload_model_weights(sem):
             unload_model_weights()
             reload_model_weights(sd_model=None, info=backup_ckpt_info)
             backup_ckpt_info = None
-
-def clear_cache():
-    gc.collect()
-    torch_gc()
 
 def clear_cache_and_reload_model():
     clear_cache()
