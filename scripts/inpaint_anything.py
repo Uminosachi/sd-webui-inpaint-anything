@@ -662,12 +662,12 @@ def run_get_alpha_image(input_image, sel_mask):
     clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
-        return None
+        return None, ""
     
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
         ia_logging.warning("The size of image and mask do not match")
-        return None
+        return None, ""
 
     alpha_image = Image.fromarray(input_image).convert("RGBA")
     mask_image = Image.fromarray(mask_image).convert("L")
@@ -699,7 +699,7 @@ def run_get_alpha_image(input_image, sel_mask):
     output_image = Image.alpha_composite(alpha_image, checkerboard)
     
     clear_cache()
-    return output_image
+    return output_image, f"saved: {save_name}"
 
 def run_get_mask(sel_mask):
     clear_cache()
@@ -959,7 +959,7 @@ def on_ui_tabs():
                         with gr.Row():
                             load_model_btn = gr.Button("Download model", elem_id="load_model_btn")
                         with gr.Row():
-                            status_text = gr.Textbox(label="", max_lines=1, show_label=False, interactive=False)
+                            status_text = gr.Textbox(label="", elem_id="status_text", max_lines=1, show_label=False, interactive=False)
                 with gr.Row():
                     input_image = gr.Image(label="Input image", elem_id="input_image", source="upload", type="numpy", interactive=True)
                 
@@ -1146,7 +1146,7 @@ def on_ui_tabs():
 
                     with gr.Row():
                         with gr.Column():
-                            gr.Markdown("")
+                            get_alpha_status_text = gr.Textbox(label="", elem_id="get_alpha_status_text", max_lines=1, show_label=False, interactive=False)
                         with gr.Column():
                             mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
             
@@ -1192,7 +1192,7 @@ def on_ui_tabs():
             get_alpha_image_btn.click(
                 run_get_alpha_image,
                 inputs=[input_image, sel_mask],
-                outputs=[alpha_out_image])
+                outputs=[alpha_out_image, get_alpha_status_text])
             get_mask_btn.click(
                 run_get_mask,
                 inputs=[sel_mask],
