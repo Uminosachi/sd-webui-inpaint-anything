@@ -42,6 +42,7 @@ from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGen
 from segment_anything_hq import SamPredictor as SamPredictorHQ
 from ia_logging import ia_logging
 from ia_ui_items import (get_sampler_names, get_sam_model_ids, get_model_ids, get_cleaner_model_ids, get_padding_mode_names)
+import threading
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -198,20 +199,54 @@ def save_mask_image(mask_image, save_mask_chk=False):
         save_name = os.path.join(ia_outputs_dir, save_name)
         Image.fromarray(mask_image).save(save_name)
 
-def pre_unload_model_weights():
-    unload_model_weights()
-    clear_cache()
-
 backup_ckpt_info = None
+model_access_sem = threading.Semaphore(1)
 
-def post_reload_model_weights():
-    global backup_ckpt_info
-    if shared.sd_model is None:
-        reload_model_weights()
-    elif backup_ckpt_info is not None:
+def pre_unload_model_weights(sem):
+    with sem:
         unload_model_weights()
-        reload_model_weights(sd_model=None, info=backup_ckpt_info)
-        backup_ckpt_info = None
+        clear_cache()
+
+def await_pre_unload_model_weights():
+    thread = threading.Thread(target=pre_unload_model_weights, args=(model_access_sem,))
+    thread.start()
+    thread.join(timeout=10)
+
+def pre_reload_model_weights(sem):
+    with sem:
+        if shared.sd_model is None:
+            reload_model_weights()
+
+def await_pre_reload_model_weights():
+    thread = threading.Thread(target=pre_reload_model_weights, args=(model_access_sem,))
+    thread.start()
+    thread.join(timeout=10)
+
+def backup_checkpoint_info(sem, info):
+    global backup_ckpt_info
+    with sem:
+        if shared.sd_model is not None:
+            if info != shared.sd_model.sd_checkpoint_info:
+                backup_ckpt_info = shared.sd_model.sd_checkpoint_info
+                unload_model_weights()
+                reload_model_weights(sd_model=None, info=info)
+        else:
+            reload_model_weights(sd_model=None, info=info)
+
+def await_backup_checkpoint_info(info):
+    thread = threading.Thread(target=backup_checkpoint_info, args=(model_access_sem, info))
+    thread.start()
+    thread.join(timeout=10)
+
+def post_reload_model_weights(sem):
+    global backup_ckpt_info
+    with sem:
+        if shared.sd_model is None:
+            reload_model_weights()
+        elif backup_ckpt_info is not None:
+            unload_model_weights()
+            reload_model_weights(sd_model=None, info=backup_ckpt_info)
+            backup_ckpt_info = None
 
 def clear_cache():
     gc.collect()
@@ -220,7 +255,8 @@ def clear_cache():
 def sleep_clear_cache_and_reload_model():
     time.sleep(0.1)
     clear_cache()
-    post_reload_model_weights()
+    thread = threading.Thread(target=post_reload_model_weights, args=(model_access_sem,))
+    thread.start()
 
 def input_image_upload(input_image):
     clear_cache()
@@ -276,7 +312,8 @@ def run_sam(input_image, sam_model_id, sam_image):
     if input_image is None:
         return None, "Input image not found"
     
-    pre_unload_model_weights()
+    await_pre_unload_model_weights()
+
     ia_logging.info(f"input_image: {input_image.shape} {input_image.dtype}")
     
     cm_pascal = create_pascal_label_colormap()
@@ -449,7 +486,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     update_ia_outputs_dir()
     save_mask_image(mask_image, save_mask_chk)
 
-    pre_unload_model_weights()
+    await_pre_unload_model_weights()
 
     ia_logging.info(f"Loading model {model_id}")
     config_offline_inpainting = shared.opts.data.get("inpaint_anything_offline_inpainting", False)
@@ -581,7 +618,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     update_ia_outputs_dir()
     save_mask_image(mask_image, cleaner_save_mask_chk)
 
-    pre_unload_model_weights()
+    await_pre_unload_model_weights()
 
     ia_logging.info(f"Loading model {cleaner_model_id}")
     if platform.system() == "Darwin":
@@ -696,8 +733,7 @@ def run_cn_inpaint(input_image, sel_mask,
         ia_logging.warning("The size of image and mask do not match")
         return None
 
-    if shared.sd_model is None:
-        reload_model_weights()
+    await_pre_reload_model_weights()
 
     if (shared.sd_model.parameterization == "v" and "sd15" in cn_model_id):
         ia_logging.warning("The SD model is not compatible with the ControlNet model")
@@ -810,12 +846,7 @@ def run_webui_inpaint(input_image, sel_mask,
         ia_logging.error(f"No model found: {webui_model_id}")
         return None
     
-    global backup_ckpt_info
-    if shared.sd_model is not None:
-        backup_ckpt_info = shared.sd_model.sd_checkpoint_info
-
-    unload_model_weights()
-    reload_model_weights(sd_model=None, info=info)
+    await_backup_checkpoint_info(info=info)
     
     if webui_seed < 0:
         webui_seed = random.randint(0, 2147483647)
