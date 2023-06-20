@@ -222,7 +222,7 @@ def await_pre_reload_model_weights():
     thread.start()
     thread.join(timeout=10)
 
-def backup_checkpoint_info(sem, info):
+def backup_reload_ckpt_info(sem, info):
     global backup_ckpt_info
     with sem:
         if shared.sd_model is not None:
@@ -233,8 +233,8 @@ def backup_checkpoint_info(sem, info):
         else:
             reload_model_weights(sd_model=None, info=info)
 
-def await_backup_checkpoint_info(info):
-    thread = threading.Thread(target=backup_checkpoint_info, args=(model_access_sem, info))
+def await_backup_reload_ckpt_info(info):
+    thread = threading.Thread(target=backup_reload_ckpt_info, args=(model_access_sem, info))
     thread.start()
     thread.join(timeout=10)
 
@@ -252,8 +252,7 @@ def clear_cache():
     gc.collect()
     torch_gc()
 
-def sleep_clear_cache_and_reload_model():
-    time.sleep(0.1)
+def clear_cache_and_reload_model():
     clear_cache()
     thread = threading.Thread(target=post_reload_model_weights, args=(model_access_sem,))
     thread.start()
@@ -846,7 +845,7 @@ def run_webui_inpaint(input_image, sel_mask,
         ia_logging.error(f"No model found: {webui_model_id}")
         return None
     
-    await_backup_checkpoint_info(info=info)
+    await_backup_reload_ckpt_info(info=info)
     
     if webui_seed < 0:
         webui_seed = random.randint(0, 2147483647)
@@ -1172,7 +1171,7 @@ def on_ui_tabs():
             input_image.upload(input_image_upload, inputs=[input_image], outputs=None)
             padding_btn.click(run_padding, inputs=[input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode], outputs=[input_image, status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text]).then(
-                fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
+                fn=clear_cache_and_reload_model, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
             expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
@@ -1183,12 +1182,12 @@ def on_ui_tabs():
                 run_inpaint,
                 inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk, sampler_name],
                 outputs=[out_image]).then(
-                fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None)
+                fn=clear_cache_and_reload_model, inputs=None, outputs=None)
             cleaner_btn.click(
                 run_cleaner,
                 inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk],
                 outputs=[cleaner_out_image]).then(
-                fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None)
+                fn=clear_cache_and_reload_model, inputs=None, outputs=None)
             get_alpha_image_btn.click(
                 run_get_alpha_image,
                 inputs=[input_image, sel_mask],
@@ -1209,7 +1208,7 @@ def on_ui_tabs():
                             cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_low_vram_chk, cn_weight, cn_mode],
                     outputs=[cn_out_image]).then(
-                    fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None)
+                    fn=clear_cache_and_reload_model, inputs=None, outputs=None)
             elif cn_enabled and cn_ref_only:
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
@@ -1217,7 +1216,7 @@ def on_ui_tabs():
                             cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode],
                     outputs=[cn_out_image]).then(
-                    fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None)
+                    fn=clear_cache_and_reload_model, inputs=None, outputs=None)
             if webui_inpaint_enabled:
                 webui_inpaint_btn.click(
                     run_webui_inpaint,
@@ -1225,7 +1224,7 @@ def on_ui_tabs():
                             webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk,
                             webui_fill_mode],
                     outputs=[webui_out_image]).then(
-                    fn=sleep_clear_cache_and_reload_model, inputs=None, outputs=None)
+                    fn=clear_cache_and_reload_model, inputs=None, outputs=None)
 
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
