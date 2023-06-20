@@ -343,6 +343,7 @@ def run_sam(input_image, sam_model_id, sam_image):
     sam_dict["sam_masks"] = sam_masks
 
     del sam_mask_generator
+    clear_cache_and_reload_model()
     if sam_image is None:
         return seg_image, "Segment Anything complete"
     else:
@@ -1171,7 +1172,7 @@ def on_ui_tabs():
             input_image.upload(input_image_upload, inputs=[input_image], outputs=None)
             padding_btn.click(run_padding, inputs=[input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode], outputs=[input_image, status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text]).then(
-                fn=clear_cache_and_reload_model, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
+                fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
             expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
