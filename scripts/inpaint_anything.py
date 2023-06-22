@@ -1108,15 +1108,14 @@ def on_ui_tabs():
                                 
                             if cn_ref_only:
                                 with gr.Row():
-                                    gr.Markdown("Reference-Only Control (enabled only when a reference image below is present)")
-                                with gr.Row():
                                     with gr.Column():
+                                        gr.Markdown("Reference-Only Control (enabled with image below)")
                                         cn_ref_image = gr.Image(label="Reference Image", elem_id="cn_ref_image", source="upload", type="numpy", interactive=True)
                                     with gr.Column():
+                                        cn_ref_resize_mode = gr.Radio(label="Reference Image Resize Mode", elem_id="cn_ref_resize_mode", choices=["tile", "resize"], value="tile", show_label=True)
                                         cn_ref_module_id = gr.Dropdown(label="Reference Type", elem_id="cn_ref_module_id", choices=cn_ref_module_ids, value=cn_ref_module_ids[-1], show_label=True)
                                         cn_ref_weight = gr.Slider(label="Reference Control Weight", elem_id="cn_ref_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
                                         cn_ref_mode = gr.Dropdown(label="Reference Control Mode", elem_id="cn_ref_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
-                                        cn_ref_resize_mode = gr.Radio(label="Reference Image Resize Mode", elem_id="cn_ref_resize_mode", choices=["tile", "resize"], value="tile", show_label=True)
                             else:
                                 with gr.Row():
                                     gr.Markdown("The Multi ControlNet setting is currently set to 1.<br>" + \
