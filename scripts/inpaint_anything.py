@@ -43,6 +43,7 @@ from segment_anything_hq import SamPredictor as SamPredictorHQ
 from ia_logging import ia_logging
 from ia_ui_items import (get_sampler_names, get_sam_model_ids, get_model_ids, get_cleaner_model_ids, get_padding_mode_names)
 import threading
+import math
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -722,7 +723,7 @@ def run_get_mask(sel_mask):
 
 def run_cn_inpaint(input_image, sel_mask,
                    cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
-                   cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced"):
+                   cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced", cn_ref_resize_mode="tile"):
     clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
@@ -776,7 +777,17 @@ def run_cn_inpaint(input_image, sel_mask,
     )]
     
     if cn_ref_module_id is not None and cn_ref_image is not None:
-        cn_ref_image = resize_image(1, Image.fromarray(cn_ref_image), width=width, height=height)
+        if cn_ref_resize_mode == "tile":
+            ref_height, ref_width = cn_ref_image.shape[:2]
+            num_h = math.ceil(height / ref_height) if height > ref_height else 1
+            num_w = math.ceil(width / ref_width) if width > ref_width else 1
+            cn_ref_image = np.tile(cn_ref_image, (num_h, num_w, 1))
+            cn_ref_image = transforms.functional.center_crop(Image.fromarray(cn_ref_image), (height, width))
+            ia_logging.info(f"Reference image is tiled ({num_h}, {num_w}) times and cropped to ({height}, {width})")
+        else:
+            cn_ref_image = resize_image(1, Image.fromarray(cn_ref_image), width=width, height=height)
+            ia_logging.info(f"Reference image is resized to ({height}, {width}) maintaining aspect ratio")
+        assert cn_ref_image.size == init_image.size, "The size of reference image and input image do not match"
         
         cn_units.append(cnet.ControlNetUnit(
             enabled=True,
@@ -1101,6 +1112,7 @@ def on_ui_tabs():
                                         cn_ref_module_id = gr.Dropdown(label="Reference Type", elem_id="cn_ref_module_id", choices=cn_ref_module_ids, value=cn_ref_module_ids[-1], show_label=True)
                                         cn_ref_weight = gr.Slider(label="Reference Control Weight", elem_id="cn_ref_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
                                         cn_ref_mode = gr.Dropdown(label="Reference Control Mode", elem_id="cn_ref_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
+                                        cn_ref_resize_mode = gr.Radio(label="Reference Image Resize Mode", elem_id="cn_ref_resize_mode", choices=["tile", "resize"], value="tile", show_label=True)
                             else:
                                 with gr.Row():
                                     gr.Markdown("The Multi ControlNet setting is currently set to 1.<br>" + \
@@ -1215,7 +1227,7 @@ def on_ui_tabs():
                     run_cn_inpaint,
                     inputs=[input_image, sel_mask,
                             cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
-                            cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode],
+                            cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode, cn_ref_resize_mode],
                     outputs=[cn_out_image]).then(
                     fn=clear_cache_and_reload_model, inputs=None, outputs=None)
             if webui_inpaint_enabled:
