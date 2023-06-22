@@ -784,7 +784,9 @@ def run_cn_inpaint(input_image, sel_mask,
         if cn_ref_resize_mode == "tile":
             ref_height, ref_width = cn_ref_image.shape[:2]
             num_h = math.ceil(height / ref_height) if height > ref_height else 1
+            num_h = num_h + 1 if (num_h % 2) == 0 else num_h
             num_w = math.ceil(width / ref_width) if width > ref_width else 1
+            num_w = num_w + 1 if (num_w % 2) == 0 else num_w
             cn_ref_image = np.tile(cn_ref_image, (num_h, num_w, 1))
             cn_ref_image = transforms.functional.center_crop(Image.fromarray(cn_ref_image), (height, width))
             ia_logging.info(f"Reference image is tiled ({num_h}, {num_w}) times and cropped to ({height}, {width})")
