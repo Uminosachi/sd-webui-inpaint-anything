@@ -212,6 +212,7 @@ def pre_unload_model_weights(sem):
         clear_cache()
 
 def await_pre_unload_model_weights():
+    global model_access_sem
     thread = threading.Thread(target=pre_unload_model_weights, args=(model_access_sem,))
     thread.start()
     thread.join(timeout=10)
@@ -222,6 +223,7 @@ def pre_reload_model_weights(sem):
             reload_model_weights()
 
 def await_pre_reload_model_weights():
+    global model_access_sem
     thread = threading.Thread(target=pre_reload_model_weights, args=(model_access_sem,))
     thread.start()
     thread.join(timeout=10)
@@ -238,9 +240,10 @@ def backup_reload_ckpt_info(sem, info):
             reload_model_weights(sd_model=None, info=info)
 
 def await_backup_reload_ckpt_info(info):
+    global model_access_sem
     thread = threading.Thread(target=backup_reload_ckpt_info, args=(model_access_sem, info))
     thread.start()
-    thread.join(timeout=10)
+    thread.join(timeout=30)
 
 def post_reload_model_weights(sem):
     global backup_ckpt_info
@@ -254,6 +257,7 @@ def post_reload_model_weights(sem):
 
 def clear_cache_and_reload_model():
     clear_cache()
+    global model_access_sem
     thread = threading.Thread(target=post_reload_model_weights, args=(model_access_sem,))
     thread.start()
 
