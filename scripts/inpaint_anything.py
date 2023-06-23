@@ -42,6 +42,7 @@ from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGen
 from segment_anything_hq import SamPredictor as SamPredictorHQ
 from ia_logging import ia_logging
 from ia_ui_items import (get_sampler_names, get_sam_model_ids, get_model_ids, get_cleaner_model_ids, get_padding_mode_names)
+from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
 import threading
 import math
 
@@ -59,6 +60,8 @@ def download_model(sam_model_id):
     # print(sam_model_id)
     if "_hq_" in sam_model_id:
         url_sam = "https://huggingface.co/Uminosachi/sam-hq/resolve/main/" + sam_model_id
+    elif "FastSAM" in sam_model_id:
+        url_sam = "https://huggingface.co/Uminosachi/FastSAM/resolve/main/" + sam_model_id
     else:
         # url_sam_vit_h_4b8939 = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
         url_sam = "https://dl.fbaipublicfiles.com/segment_anything/" + sam_model_id
@@ -110,6 +113,11 @@ def get_sam_mask_generator(sam_checkpoint):
         sam_model_registry_local = sam_model_registry_hq
         SamAutomaticMaskGeneratorLocal = SamAutomaticMaskGeneratorHQ
         points_per_batch = 32
+    elif "FastSAM" in os.path.basename(sam_checkpoint):
+        model_type = os.path.splitext(os.path.basename(sam_checkpoint))[0]
+        sam_model_registry_local = fast_sam_model_registry
+        SamAutomaticMaskGeneratorLocal = FastSamAutomaticMaskGenerator
+        points_per_batch = None
     else:
         model_type = os.path.basename(sam_checkpoint)[4:9]
         sam_model_registry_local = sam_model_registry

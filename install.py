@@ -53,3 +53,9 @@ if not launch.is_installed("lama_cleaner"):
         launch.run_pip("install lama-cleaner", "requirements for lama_cleaner")
     except:
         print("Can't install lama-cleaner. Please follow the readme to install manually")
+
+if not launch.is_installed("ultralytics"):
+    try:
+        launch.run_pip("install ultralytics", "requirements for ultralytics")
+    except:
+        print("Can't install ultralytics. Please follow the readme to install manually")
