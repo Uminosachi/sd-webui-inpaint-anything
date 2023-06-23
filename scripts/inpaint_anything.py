@@ -765,7 +765,7 @@ def run_cn_inpaint(input_image, sel_mask,
     backup_alwayson_scripts(p.scripts)
     disable_alwayson_scripts(p.scripts)
 
-    cn_units = [cnet.ControlNetUnit(
+    cn_units = [dict(
         enabled=True,
         module=cn_module_id,
         model=cn_model_id,
@@ -795,12 +795,12 @@ def run_cn_inpaint(input_image, sel_mask,
             ia_logging.info(f"Reference image is resized to ({height}, {width}) maintaining aspect ratio")
         assert cn_ref_image.size == init_image.size, "The size of reference image and input image do not match"
         
-        cn_units.append(cnet.ControlNetUnit(
+        cn_units.append(dict(
             enabled=True,
             module=cn_ref_module_id,
             model=None,
             weight=cn_ref_weight,
-            image=np.array(cn_ref_image),
+            image={"image": np.array(cn_ref_image), "mask": None},
             resize_mode=cnet.ResizeMode.RESIZE,
             low_vram=cn_low_vram_chk,
             processor_res=min(width, height),
