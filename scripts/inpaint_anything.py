@@ -808,6 +808,7 @@ def run_cn_inpaint(input_image, sel_mask,
             guidance_end=1.0,
             pixel_perfect=True,
             control_mode=cn_ref_mode,
+            threshold_a=0.5,
         ))
     
     p.script_args = np.zeros(get_controlnet_args_to(p.scripts))
