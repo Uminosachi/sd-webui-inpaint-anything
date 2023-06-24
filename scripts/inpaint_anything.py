@@ -773,7 +773,7 @@ def run_cn_inpaint(input_image, sel_mask,
     backup_alwayson_scripts(p.scripts)
     disable_alwayson_scripts(p.scripts)
 
-    cn_units = [dict(
+    cn_units = [cnet.to_processing_unit(dict(
         enabled=True,
         module=cn_module_id,
         model=cn_model_id,
@@ -786,7 +786,7 @@ def run_cn_inpaint(input_image, sel_mask,
         guidance_end=1.0,
         pixel_perfect=True,
         control_mode=cn_mode,
-    )]
+    ))]
     
     if cn_ref_module_id is not None and cn_ref_image is not None:
         if cn_ref_resize_mode == "tile":
@@ -803,7 +803,7 @@ def run_cn_inpaint(input_image, sel_mask,
             ia_logging.info(f"Reference image is resized to ({height}, {width}) maintaining aspect ratio")
         assert cn_ref_image.size == init_image.size, "The size of reference image and input image do not match"
         
-        cn_units.append(dict(
+        cn_units.append(cnet.to_processing_unit(dict(
             enabled=True,
             module=cn_ref_module_id,
             model=None,
@@ -817,7 +817,7 @@ def run_cn_inpaint(input_image, sel_mask,
             pixel_perfect=True,
             control_mode=cn_ref_mode,
             threshold_a=0.5,
-        ))
+        )))
     
     p.script_args = np.zeros(get_controlnet_args_to(p.scripts))
     cnet.update_cn_script_in_processing(p, cn_units)
