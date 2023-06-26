@@ -2,7 +2,7 @@ import os
 import importlib
 import modules.scripts as scripts
 from modules import paths
-from modules.shared import opts, sd_model
+from modules import shared
 from modules.processing import StableDiffusionProcessingImg2Img
 import copy
 
@@ -159,8 +159,8 @@ def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_
     width, height = init_image.size
 
     sd_img2img_args = dict(
-        sd_model=sd_model,
-        outpath_samples=opts.outdir_samples or opts.outdir_img2img_samples,
+        sd_model=shared.sd_model,
+        outpath_samples=shared.opts.outdir_samples or shared.opts.outdir_img2img_samples,
         inpaint_full_res=False,
         init_images=[init_image],
         resize_mode=0,  # 0:Just resize

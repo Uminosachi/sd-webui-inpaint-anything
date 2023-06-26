@@ -252,7 +252,7 @@ def await_backup_reload_ckpt_info(info):
     global model_access_sem
     thread = threading.Thread(target=backup_reload_ckpt_info, args=(model_access_sem, info))
     thread.start()
-    thread.join(timeout=30)
+    thread.join(timeout=40)
 
 def post_reload_model_weights(sem):
     global backup_ckpt_info
