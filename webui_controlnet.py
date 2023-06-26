@@ -49,7 +49,7 @@ def backup_alwayson_scripts(input_scripts):
     global original_alwayson_scripts
     original_alwayson_scripts = copy.copy(input_scripts.alwayson_scripts)
 
-def disable_alwayson_scripts(input_scripts):
+def disable_alwayson_scripts_wo_cn(cnet, input_scripts):
     """Disable alwayson scripts
     
     Args:
@@ -61,7 +61,7 @@ def disable_alwayson_scripts(input_scripts):
     for script in input_scripts.alwayson_scripts:
         if os.path.basename(script.filename) in default_scripts:
             continue
-        if "controlnet" in os.path.basename(script.filename) or script.title().lower() == "controlnet":
+        if cnet.is_cn_script(script):
             continue
         # print("Disabled script: {}".format(script.title()))
         disabled_scripts.append(script)
@@ -113,7 +113,7 @@ def get_max_args_to(input_scripts):
             max_args_to = script.args_to
     return max_args_to
 
-def get_controlnet_args_to(input_scripts):
+def get_controlnet_args_to(cnet, input_scripts):
     """Get args_to of ControlNet script
 
     Args:
@@ -123,21 +123,21 @@ def get_controlnet_args_to(input_scripts):
         int: args_to of ControlNet script
     """
     for script in input_scripts.alwayson_scripts:
-        if "controlnet" in os.path.basename(script.filename) or script.title().lower() == "controlnet":
+        if cnet.is_cn_script(script):
             return script.args_to
     return get_max_args_to(input_scripts)
 
-def clear_controlnet_cache(input_scripts):
+def clear_controlnet_cache(cnet, input_scripts):
     """Clear ControlNet cache
 
     Args:
         input_scripts (ScriptRunner): scripts to clear ControlNet cache
     """
     for script in input_scripts.alwayson_scripts:
-        if "controlnet" in os.path.basename(script.filename) or script.title().lower() == "controlnet":
-            if hasattr(script, "model_cache"):
+        if cnet.is_cn_script(script):
+            if hasattr(script, "clear_control_model_cache"):
                 # print("Clear ControlNet cache: {}".format(script.title()))
-                script.model_cache.clear()
+                script.clear_control_model_cache()
 
 def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_id, ddim_steps, cfg_scale, strength, seed, fill_mode=1):
     """Get StableDiffusionProcessingImg2Img instance

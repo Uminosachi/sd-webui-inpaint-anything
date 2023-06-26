@@ -31,7 +31,7 @@ from modules.safe import unsafe_torch_load, load
 
 import re
 from webui_controlnet import (find_controlnet, get_sd_img2img_processing,
-                              backup_alwayson_scripts, disable_alwayson_scripts, restore_alwayson_scripts, disable_all_alwayson_scripts,
+                              backup_alwayson_scripts, disable_alwayson_scripts_wo_cn, restore_alwayson_scripts, disable_all_alwayson_scripts,
                               get_controlnet_args_to, clear_controlnet_cache, get_max_args_to)
 from modules.processing import process_images, create_infotext
 from modules.sd_samplers import samplers_for_img2img
@@ -771,7 +771,7 @@ def run_cn_inpaint(input_image, sel_mask,
     p = get_sd_img2img_processing(init_image, None, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, 1)
 
     backup_alwayson_scripts(p.scripts)
-    disable_alwayson_scripts(p.scripts)
+    disable_alwayson_scripts_wo_cn(cnet, p.scripts)
 
     cn_units = [cnet.to_processing_unit(dict(
         enabled=True,
@@ -819,12 +819,12 @@ def run_cn_inpaint(input_image, sel_mask,
             threshold_a=0.5,
         )))
     
-    p.script_args = np.zeros(get_controlnet_args_to(p.scripts))
+    p.script_args = np.zeros(get_controlnet_args_to(cnet, p.scripts))
     cnet.update_cn_script_in_processing(p, cn_units)
 
     processed = process_images(p)
 
-    clear_controlnet_cache(p.scripts)
+    clear_controlnet_cache(cnet, p.scripts)
     restore_alwayson_scripts(p.scripts)
 
     no_hash_cn_model_id = re.sub("\s\[[0-9a-f]{8,10}\]", "", cn_model_id).strip()
