@@ -57,7 +57,6 @@ def download_model(sam_model_id):
     Returns:
         str: download status
     """
-    # print(sam_model_id)
     if "_hq_" in sam_model_id:
         url_sam = "https://huggingface.co/Uminosachi/sam-hq/resolve/main/" + sam_model_id
     elif "FastSAM" in sam_model_id:
@@ -224,7 +223,7 @@ def await_pre_unload_model_weights():
     global model_access_sem
     thread = threading.Thread(target=pre_unload_model_weights, args=(model_access_sem,))
     thread.start()
-    thread.join(timeout=10)
+    thread.join()
 
 def pre_reload_model_weights(sem):
     with sem:
@@ -235,7 +234,7 @@ def await_pre_reload_model_weights():
     global model_access_sem
     thread = threading.Thread(target=pre_reload_model_weights, args=(model_access_sem,))
     thread.start()
-    thread.join(timeout=10)
+    thread.join()
 
 def backup_reload_ckpt_info(sem, info):
     global backup_ckpt_info
@@ -252,7 +251,7 @@ def await_backup_reload_ckpt_info(info):
     global model_access_sem
     thread = threading.Thread(target=backup_reload_ckpt_info, args=(model_access_sem, info))
     thread.start()
-    thread.join(timeout=40)
+    thread.join()
 
 def post_reload_model_weights(sem):
     global backup_ckpt_info
@@ -331,7 +330,6 @@ def run_sam(input_image, sam_model_id, sam_image):
     cm_pascal = create_pascal_label_colormap()
     seg_colormap = cm_pascal
     seg_colormap = [c for c in seg_colormap if max(c) >= 64]
-    # print(len(seg_colormap))
     
     sam_mask_generator = get_sam_mask_generator(sam_checkpoint)
     ia_logging.info(f"{sam_mask_generator.__class__.__name__} {sam_model_id}")
@@ -658,7 +656,6 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     )
     
     output_image = model(image=init_image, mask=mask_image, config=config)
-    # print(output_image.shape, output_image.dtype, np.min(output_image), np.max(output_image))
     output_image = cv2.cvtColor(output_image.astype(np.uint8), cv2.COLOR_BGR2RGB)
     output_image = Image.fromarray(output_image)
 
@@ -761,7 +758,6 @@ def run_cn_inpaint(input_image, sel_mask,
     update_ia_outputs_dir()
     save_mask_image(mask_image, cn_save_mask_chk)
 
-    # print(cn_model_id)
     if cn_seed < 0:
         cn_seed = random.randint(0, 2147483647)
     
