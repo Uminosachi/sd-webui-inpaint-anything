@@ -1108,7 +1108,7 @@ def on_ui_tabs():
                         with gr.Accordion("ControlNet options", elem_id="cn_cn_options", open=False):
                             with gr.Row():
                                 with gr.Column():
-                                    cn_low_vram_chk = gr.Checkbox(label="Low VRAM", elem_id="cn_low_vram_chk", show_label=True, interactive=True)
+                                    cn_low_vram_chk = gr.Checkbox(label="Low VRAM", elem_id="cn_low_vram_chk", value=True, show_label=True, interactive=True)
                                     cn_weight = gr.Slider(label="Control Weight", elem_id="cn_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
                                 with gr.Column():
                                     cn_mode = gr.Dropdown(label="Control Mode", elem_id="cn_mode", choices=cn_modes, value=cn_modes[-1], show_label=True)
