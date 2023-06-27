@@ -67,6 +67,7 @@ To download the model:
 * This tab becomes accessible when you have an inpainting model.
 * The model required should have `inpaint` (case-insensitive) in its filename and must be located in the `stable-diffusion-webui/models` directory.
 * Once the model is recognized, it can be selected from the Inpainting Model ID dropdown list.
+* When the Stable Diffusion checkpoint in the upper left corner of the WebUI matches the Inpainting Model ID, the process can be executed swiftly without requiring model loading.
 
 ### ControlNet Inpaint Tab
 
