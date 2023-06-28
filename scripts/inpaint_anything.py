@@ -45,6 +45,7 @@ from ia_ui_items import (get_sampler_names, get_sam_model_ids, get_model_ids, ge
 from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
 import threading
 import math
+import copy
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -333,7 +334,13 @@ def run_sam(input_image, sam_model_id, sam_image):
     
     sam_mask_generator = get_sam_mask_generator(sam_checkpoint)
     ia_logging.info(f"{sam_mask_generator.__class__.__name__} {sam_model_id}")
-    sam_masks = sam_mask_generator.generate(input_image)
+    try:
+        sam_masks = sam_mask_generator.generate(input_image)
+    except Exception as e:
+        ia_logging.error(str(e))
+        del sam_mask_generator
+        clear_cache_and_reload_model()
+        return None, "SAM generate failed"
 
     canvas_image = np.zeros_like(input_image, dtype=np.uint8)
 
@@ -351,7 +358,7 @@ def run_sam(input_image, sam_model_id, sam_image):
         canvas_image = canvas_image + seg_color
     seg_image = canvas_image.astype(np.uint8)
     
-    sam_dict["sam_masks"] = sam_masks
+    sam_dict["sam_masks"] = copy.deepcopy(sam_masks)
 
     del sam_mask_generator
     clear_cache_and_reload_model()
