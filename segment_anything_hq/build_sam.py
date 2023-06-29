@@ -9,6 +9,7 @@ import torch
 from functools import partial
 
 from .modeling import ImageEncoderViT, MaskDecoderHQ, PromptEncoder, Sam, TwoWayTransformer
+import platform
 
 
 def build_sam_vit_h(checkpoint=None):
@@ -103,7 +104,10 @@ def _build_sam(
     # sam.eval()
     if checkpoint is not None:
         with open(checkpoint, "rb") as f:
-            state_dict = torch.load(f)
+            if platform.system() == "Darwin":
+                state_dict = torch.load(f, map_location=torch.device("cpu"))
+            else:
+                state_dict = torch.load(f)
         info = sam.load_state_dict(state_dict, strict=False)
         print(info)
     for n, p in sam.named_parameters():
