@@ -406,15 +406,15 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
         seg_mask = np.expand_dims(seg_dict["segmentation"].astype(np.uint8), axis=-1)
         canvas_mask = np.logical_not(canvas_image.astype(bool)).astype(np.uint8)
         if (seg_mask * canvas_mask * mask).astype(bool).any():
-            mask_region = mask_region + (seg_mask * canvas_mask * 255)
+            mask_region = mask_region + (seg_mask * canvas_mask)
         seg_color = seg_mask * canvas_mask
         canvas_image = canvas_image + seg_color
     
     canvas_mask = np.logical_not(canvas_image.astype(bool)).astype(np.uint8)
     if (canvas_mask * mask).astype(bool).any():
-        mask_region = mask_region + (canvas_mask * 255)
+        mask_region = mask_region + (canvas_mask)
     
-    mask_region = np.tile(mask_region, (1, 1, 3))
+    mask_region = np.tile(mask_region * 255, (1, 1, 3))
     
     seg_image = mask_region.astype(np.uint8)
 
