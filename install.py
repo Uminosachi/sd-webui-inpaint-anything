@@ -59,3 +59,9 @@ if not launch.is_installed("ultralytics"):
         launch.run_pip("install ultralytics", "requirements for ultralytics")
     except:
         print("Can't install ultralytics. Please follow the readme to install manually")
+
+if not launch.is_installed("tqdm"):
+    try:
+        launch.run_pip("install tqdm", "requirements for tqdm")
+    except:
+        print("Can't install tqdm. Please follow the readme to install manually")
