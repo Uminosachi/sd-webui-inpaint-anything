@@ -83,6 +83,10 @@ async function inpaintAnything_clearSamMask() {
 	if (!sam_mask_clear) {
 		return;
 	}
+	const remove_image_button = document.querySelector("#sam_image").querySelector("button[aria-label='Remove Image']");
+	if (!remove_image_button) {
+		return;
+	}
 	sam_mask_clear.dispatchEvent(
 		new Event('click', {
 			bubbles: true,
@@ -96,6 +100,10 @@ async function inpaintAnything_clearSelMask() {
 
 	const sel_mask_clear = document.querySelector("#sel_mask").querySelector("button[aria-label='Clear']");
 	if (!sel_mask_clear) {
+		return;
+	}
+	const remove_image_button = document.querySelector("#sel_mask").querySelector("button[aria-label='Remove Image']");
+	if (!remove_image_button) {
 		return;
 	}
 	sel_mask_clear.dispatchEvent(
