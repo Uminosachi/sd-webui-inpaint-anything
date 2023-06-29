@@ -351,30 +351,31 @@ def run_sam(input_image, sam_model_id, sam_image):
             ia_logging.info("insert pad_mask to sam_masks")
     sam_masks = sam_masks[:len(seg_colormap)]
 
-    with tqdm(sam_masks[0:min(255, len(sam_masks))], desc="Processing segments") as progress_bar:
+    with tqdm(total=len(sam_masks), desc="Processing segments") as progress_bar:
         canvas_image = np.zeros((*input_image.shape[:2], 1), dtype=np.uint8)
-        for idx, seg_dict in enumerate(progress_bar):
+        for idx, seg_dict in enumerate(sam_masks[0:min(255, len(sam_masks))]):
             seg_mask = np.expand_dims(seg_dict["segmentation"].astype(np.uint8), axis=-1)
             canvas_mask = np.logical_not(canvas_image.astype(bool)).astype(np.uint8)
             seg_color = np.array([idx+1], dtype=np.uint8) * seg_mask * canvas_mask
             canvas_image = canvas_image + seg_color
+            progress_bar.update(1)
         seg_colormap = np.insert(seg_colormap, 0, [0, 0, 0], axis=0)
         temp_canvas_image = np.apply_along_axis(lambda x: seg_colormap[x[0]], axis=-1, arr=canvas_image)
-    if len(sam_masks) > 255:
-        with tqdm(sam_masks[255:min(509, len(sam_masks))], desc="Processing segments") as progress_bar2:
+        if len(sam_masks) > 255:
             canvas_image = canvas_image.astype(bool).astype(np.uint8)
-            for idx, seg_dict in enumerate(progress_bar2):
+            for idx, seg_dict in enumerate(sam_masks[255:min(509, len(sam_masks))]):
                 seg_mask = np.expand_dims(seg_dict["segmentation"].astype(np.uint8), axis=-1)
                 canvas_mask = np.logical_not(canvas_image.astype(bool)).astype(np.uint8)
                 seg_color = np.array([idx+2], dtype=np.uint8) * seg_mask * canvas_mask
                 canvas_image = canvas_image + seg_color
+                progress_bar.update(1)
             seg_colormap = seg_colormap[256:]
             seg_colormap = np.insert(seg_colormap, 0, [0, 0, 0], axis=0)
             seg_colormap = np.insert(seg_colormap, 0, [0, 0, 0], axis=0)
             canvas_image = np.apply_along_axis(lambda x: seg_colormap[x[0]], axis=-1, arr=canvas_image)
             canvas_image = temp_canvas_image + canvas_image
-    else:
-        canvas_image = temp_canvas_image
+        else:
+            canvas_image = temp_canvas_image
     seg_image = canvas_image.astype(np.uint8)
     
     sam_dict["sam_masks"] = copy.deepcopy(sam_masks)
