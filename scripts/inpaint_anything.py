@@ -26,7 +26,7 @@ try:
     from modules.paths_internal import extensions_dir
 except Exception:
     from modules.extensions import extensions_dir
-from modules.devices import device, torch_gc
+from modules.devices import device
 from modules.safe import unsafe_torch_load, load
 
 import re
@@ -36,17 +36,18 @@ from webui_controlnet import (find_controlnet, get_sd_img2img_processing,
 from modules.processing import process_images, create_infotext
 from modules.sd_samplers import samplers_for_img2img
 from modules.images import resize_image
-from modules.sd_models import unload_model_weights, reload_model_weights, get_closet_checkpoint_match
+from modules.sd_models import get_closet_checkpoint_match
 from segment_anything_hq import sam_model_registry as sam_model_registry_hq
 from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
 from segment_anything_hq import SamPredictor as SamPredictorHQ
 from ia_logging import ia_logging
 from ia_ui_items import (get_sampler_names, get_sam_model_ids, get_model_ids, get_cleaner_model_ids, get_padding_mode_names)
 from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
-import threading
 import math
 import copy
 from tqdm import tqdm
+from ia_threading import (clear_cache, await_pre_unload_model_weights, await_pre_reload_model_weights, await_backup_reload_ckpt_info,
+                          clear_cache_and_reload_model)
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -208,68 +209,6 @@ def save_mask_image(mask_image, save_mask_chk=False):
         save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
         save_name = os.path.join(ia_outputs_dir, save_name)
         Image.fromarray(mask_image).save(save_name)
-
-backup_ckpt_info = None
-model_access_sem = threading.Semaphore(1)
-
-def clear_cache():
-    gc.collect()
-    torch_gc()
-
-def pre_unload_model_weights(sem):
-    with sem:
-        unload_model_weights()
-        clear_cache()
-
-def await_pre_unload_model_weights():
-    global model_access_sem
-    thread = threading.Thread(target=pre_unload_model_weights, args=(model_access_sem,))
-    thread.start()
-    thread.join()
-
-def pre_reload_model_weights(sem):
-    with sem:
-        if shared.sd_model is None:
-            reload_model_weights()
-
-def await_pre_reload_model_weights():
-    global model_access_sem
-    thread = threading.Thread(target=pre_reload_model_weights, args=(model_access_sem,))
-    thread.start()
-    thread.join()
-
-def backup_reload_ckpt_info(sem, info):
-    global backup_ckpt_info
-    with sem:
-        if shared.sd_model is not None:
-            if info.title != shared.sd_model.sd_checkpoint_info.title:
-                backup_ckpt_info = shared.sd_model.sd_checkpoint_info
-                unload_model_weights()
-                reload_model_weights(sd_model=None, info=info)
-        else:
-            reload_model_weights(sd_model=None, info=info)
-
-def await_backup_reload_ckpt_info(info):
-    global model_access_sem
-    thread = threading.Thread(target=backup_reload_ckpt_info, args=(model_access_sem, info))
-    thread.start()
-    thread.join()
-
-def post_reload_model_weights(sem):
-    global backup_ckpt_info
-    with sem:
-        if shared.sd_model is None:
-            reload_model_weights()
-        elif backup_ckpt_info is not None:
-            unload_model_weights()
-            reload_model_weights(sd_model=None, info=backup_ckpt_info)
-            backup_ckpt_info = None
-
-def clear_cache_and_reload_model():
-    clear_cache()
-    global model_access_sem
-    thread = threading.Thread(target=post_reload_model_weights, args=(model_access_sem,))
-    thread.start()
 
 def input_image_upload(input_image, sam_image, sel_mask):
     clear_cache()
@@ -605,8 +544,10 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         # pipe.enable_model_cpu_offload()
         pipe = pipe.to(device)
         if shared.xformers_available:
+            ia_logging.info("Enable xformers memory efficient attention")
             pipe.enable_xformers_memory_efficient_attention()
         else:
+            ia_logging.info("Enable attention slicing")
             pipe.enable_attention_slicing()
         generator = torch.Generator(device).manual_seed(seed)
     
