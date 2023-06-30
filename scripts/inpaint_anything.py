@@ -401,6 +401,10 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
     image = sam_image["image"]
     mask = sam_image["mask"][:,:,0:1]
     
+    if len(sam_masks) > 0 and sam_masks[0]["segmentation"].shape[:2] != mask.shape[:2]:
+        ia_logging.error("sam_masks shape not match")
+        return None
+
     canvas_image = np.zeros((*image.shape[:2], 1), dtype=np.uint8)
     mask_region = np.zeros((*image.shape[:2], 1), dtype=np.uint8)
     for idx, seg_dict in enumerate(sam_masks):
@@ -1203,7 +1207,7 @@ def on_ui_tabs():
             
             with gr.Column():
                 sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
-                                     interactive=True).style(height=480)
+                                     interactive=True, value=np.zeros((480, 480, 3), dtype=np.uint8)).style(height=480)
                 with gr.Row():
                     with gr.Column():
                         select_btn = gr.Button("Create mask", elem_id="select_btn")
@@ -1211,7 +1215,7 @@ def on_ui_tabs():
                         invert_chk = gr.Checkbox(label="Invert mask", elem_id="invert_chk", show_label=True, interactive=True)
 
                 sel_mask = gr.Image(label="Selected mask image", elem_id="sel_mask", type="numpy", tool="sketch", brush_radius=12,
-                                    interactive=True).style(height=480)
+                                    interactive=True, value=np.zeros((480, 480, 3), dtype=np.uint8)).style(height=480)
 
                 with gr.Row():
                     with gr.Column():
