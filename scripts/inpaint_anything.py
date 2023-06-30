@@ -271,11 +271,16 @@ def clear_cache_and_reload_model():
     thread = threading.Thread(target=post_reload_model_weights, args=(model_access_sem,))
     thread.start()
 
-def input_image_upload(input_image):
+def input_image_upload(input_image, sam_image, sel_mask):
     clear_cache()
     global sam_dict
     sam_dict["orig_image"] = input_image
     sam_dict["pad_mask"] = None
+
+    ret_sam_image = np.zeros_like(input_image, dtype=np.uint8) if sam_image is None else gr.update()
+    ret_sel_mask = np.zeros_like(input_image, dtype=np.uint8) if sel_mask is None else gr.update()
+
+    return ret_sam_image, ret_sel_mask
 
 def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode="edge"):
     clear_cache()
@@ -1224,7 +1229,7 @@ def on_ui_tabs():
                         apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
-            input_image.upload(input_image_upload, inputs=[input_image], outputs=None)
+            input_image.upload(input_image_upload, inputs=[input_image, sam_image, sel_mask], outputs=[sam_image, sel_mask])
             padding_btn.click(run_padding, inputs=[input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode], outputs=[input_image, status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
