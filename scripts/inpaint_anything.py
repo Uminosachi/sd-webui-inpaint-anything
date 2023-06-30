@@ -325,10 +325,12 @@ def run_sam(input_image, sam_model_id, sam_image):
     
     sam_checkpoint = os.path.join(extensions_dir, "sd-webui-inpaint-anything", "models", sam_model_id)
     if not os.path.isfile(sam_checkpoint):
-        return None, f"{sam_model_id} not found, please download"
+        ret_sam_image = None if sam_image is None else gr.update()
+        return ret_sam_image, f"{sam_model_id} not found, please download"
     
     if input_image is None:
-        return None, "Input image not found"
+        ret_sam_image = None if sam_image is None else gr.update()
+        return ret_sam_image, "Input image not found"
     
     await_pre_unload_model_weights()
 
@@ -346,7 +348,8 @@ def run_sam(input_image, sam_model_id, sam_image):
         ia_logging.error(str(e))
         del sam_mask_generator
         clear_cache_and_reload_model()
-        return None, "SAM generate failed"
+        ret_sam_image = None if sam_image is None else gr.update()
+        return ret_sam_image, "SAM generate failed"
 
     ia_logging.info("sam_masks: {}".format(len(sam_masks)))
     sam_masks = sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(np.uint32)))
@@ -400,7 +403,8 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
     clear_cache()
     global sam_dict
     if sam_dict["sam_masks"] is None or sam_image is None:
-        return None
+        ret_sel_mask = None if sel_mask is None else gr.update()
+        return ret_sel_mask
     sam_masks = sam_dict["sam_masks"]
     
     image = sam_image["image"]
@@ -408,7 +412,8 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
     
     if len(sam_masks) > 0 and sam_masks[0]["segmentation"].shape[:2] != mask.shape[:2]:
         ia_logging.error("sam_masks shape not match")
-        return None
+        ret_sel_mask = None if sel_mask is None else gr.update()
+        return ret_sel_mask
 
     canvas_image = np.zeros((*image.shape[:2], 1), dtype=np.uint8)
     mask_region = np.zeros((*image.shape[:2], 1), dtype=np.uint8)
