@@ -46,11 +46,12 @@ from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
 import math
 import copy
 from tqdm import tqdm
-from ia_threading import (clear_cache, await_pre_unload_model_weights, await_pre_reload_model_weights, await_backup_reload_ckpt_info,
+from ia_threading import (clear_cache_decorator, await_pre_unload_model_weights, await_pre_reload_model_weights, await_backup_reload_ckpt_info,
                           clear_cache_and_reload_model)
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
+@clear_cache_decorator
 def download_model(sam_model_id):
     """Download SAM model.
 
@@ -210,8 +211,8 @@ def save_mask_image(mask_image, save_mask_chk=False):
         save_name = os.path.join(ia_outputs_dir, save_name)
         Image.fromarray(mask_image).save(save_name)
 
+@clear_cache_decorator
 def input_image_upload(input_image, sam_image, sel_mask):
-    clear_cache()
     global sam_dict
     sam_dict["orig_image"] = input_image
     sam_dict["pad_mask"] = None
@@ -221,8 +222,8 @@ def input_image_upload(input_image, sam_image, sel_mask):
 
     return ret_sam_image, ret_sel_mask
 
+@clear_cache_decorator
 def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode="edge"):
-    clear_cache()
     global sam_dict
     if input_image is None or sam_dict["orig_image"] is None:
         sam_dict["orig_image"] = None
@@ -255,12 +256,12 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
 
     return pad_image, "Padding done"
 
+@clear_cache_decorator
 def run_sam(input_image, sam_model_id, sam_image):
-    clear_cache()
     global sam_dict
     if sam_dict["sam_masks"] is not None:
         sam_dict["sam_masks"] = None
-        clear_cache()
+        gc.collect()
     
     sam_checkpoint = os.path.join(extensions_dir, "sd-webui-inpaint-anything", "models", sam_model_id)
     if not os.path.isfile(sam_checkpoint):
@@ -338,8 +339,8 @@ def run_sam(input_image, sam_model_id, sam_image):
         else:
             return gr.update(value=seg_image), "Segment Anything complete"
 
+@clear_cache_decorator
 def select_mask(input_image, sam_image, invert_chk, sel_mask):
-    clear_cache()
     global sam_dict
     if sam_dict["sam_masks"] is None or sam_image is None:
         ret_sel_mask = None if sel_mask is None else gr.update()
@@ -382,7 +383,6 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
     else:
         ret_image = seg_image
 
-    clear_cache()
     if sel_mask is None:
         return ret_image
     else:
@@ -391,8 +391,8 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
         else:
             return gr.update(value=ret_image)
 
+@clear_cache_decorator
 def expand_mask(input_image, sel_mask, expand_iteration=1):
-    clear_cache()
     global sam_dict
     if sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -410,14 +410,13 @@ def expand_mask(input_image, sel_mask, expand_iteration=1):
     else:
         ret_image = new_sel_mask
 
-    clear_cache()
     if sel_mask["image"].shape == ret_image.shape and np.all(sel_mask["image"] == ret_image):
         return gr.update()
     else:
         return gr.update(value=ret_image)
 
+@clear_cache_decorator
 def apply_mask(input_image, sel_mask):
-    clear_cache()
     global sam_dict
     if sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -433,7 +432,6 @@ def apply_mask(input_image, sel_mask):
     else:
         ret_image = new_sel_mask
 
-    clear_cache()
     if sel_mask["image"].shape == ret_image.shape and np.all(sel_mask["image"] == ret_image):
         return gr.update()
     else:
@@ -464,8 +462,8 @@ def auto_resize_to_pil(input_image, mask_image):
     
     return init_image, mask_image
 
+@clear_cache_decorator
 def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk, sampler_name="DDIM"):
-    clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -598,8 +596,8 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     del pipe
     return output_image
 
+@clear_cache_decorator
 def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
-    clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -652,8 +650,8 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     del model
     return output_image
 
+@clear_cache_decorator
 def run_get_alpha_image(input_image, sel_mask):
-    clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None, ""
@@ -692,11 +690,10 @@ def run_get_alpha_image(input_image, sel_mask):
     
     output_image = Image.alpha_composite(alpha_image, checkerboard)
     
-    clear_cache()
     return output_image, f"saved: {save_name}"
 
+@clear_cache_decorator
 def run_get_mask(sel_mask):
-    clear_cache()
     global sam_dict
     if sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -711,13 +708,12 @@ def run_get_mask(sel_mask):
     save_name = os.path.join(ia_outputs_dir, save_name)
     Image.fromarray(mask_image).save(save_name)
     
-    clear_cache()
     return mask_image
 
+@clear_cache_decorator
 def run_cn_inpaint(input_image, sel_mask,
                    cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
                    cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced", cn_ref_resize_mode="tile"):
-    clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -830,10 +826,10 @@ def run_cn_inpaint(input_image, sel_mask,
 
     return output_image
 
+@clear_cache_decorator
 def run_webui_inpaint(input_image, sel_mask,
                       webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk,
                       webui_fill_mode):
-    clear_cache()
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None

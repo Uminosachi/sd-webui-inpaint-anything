@@ -65,3 +65,11 @@ def clear_cache_and_reload_model():
     global model_access_sem
     thread = threading.Thread(target=post_reload_model_weights, args=(model_access_sem,))
     thread.start()
+
+def clear_cache_decorator(func):
+    def wrapper(*args, **kwargs):
+        clear_cache()
+        res = func(*args, **kwargs)
+        clear_cache()
+        return res
+    return wrapper
