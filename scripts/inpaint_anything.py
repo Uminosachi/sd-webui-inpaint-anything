@@ -47,7 +47,7 @@ import math
 import copy
 from tqdm import tqdm
 from ia_threading import (clear_cache_decorator, await_pre_unload_model_weights, await_pre_reload_model_weights, await_backup_reload_ckpt_info,
-                          clear_cache_and_reload_model)
+                          async_post_reload_model_weights)
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -220,7 +220,7 @@ def input_image_upload(input_image, sam_image, sel_mask):
     ret_sam_image = np.zeros_like(input_image, dtype=np.uint8) if sam_image is None else gr.update()
     ret_sel_mask = np.zeros_like(input_image, dtype=np.uint8) if sel_mask is None else gr.update()
 
-    return ret_sam_image, ret_sel_mask
+    return ret_sam_image, ret_sel_mask, gr.update(interactive=True)
 
 @clear_cache_decorator
 def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode="edge"):
@@ -287,7 +287,7 @@ def run_sam(input_image, sam_model_id, sam_image):
     except Exception as e:
         ia_logging.error(str(e))
         del sam_mask_generator
-        clear_cache_and_reload_model()
+        async_post_reload_model_weights()
         ret_sam_image = None if sam_image is None else gr.update()
         return ret_sam_image, "SAM generate failed"
 
@@ -330,7 +330,7 @@ def run_sam(input_image, sam_model_id, sam_image):
 
     del sam_masks
     del sam_mask_generator
-    clear_cache_and_reload_model()
+    async_post_reload_model_weights()
     if sam_image is None:
         return seg_image, "Segment Anything complete"
     else:
@@ -470,7 +470,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        ia_logging.warning("The size of image and mask do not match")
+        ia_logging.error("The size of image and mask do not match")
         return None
 
     global ia_outputs_dir
@@ -604,7 +604,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        ia_logging.warning("The size of image and mask do not match")
+        ia_logging.error("The size of image and mask do not match")
         return None
 
     global ia_outputs_dir
@@ -658,7 +658,7 @@ def run_get_alpha_image(input_image, sel_mask):
     
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        ia_logging.warning("The size of image and mask do not match")
+        ia_logging.error("The size of image and mask do not match")
         return None, ""
 
     alpha_image = Image.fromarray(input_image).convert("RGBA")
@@ -720,7 +720,7 @@ def run_cn_inpaint(input_image, sel_mask,
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        ia_logging.warning("The size of image and mask do not match")
+        ia_logging.error("The size of image and mask do not match")
         return None
 
     await_pre_reload_model_weights()
@@ -836,7 +836,7 @@ def run_webui_inpaint(input_image, sel_mask,
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        ia_logging.warning("The size of image and mask do not match")
+        ia_logging.error("The size of image and mask do not match")
         return None
 
     global ia_outputs_dir
@@ -984,7 +984,7 @@ def on_ui_tabs():
                                 padding_btn = gr.Button("Run Padding", elem_id="padding_btn")
                 
                 with gr.Row():
-                    sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn")
+                    sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn", interactive=False)
                 
                 with gr.Tab("Inpainting", elem_id="inpainting_tab"):
                     prompt = gr.Textbox(label="Inpainting Prompt", elem_id="sd_prompt")
@@ -1171,7 +1171,7 @@ def on_ui_tabs():
                         apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
             
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
-            input_image.upload(input_image_upload, inputs=[input_image, sam_image, sel_mask], outputs=[sam_image, sel_mask])
+            input_image.upload(input_image_upload, inputs=[input_image, sam_image, sel_mask], outputs=[sam_image, sel_mask, sam_btn])
             padding_btn.click(run_padding, inputs=[input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode], outputs=[input_image, status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
@@ -1185,12 +1185,12 @@ def on_ui_tabs():
                 run_inpaint,
                 inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, model_id, save_mask_chk, composite_chk, sampler_name],
                 outputs=[out_image]).then(
-                fn=clear_cache_and_reload_model, inputs=None, outputs=None)
+                fn=async_post_reload_model_weights, inputs=None, outputs=None)
             cleaner_btn.click(
                 run_cleaner,
                 inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk],
                 outputs=[cleaner_out_image]).then(
-                fn=clear_cache_and_reload_model, inputs=None, outputs=None)
+                fn=async_post_reload_model_weights, inputs=None, outputs=None)
             get_alpha_image_btn.click(
                 run_get_alpha_image,
                 inputs=[input_image, sel_mask],
@@ -1211,7 +1211,7 @@ def on_ui_tabs():
                             cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_low_vram_chk, cn_weight, cn_mode],
                     outputs=[cn_out_image]).then(
-                    fn=clear_cache_and_reload_model, inputs=None, outputs=None)
+                    fn=async_post_reload_model_weights, inputs=None, outputs=None)
             elif cn_enabled and cn_ref_only:
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
@@ -1219,7 +1219,7 @@ def on_ui_tabs():
                             cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode, cn_ref_resize_mode],
                     outputs=[cn_out_image]).then(
-                    fn=clear_cache_and_reload_model, inputs=None, outputs=None)
+                    fn=async_post_reload_model_weights, inputs=None, outputs=None)
             if webui_inpaint_enabled:
                 webui_inpaint_btn.click(
                     run_webui_inpaint,
@@ -1227,7 +1227,7 @@ def on_ui_tabs():
                             webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk,
                             webui_fill_mode],
                     outputs=[webui_out_image]).then(
-                    fn=clear_cache_and_reload_model, inputs=None, outputs=None)
+                    fn=async_post_reload_model_weights, inputs=None, outputs=None)
 
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 

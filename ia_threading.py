@@ -3,6 +3,7 @@ import gc
 from modules.devices import torch_gc
 from modules.sd_models import unload_model_weights, reload_model_weights
 from modules import shared
+from functools import wraps
 
 backup_ckpt_info = None
 model_access_sem = threading.Semaphore(1)
@@ -60,13 +61,13 @@ def post_reload_model_weights(sem):
             reload_model_weights(sd_model=None, info=backup_ckpt_info)
             backup_ckpt_info = None
 
-def clear_cache_and_reload_model():
-    clear_cache()
+def async_post_reload_model_weights():
     global model_access_sem
     thread = threading.Thread(target=post_reload_model_weights, args=(model_access_sem,))
     thread.start()
 
 def clear_cache_decorator(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         clear_cache()
         res = func(*args, **kwargs)
