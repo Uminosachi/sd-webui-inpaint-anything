@@ -49,12 +49,10 @@ def get_ia_config(key, section=None):
     ia_config_ini.read(ia_config_ini_path)
     
     if ia_config_ini.has_section(section) and ia_config_ini.has_option(section, key):
-        print("ia_config: get_ia_config: section: {}, key: {}, option: {}".format(section, key, ia_config_ini[section][key]))
         return ia_config_ini[section][key]
 
     section = IAConfig.SECTION_DEFAULT
     if ia_config_ini.has_option(section, key):
-        print("ia_config: get_ia_config: section: {}, key: {}, option: {}".format(section, key, ia_config_ini[section][key]))
         return ia_config_ini[section][key]
     
     return None
@@ -68,11 +66,11 @@ def get_ia_config_index(key, section=None):
     if key == IAConfig.KEY_SAM_MODEL_ID:
         sam_model_ids = get_sam_model_ids()
         idx = sam_model_ids.index(option) if option in sam_model_ids else 1
-        print("ia_config: get_ia_config_index: key: {}, option: {}, idx: {}".format(key, option, idx))
+        # print("ia_config: get_ia_config_index: key: {}, option: {}, idx: {}".format(key, option, idx))
     elif key == IAConfig.KEY_INP_MODEL_ID:
         inp_model_ids = get_model_ids()
         idx = inp_model_ids.index(option) if option in inp_model_ids else 0
-        print("ia_config: get_ia_config_index: key: {}, option: {}, idx: {}".format(key, option, idx))
+        # print("ia_config: get_ia_config_index: key: {}, option: {}, idx: {}".format(key, option, idx))
     else:
         idx = None
 
@@ -80,6 +78,7 @@ def get_ia_config_index(key, section=None):
 
 def set_ia_config(key, option, section=None):
     global ia_config_ini_path
+    global webui_config_path
     if not os.path.isfile(ia_config_ini_path):
         setup_ia_config_ini()
     
@@ -89,10 +88,13 @@ def set_ia_config(key, option, section=None):
     ia_config_ini = configparser.ConfigParser()
     ia_config_ini.read(ia_config_ini_path)
     
-    if not ia_config_ini.has_section(section):
+    if section != IAConfig.SECTION_DEFAULT and not ia_config_ini.has_section(section):
         ia_config_ini[section] = {}
+    else:
+        if ia_config_ini.has_option(section, key) and ia_config_ini[section][key] == option:
+            return
     
-    print("ia_config: set_ia_config: section: {}, key: {}, option: {}".format(section, key, option))
+    # print("ia_config: set_ia_config: section: {}, key: {}, option: {}".format(section, key, option))
     ia_config_ini[section][key] = option
     
     with open(ia_config_ini_path, "w") as f:

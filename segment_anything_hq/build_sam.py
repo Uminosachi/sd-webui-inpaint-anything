@@ -109,7 +109,7 @@ def _build_sam(
             else:
                 state_dict = torch.load(f)
         info = sam.load_state_dict(state_dict, strict=False)
-        print(info)
+        # print(info)
     for n, p in sam.named_parameters():
         if 'hf_token' not in n and 'hf_mlp' not in n and 'compress_vit_feat' not in n and 'embedding_encoder' not in n and 'embedding_maskfeature' not in n:
             p.requires_grad = False
