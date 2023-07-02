@@ -34,21 +34,20 @@ def setup_ia_config_ini():
             IAConfig.KEY_SAM_MODEL_ID: sam_model_ids[sam_model_index],
             IAConfig.KEY_INP_MODEL_ID: inp_model_ids[inp_model_index],
         }
-        with open(ia_config_ini_path, "w") as f:
+        with open(ia_config_ini_path, "w", encoding="utf-8") as f:
             ia_config_ini.write(f)
 
 def get_ia_config(key, section=None):
     global ia_config_ini_path
-    if not os.path.isfile(ia_config_ini_path):
-        setup_ia_config_ini()
+    setup_ia_config_ini()
     
     if section is None:
         section = IAConfig.SECTION_DEFAULT
     
     ia_config_ini = configparser.ConfigParser()
-    ia_config_ini.read(ia_config_ini_path)
+    ia_config_ini.read(ia_config_ini_path, encoding="utf-8")
     
-    if ia_config_ini.has_section(section) and ia_config_ini.has_option(section, key):
+    if ia_config_ini.has_option(section, key):
         return ia_config_ini[section][key]
 
     section = IAConfig.SECTION_DEFAULT
@@ -79,14 +78,13 @@ def get_ia_config_index(key, section=None):
 def set_ia_config(key, option, section=None):
     global ia_config_ini_path
     global webui_config_path
-    if not os.path.isfile(ia_config_ini_path):
-        setup_ia_config_ini()
+    setup_ia_config_ini()
     
     if section is None:
         section = IAConfig.SECTION_DEFAULT
     
     ia_config_ini = configparser.ConfigParser()
-    ia_config_ini.read(ia_config_ini_path)
+    ia_config_ini.read(ia_config_ini_path, encoding="utf-8")
     
     if section != IAConfig.SECTION_DEFAULT and not ia_config_ini.has_section(section):
         ia_config_ini[section] = {}
@@ -97,7 +95,7 @@ def set_ia_config(key, option, section=None):
     # print("ia_config: set_ia_config: section: {}, key: {}, option: {}".format(section, key, option))
     ia_config_ini[section][key] = option
     
-    with open(ia_config_ini_path, "w") as f:
+    with open(ia_config_ini_path, "w", encoding="utf-8") as f:
         ia_config_ini.write(f)
     
     if os.path.isfile(webui_config_path):
