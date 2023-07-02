@@ -48,6 +48,7 @@ import copy
 from tqdm import tqdm
 from ia_threading import (clear_cache_decorator, await_pre_unload_model_weights, await_pre_reload_model_weights, await_backup_reload_ckpt_info,
                           async_post_reload_model_weights)
+from ia_config import IAConfig, setup_ia_config_ini, get_ia_config, set_ia_config
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -259,10 +260,6 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
 @clear_cache_decorator
 def run_sam(input_image, sam_model_id, sam_image):
     global sam_dict
-    if sam_dict["sam_masks"] is not None:
-        sam_dict["sam_masks"] = None
-        gc.collect()
-    
     sam_checkpoint = os.path.join(extensions_dir, "sd-webui-inpaint-anything", "models", sam_model_id)
     if not os.path.isfile(sam_checkpoint):
         ret_sam_image = None if sam_image is None else gr.update()
@@ -271,7 +268,11 @@ def run_sam(input_image, sam_model_id, sam_image):
     if input_image is None:
         ret_sam_image = None if sam_image is None else gr.update()
         return ret_sam_image, "Input image not found"
-    
+
+    if sam_dict["sam_masks"] is not None:
+        sam_dict["sam_masks"] = None
+        gc.collect()
+
     await_pre_unload_model_weights()
 
     ia_logging.info(f"input_image: {input_image.shape} {input_image.dtype}")
@@ -907,6 +908,7 @@ def run_webui_inpaint(input_image, sel_mask,
 def on_ui_tabs():
     global sam_dict
     
+    setup_ia_config_ini()
     sampler_names = get_sampler_names()
     sam_model_ids = get_sam_model_ids()
     sam_model_index =  sam_model_ids.index("sam_vit_l_0b3195.pth") if "sam_vit_l_0b3195.pth" in sam_model_ids else 1
