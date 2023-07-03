@@ -57,25 +57,25 @@ def get_ia_config(key, section=None):
     return None
 
 def get_ia_config_index(key, section=None):
-    option = get_ia_config(key, section)
+    value = get_ia_config(key, section)
     
-    if option is None:
+    if value is None:
         return None
     
     if key == IAConfig.KEY_SAM_MODEL_ID:
         sam_model_ids = get_sam_model_ids()
-        idx = sam_model_ids.index(option) if option in sam_model_ids else 1
-        # print("ia_config: get_ia_config_index: key: {}, option: {}, idx: {}".format(key, option, idx))
+        idx = sam_model_ids.index(value) if value in sam_model_ids else 1
+        # print("ia_config: get_ia_config_index: key: {}, value: {}, idx: {}".format(key, value, idx))
     elif key == IAConfig.KEY_INP_MODEL_ID:
         inp_model_ids = get_model_ids()
-        idx = inp_model_ids.index(option) if option in inp_model_ids else 0
-        # print("ia_config: get_ia_config_index: key: {}, option: {}, idx: {}".format(key, option, idx))
+        idx = inp_model_ids.index(value) if value in inp_model_ids else 0
+        # print("ia_config: get_ia_config_index: key: {}, value: {}, idx: {}".format(key, value, idx))
     else:
         idx = None
 
     return idx
 
-def set_ia_config(key, option, section=None):
+def set_ia_config(key, value, section=None):
     global ia_config_ini_path
     global webui_config_path
     setup_ia_config_ini()
@@ -89,11 +89,11 @@ def set_ia_config(key, option, section=None):
     if section != IAConfig.SECTION_DEFAULT and not ia_config_ini.has_section(section):
         ia_config_ini[section] = {}
     else:
-        if ia_config_ini.has_option(section, key) and ia_config_ini[section][key] == option:
+        if ia_config_ini.has_option(section, key) and ia_config_ini[section][key] == value:
             return
     
-    # print("ia_config: set_ia_config: section: {}, key: {}, option: {}".format(section, key, option))
-    ia_config_ini[section][key] = option
+    # print("ia_config: set_ia_config: section: {}, key: {}, value: {}".format(section, key, value))
+    ia_config_ini[section][key] = value
     
     with open(ia_config_ini_path, "w", encoding="utf-8") as f:
         ia_config_ini.write(f)
@@ -104,10 +104,10 @@ def set_ia_config(key, option, section=None):
         
         if key == IAConfig.KEY_SAM_MODEL_ID:
             if IAConfig.KEY_WEBUI_SAM_MODEL_ID in webui_config.keys():
-                webui_config[IAConfig.KEY_WEBUI_SAM_MODEL_ID] = option
+                webui_config[IAConfig.KEY_WEBUI_SAM_MODEL_ID] = value
         elif key == IAConfig.KEY_INP_MODEL_ID:
             if IAConfig.KEY_WEBUI_INP_MODEL_ID in webui_config.keys():
-                webui_config[IAConfig.KEY_WEBUI_INP_MODEL_ID] = option
+                webui_config[IAConfig.KEY_WEBUI_INP_MODEL_ID] = value
         
         with open(webui_config_path, "w", encoding="utf-8") as f:
             json.dump(webui_config, f, indent=4)

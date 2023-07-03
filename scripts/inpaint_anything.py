@@ -1042,7 +1042,6 @@ def on_ui_tabs():
 
                 if webui_inpaint_enabled:
                     with gr.Tab("Inpainting webui", elem_id="webui_inpainting_tab"):
-                    
                         webui_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="webui_sd_prompt")
                         webui_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="webui_sd_n_prompt")
                         with gr.Accordion("Advanced options", elem_id="webui_advanced_options", open=False):
@@ -1162,16 +1161,18 @@ def on_ui_tabs():
                             mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
             
             with gr.Column():
-                sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
-                                     interactive=True).style(height=480)
+                with gr.Row():
+                    sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
+                                        interactive=True).style(height=480)
                 with gr.Row():
                     with gr.Column():
                         select_btn = gr.Button("Create mask", elem_id="select_btn")
                     with gr.Column():
                         invert_chk = gr.Checkbox(label="Invert mask", elem_id="invert_chk", show_label=True, interactive=True)
 
-                sel_mask = gr.Image(label="Selected mask image", elem_id="sel_mask", type="numpy", tool="sketch", brush_radius=12,
-                                    interactive=True).style(height=480)
+                with gr.Row():
+                    sel_mask = gr.Image(label="Selected mask image", elem_id="sel_mask", type="numpy", tool="sketch", brush_radius=12,
+                                        interactive=True).style(height=480)
 
                 with gr.Row():
                     with gr.Column():
