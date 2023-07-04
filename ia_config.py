@@ -1,6 +1,6 @@
 import configparser
 import os
-from ia_ui_items import get_sam_model_ids, get_model_ids
+from ia_ui_items import get_sam_model_ids, get_inp_model_ids
 from modules.paths_internal import data_path
 import json
 
@@ -8,15 +8,16 @@ ia_config_ini_path = os.path.join(os.path.dirname(__file__), "ia_config.ini")
 webui_config_path = os.path.join(data_path, "ui-config.json")
 
 class IAConfig:
-    SECTIONS = ["DEFAULT", "USER"]
-    KEYS = ["sam_model_id", "inp_model_id"]
-
     SECTION_DEFAULT = "DEFAULT"
     SECTION_USER = "USER"
 
+    SECTIONS = [SECTION_DEFAULT, SECTION_USER]
+
     KEY_SAM_MODEL_ID = "sam_model_id"
     KEY_INP_MODEL_ID = "inp_model_id"
-    
+
+    KEYS = [KEY_SAM_MODEL_ID, KEY_INP_MODEL_ID]
+
     KEY_WEBUI_SAM_MODEL_ID = "inpaint_anything/Segment Anything Model ID/value"
     KEY_WEBUI_INP_MODEL_ID = "inpaint_anything/Inpainting Model ID/value"
 
@@ -27,7 +28,7 @@ def setup_ia_config_ini():
         
         sam_model_ids = get_sam_model_ids()
         sam_model_index = 1
-        inp_model_ids = get_model_ids()
+        inp_model_ids = get_inp_model_ids()
         inp_model_index = 0
         
         ia_config_ini[IAConfig.SECTION_DEFAULT] = {
@@ -37,12 +38,9 @@ def setup_ia_config_ini():
         with open(ia_config_ini_path, "w", encoding="utf-8") as f:
             ia_config_ini.write(f)
 
-def get_ia_config(key, section=None):
+def get_ia_config(key, section=IAConfig.SECTION_DEFAULT):
     global ia_config_ini_path
     setup_ia_config_ini()
-    
-    if section is None:
-        section = IAConfig.SECTION_DEFAULT
     
     ia_config_ini = configparser.ConfigParser()
     ia_config_ini.read(ia_config_ini_path, encoding="utf-8")
@@ -56,7 +54,7 @@ def get_ia_config(key, section=None):
     
     return None
 
-def get_ia_config_index(key, section=None):
+def get_ia_config_index(key, section=IAConfig.SECTION_DEFAULT):
     value = get_ia_config(key, section)
     
     if value is None:
@@ -65,24 +63,19 @@ def get_ia_config_index(key, section=None):
     if key == IAConfig.KEY_SAM_MODEL_ID:
         sam_model_ids = get_sam_model_ids()
         idx = sam_model_ids.index(value) if value in sam_model_ids else 1
-        # print("ia_config: get_ia_config_index: key: {}, value: {}, idx: {}".format(key, value, idx))
     elif key == IAConfig.KEY_INP_MODEL_ID:
-        inp_model_ids = get_model_ids()
+        inp_model_ids = get_inp_model_ids()
         idx = inp_model_ids.index(value) if value in inp_model_ids else 0
-        # print("ia_config: get_ia_config_index: key: {}, value: {}, idx: {}".format(key, value, idx))
     else:
         idx = None
 
     return idx
 
-def set_ia_config(key, value, section=None):
+def set_ia_config(key, value, section=IAConfig.SECTION_DEFAULT):
     global ia_config_ini_path
     global webui_config_path
     setup_ia_config_ini()
-    
-    if section is None:
-        section = IAConfig.SECTION_DEFAULT
-    
+
     ia_config_ini = configparser.ConfigParser()
     ia_config_ini.read(ia_config_ini_path, encoding="utf-8")
     
@@ -92,8 +85,11 @@ def set_ia_config(key, value, section=None):
         if ia_config_ini.has_option(section, key) and ia_config_ini[section][key] == value:
             return
     
-    # print("ia_config: set_ia_config: section: {}, key: {}, value: {}".format(section, key, value))
-    ia_config_ini[section][key] = value
+    try:
+        ia_config_ini[section][key] = value
+    except:
+        ia_config_ini[section] = {}
+        ia_config_ini[section][key] = value
     
     with open(ia_config_ini_path, "w", encoding="utf-8") as f:
         ia_config_ini.write(f)

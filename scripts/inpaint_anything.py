@@ -41,7 +41,7 @@ from segment_anything_hq import sam_model_registry as sam_model_registry_hq
 from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
 from segment_anything_hq import SamPredictor as SamPredictorHQ
 from ia_logging import ia_logging
-from ia_ui_items import (get_sampler_names, get_sam_model_ids, get_model_ids, get_cleaner_model_ids, get_padding_mode_names)
+from ia_ui_items import (get_sampler_names, get_sam_model_ids, get_inp_model_ids, get_cleaner_model_ids, get_padding_mode_names)
 from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
 import math
 import copy
@@ -917,7 +917,7 @@ def on_ui_tabs():
     sam_model_ids = get_sam_model_ids()
     sam_model_index = get_ia_config_index(IAConfig.KEY_SAM_MODEL_ID, IAConfig.SECTION_USER)
     sam_model_index = sam_model_index if sam_model_index is not None else 1
-    inp_model_ids = get_model_ids()
+    inp_model_ids = get_inp_model_ids()
     inp_model_index = get_ia_config_index(IAConfig.KEY_INP_MODEL_ID, IAConfig.SECTION_USER)
     inp_model_index = inp_model_index if inp_model_index is not None else 0
     cleaner_model_ids = get_cleaner_model_ids()

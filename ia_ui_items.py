@@ -1,3 +1,5 @@
+from huggingface_hub import scan_cache_dir
+
 def get_sampler_names():
     """Get sampler name list.
 
@@ -31,23 +33,37 @@ def get_sam_model_ids():
         ]
     return sam_model_ids
 
-def get_model_ids():
+inp_list_from_cache = None
+
+def get_inp_model_ids():
     """Get inpainting model ids list.
 
     Returns:
         list: model ids list
     """
+    global inp_list_from_cache
     model_ids = [
         "stabilityai/stable-diffusion-2-inpainting",
         "Uminosachi/dreamshaper_6Inpainting",
-        "Uminosachi/dreamshaper_5-inpainting",
         "Uminosachi/Deliberate-inpainting",
-        "saik0s/realistic_vision_inpainting",
+        "Uminosachi/realisticVisionV30_v30VAE-inpainting",
         "Uminosachi/revAnimated_v121Inp-inpainting",
-        "parlance/dreamlike-diffusion-1.0-inpainting",
         "runwayml/stable-diffusion-inpainting",
         ]
-    return model_ids
+    if inp_list_from_cache is not None and isinstance(inp_list_from_cache, list):
+        model_ids.extend(inp_list_from_cache)
+        return model_ids
+    try:
+        hf_cache_info = scan_cache_dir()
+        inpaint_repos = []
+        for repo in hf_cache_info.repos:
+            if repo.repo_type == "model" and "inpaint" in repo.repo_id.lower() and repo.repo_id not in model_ids:
+                inpaint_repos.append(repo.repo_id)
+        inp_list_from_cache = sorted(inpaint_repos, reverse=True, key=lambda x: x.split("/")[-1])
+        model_ids.extend(inp_list_from_cache)
+        return model_ids
+    except:
+        return model_ids
 
 def get_cleaner_model_ids():
     """Get cleaner model ids list.
