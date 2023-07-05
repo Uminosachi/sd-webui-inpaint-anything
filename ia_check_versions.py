@@ -1,7 +1,12 @@
 from packaging.version import parse
 from importlib.util import find_spec
-from importlib.metadata import version
-from functools import cached_property
+try:
+    from importlib.metadata import version
+    from functools import cached_property
+except:
+    from pkg_resources import get_distribution
+    version = lambda module_name: get_distribution(module_name).version
+    cached_property = property
 
 def get_module_version(module_name):
     module_version = version(module_name) if find_spec(module_name) is not None else None
@@ -27,8 +32,6 @@ def compare_module_version(module_name, version_string):
 class IACheckVersions:
     @cached_property
     def diffusers_enable_cpu_offload(self):
-        print("diffusers version:", get_module_version("diffusers"))
-        print("accelerate version:", get_module_version("accelerate"))
         if (find_spec("diffusers") is not None and compare_module_version("diffusers", "0.15.0") >= 0 and
             find_spec("accelerate") is not None and compare_module_version("accelerate", "0.17.0") >= 0):
             return True
