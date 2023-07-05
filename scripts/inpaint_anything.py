@@ -49,6 +49,7 @@ from tqdm import tqdm
 from ia_threading import (clear_cache_decorator, await_pre_unload_model_weights, await_pre_reload_model_weights, await_backup_reload_ckpt_info,
                           async_post_reload_model_weights)
 from ia_config import IAConfig, setup_ia_config_ini, set_ia_config, get_ia_config_index
+from ia_check_versions import ia_check_versions
 
 _DOWNLOAD_COMPLETE = "Download complete"
 
@@ -544,8 +545,11 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         pipe.enable_attention_slicing()
         generator = torch.Generator("cpu").manual_seed(seed)
     else:
-        # pipe.enable_model_cpu_offload()
-        pipe = pipe.to(device)
+        if ia_check_versions.diffusers_enable_cpu_offload:
+            ia_logging.info("Enable model cpu offload")
+            pipe.enable_model_cpu_offload()
+        else:
+            pipe = pipe.to(device)
         if shared.xformers_available:
             ia_logging.info("Enable xformers memory efficient attention")
             pipe.enable_xformers_memory_efficient_attention()

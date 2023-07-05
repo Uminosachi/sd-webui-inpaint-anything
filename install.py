@@ -65,3 +65,9 @@ if not launch.is_installed("tqdm"):
         launch.run_pip("install tqdm", "requirements for tqdm")
     except:
         print("Can't install tqdm. Please follow the readme to install manually")
+
+if not launch.is_installed("packaging"):
+    try:
+        launch.run_pip("install packaging", "requirements for packaging")
+    except:
+        print("Can't install packaging. Please follow the readme to install manually")
