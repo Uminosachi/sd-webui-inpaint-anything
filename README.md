@@ -54,6 +54,9 @@ To download the model:
   * In the Advanced options, you can adjust the Sampler, Sampling Steps, Guidance Scale, and Seed.
   * If you enable the `Mask area Only` option, modifications will be confined to the designated mask area only.
 * Inpainting process is performed using [diffusers](https://github.com/huggingface/diffusers).
+* Tips: You can directly drag and drop the inpainted image into the input image field on the Web UI.
+
+#### Model Cache
 * The inpainting model, which is saved in HuggingFace's cache and includes `inpaint` (case-insensitive) in its repo_id, will also be added to the Inpainting Model ID dropdown list.
   * If there's a specific model you'd like to use, you can cache it in advance using the following Python commands:
 ```bash
@@ -63,7 +66,7 @@ python
 from diffusers import StableDiffusionInpaintPipeline
 pipe = StableDiffusionInpaintPipeline.from_pretrained("Uminosachi/dreamshaper_5-inpainting")
 ```
-* Tips: You can directly drag and drop the inpainted image into the input image field on the Web UI.
+* The model diffusers downloaded is typically stored in your home directory. You can find it at `/home/username/.cache/huggingface/hub` for Linux and MacOS users, or at `C:\Users\username\.cache\huggingface\hub` for Windows users.
 
 ### Cleaner Tab
 
