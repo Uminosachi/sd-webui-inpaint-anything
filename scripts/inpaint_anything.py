@@ -21,12 +21,11 @@ from lama_cleaner.model_manager import ModelManager
 from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
 
 import modules.scripts as scripts
-from modules import shared, script_callbacks
+from modules import shared, script_callbacks, devices
 try:
     from modules.paths_internal import extensions_dir
 except Exception:
     from modules.extensions import extensions_dir
-from modules.devices import device
 from modules.safe import unsafe_torch_load, load
 
 import re
@@ -135,7 +134,7 @@ def get_sam_mask_generator(sam_checkpoint):
         if platform.system() == "Darwin":
             sam.to(device="cpu")
         else:
-            sam.to(device=device)
+            sam.to(device=devices.device)
         sam_mask_generator = SamAutomaticMaskGeneratorLocal(sam, points_per_batch=points_per_batch)
         torch.load = load
     else:
@@ -168,7 +167,7 @@ def get_sam_predictor(sam_checkpoint):
         if platform.system() == "Darwin":
             sam.to(device="cpu")
         else:
-            sam.to(device=device)
+            sam.to(device=devices.device)
         sam_predictor = SamPredictorLocal(sam)
         torch.load = load
     else:
@@ -501,7 +500,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         local_files_only = True
         ia_logging.info("local_files_only: {}".format(str(local_files_only)))
     
-    if platform.system() == "Darwin":
+    if platform.system() == "Darwin" or devices.device == devices.cpu:
         torch_dtype = torch.float32
     else:
         torch_dtype = torch.float16
@@ -547,18 +546,18 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         pipe.enable_attention_slicing()
         generator = torch.Generator("cpu").manual_seed(seed)
     else:
-        if ia_check_versions.diffusers_enable_cpu_offload:
+        if ia_check_versions.diffusers_enable_cpu_offload and devices.device != devices.cpu:
             ia_logging.info("Enable model cpu offload")
             pipe.enable_model_cpu_offload()
         else:
-            pipe = pipe.to(device)
+            pipe = pipe.to(devices.device)
         if shared.xformers_available:
             ia_logging.info("Enable xformers memory efficient attention")
             pipe.enable_xformers_memory_efficient_attention()
         else:
             ia_logging.info("Enable attention slicing")
             pipe.enable_attention_slicing()
-        generator = torch.Generator(device).manual_seed(seed)
+        generator = torch.Generator(devices.device).manual_seed(seed)
     
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
@@ -628,7 +627,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     if platform.system() == "Darwin":
         model = ModelManager(name=cleaner_model_id, device="cpu")
     else:
-        model = ModelManager(name=cleaner_model_id, device=device)
+        model = ModelManager(name=cleaner_model_id, device=devices.device)
     
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
