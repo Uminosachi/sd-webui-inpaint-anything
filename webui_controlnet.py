@@ -139,7 +139,8 @@ def clear_controlnet_cache(cnet, input_scripts):
                 # print("Clear ControlNet cache: {}".format(script.title()))
                 script.clear_control_model_cache()
 
-def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_id, ddim_steps, cfg_scale, strength, seed, fill_mode=1):
+def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_id, ddim_steps, cfg_scale, strength, seed,
+                              mask_blur=4, fill_mode=1):
     """Get StableDiffusionProcessingImg2Img instance
     
     Args:
@@ -152,6 +153,8 @@ def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_
         cfg_scale (float): CFG scale
         strength (float): Denoising strength
         seed (int): Seed
+        mask_blur (int, optional): Mask blur. Defaults to 4.
+        fill_mode (int, optional): Fill mode. Defaults to 1.
 
     Returns:
         StableDiffusionProcessingImg2Img: StableDiffusionProcessingImg2Img instance
@@ -167,7 +170,7 @@ def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_
         denoising_strength=strength,
         image_cfg_scale=1.5,
         mask=mask_image,
-        mask_blur=4,
+        mask_blur=mask_blur,
         inpainting_fill=fill_mode,
         inpainting_mask_invert=0,   # 0:Inpaint masked
         prompt=prompt,

@@ -754,7 +754,7 @@ def run_cn_inpaint(input_image, sel_mask,
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
-    p = get_sd_img2img_processing(init_image, None, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, 1)
+    p = get_sd_img2img_processing(init_image, None, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed)
 
     backup_alwayson_scripts(p.scripts)
     disable_alwayson_scripts_wo_cn(cnet, p.scripts)
@@ -839,7 +839,7 @@ def run_cn_inpaint(input_image, sel_mask,
 @clear_cache_decorator
 def run_webui_inpaint(input_image, sel_mask,
                       webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk,
-                      webui_fill_mode):
+                      webui_mask_blur, webui_fill_mode):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -866,7 +866,8 @@ def run_webui_inpaint(input_image, sel_mask,
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
-    p = get_sd_img2img_processing(init_image, mask_image, webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_fill_mode)
+    p = get_sd_img2img_processing(init_image, mask_image, webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
+                                  webui_mask_blur, webui_fill_mode)
 
     backup_alwayson_scripts(p.scripts)
     disable_all_alwayson_scripts(p.scripts)
@@ -1050,6 +1051,7 @@ def on_ui_tabs():
                         webui_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="webui_sd_prompt")
                         webui_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="webui_sd_n_prompt")
                         with gr.Accordion("Advanced options", elem_id="webui_advanced_options", open=False):
+                            webui_mask_blur = gr.Slider(label="Mask blur", minimum=0, maximum=64, step=1, value=4, elem_id="webui_mask_blur")
                             webui_fill_mode = gr.Radio(label="Masked content", choices=["fill", "original", "latent noise", "latent nothing"], value="original", type="index", elem_id="webui_fill_mode")
                             with gr.Row():
                                 with gr.Column():
@@ -1240,7 +1242,7 @@ def on_ui_tabs():
                     run_webui_inpaint,
                     inputs=[input_image, sel_mask,
                             webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk,
-                            webui_fill_mode],
+                            webui_mask_blur, webui_fill_mode],
                     outputs=[webui_out_image]).then(
                     fn=async_post_reload_model_weights, inputs=None, outputs=None)
 
