@@ -44,7 +44,7 @@ from ia_threading import (clear_cache_decorator, await_pre_unload_model_weights,
                           async_post_reload_model_weights)
 from ia_config import IAConfig, setup_ia_config_ini, set_ia_config, get_ia_config_index
 from ia_check_versions import ia_check_versions
-from ia_downloader import IADownloader, ia_downloader, download_model_from_hf
+from ia_file_manager import IAFileManager, ia_file_manager, download_model_from_hf
 
 @clear_cache_decorator
 def download_model(sam_model_id):
@@ -63,7 +63,7 @@ def download_model(sam_model_id):
     else:
         # url_sam_vit_h_4b8939 = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
         url_sam = "https://dl.fbaipublicfiles.com/segment_anything/" + sam_model_id
-    models_dir = ia_downloader.models_dir
+    models_dir = ia_file_manager.models_dir
     sam_checkpoint = os.path.join(models_dir, sam_model_id)
     if not os.path.isfile(sam_checkpoint):
         try:        
@@ -72,7 +72,7 @@ def download_model(sam_model_id):
             ia_logging.error(str(e))
             return str(e)
         
-        return IADownloader.DOWNLOAD_COMPLETE
+        return IAFileManager.DOWNLOAD_COMPLETE
     else:
         return "Model already exists"
 
@@ -163,7 +163,7 @@ def save_mask_image(mask_image, save_mask_chk=False):
     """
     if save_mask_chk:
         save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
-        save_name = os.path.join(ia_downloader.outputs_dir, save_name)
+        save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
         Image.fromarray(mask_image).save(save_name)
 
 @clear_cache_decorator
@@ -214,7 +214,7 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
 @clear_cache_decorator
 def run_sam(input_image, sam_model_id, sam_image):
     global sam_dict
-    sam_checkpoint = os.path.join(ia_downloader.models_dir, sam_model_id)
+    sam_checkpoint = os.path.join(ia_file_manager.models_dir, sam_model_id)
     if not os.path.isfile(sam_checkpoint):
         ret_sam_image = None if sam_image is None else gr.update()
         return ret_sam_image, f"{sam_model_id} not found, please download"
@@ -444,7 +444,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         ia_logging.info("Enable offline network Inpainting: {}".format(str(config_offline_inpainting)))
     local_files_only = False
     local_file_status = download_model_from_hf(inp_model_id, local_files_only=True)
-    if local_file_status != IADownloader.DOWNLOAD_COMPLETE:
+    if local_file_status != IAFileManager.DOWNLOAD_COMPLETE:
         if config_offline_inpainting:
             ia_logging.warning(local_file_status)
             return None
@@ -550,7 +550,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     metadata.add_text("parameters", infotext)
     
     save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(inp_model_id) + "_" + str(seed) + ".png"
-    save_name = os.path.join(ia_downloader.outputs_dir, save_name)
+    save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     output_image.save(save_name, pnginfo=metadata)
     
     del pipe
@@ -600,7 +600,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     output_image = Image.fromarray(output_image)
 
     save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(cleaner_model_id) + ".png"
-    save_name = os.path.join(ia_downloader.outputs_dir, save_name)
+    save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     output_image.save(save_name)
     
     del model
@@ -623,7 +623,7 @@ def run_get_alpha_image(input_image, sel_mask):
     alpha_image.putalpha(mask_image)
     
     save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "rgba_image" + ".png"
-    save_name = os.path.join(ia_downloader.outputs_dir, save_name)
+    save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     alpha_image.save(save_name)
     
     def make_checkerboard(n_rows, n_columns, square_size):
@@ -653,7 +653,7 @@ def run_get_mask(sel_mask):
     mask_image = sam_dict["mask_image"]
 
     save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
-    save_name = os.path.join(ia_downloader.outputs_dir, save_name)
+    save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     Image.fromarray(mask_image).save(save_name)
     
     return mask_image
@@ -761,7 +761,7 @@ def run_cn_inpaint(input_image, sel_mask,
             metadata.add_text("parameters", infotext)
 
             save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(no_hash_cn_model_id) + "_" + str(cn_seed) + ".png"
-            save_name = os.path.join(ia_downloader.outputs_dir, save_name)
+            save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
             output_image.save(save_name, pnginfo=metadata)
         else:
             output_image = None
@@ -823,7 +823,7 @@ def run_webui_inpaint(input_image, sel_mask,
             metadata.add_text("parameters", infotext)
 
             save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(no_hash_webui_model_id) + "_" + str(webui_seed) + ".png"
-            save_name = os.path.join(ia_downloader.outputs_dir, save_name)
+            save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
             output_image.save(save_name, pnginfo=metadata)
         else:
             output_image = None

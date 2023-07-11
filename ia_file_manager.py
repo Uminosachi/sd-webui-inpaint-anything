@@ -4,7 +4,7 @@ from huggingface_hub import snapshot_download
 from ia_logging import ia_logging
 from modules import shared
 
-class IADownloader:
+class IAFileManager:
     DOWNLOAD_COMPLETE = "Download complete"
 
     def __init__(self) -> None:
@@ -16,7 +16,7 @@ class IADownloader:
 
         self._ia_models_dir = os.path.join(os.path.dirname(__file__), "models")
 
-    def update_outputs_dir(self) -> None:
+    def update_ia_outputs_dir(self) -> None:
         """Update inpaint-anything outputs directory.
         
         Returns:
@@ -35,7 +35,7 @@ class IADownloader:
         Returns:
             str: inpaint-anything outputs directory
         """
-        self.update_outputs_dir()
+        self.update_ia_outputs_dir()
         if not os.path.isdir(self._ia_outputs_dir):
             os.makedirs(self._ia_outputs_dir, exist_ok=True)
         return self._ia_outputs_dir
@@ -51,7 +51,7 @@ class IADownloader:
             os.makedirs(self._ia_models_dir, exist_ok=True)
         return self._ia_models_dir
 
-ia_downloader = IADownloader()
+ia_file_manager = IAFileManager()
 
 def download_model_from_hf(hf_model_id, local_files_only=False):
     """Download model from HuggingFace Hub.
@@ -72,4 +72,4 @@ def download_model_from_hf(hf_model_id, local_files_only=False):
     except Exception as e:
         return str(e)
 
-    return IADownloader.DOWNLOAD_COMPLETE
+    return IAFileManager.DOWNLOAD_COMPLETE
