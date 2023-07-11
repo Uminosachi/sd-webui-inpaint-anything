@@ -1,11 +1,11 @@
 import configparser
 import os
 from ia_ui_items import get_sam_model_ids, get_inp_model_ids
-from modules.paths_internal import data_path
+from modules import shared
 import json
 
 ia_config_ini_path = os.path.join(os.path.dirname(__file__), "ia_config.ini")
-webui_config_path = os.path.join(data_path, "ui-config.json")
+webui_config_path = os.path.join(shared.data_path, "ui-config.json")
 
 class IAConfig:
     SECTION_DEFAULT = "DEFAULT"
