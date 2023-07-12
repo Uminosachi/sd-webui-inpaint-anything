@@ -14,7 +14,7 @@ class IAFileManager:
                                             "outputs", config_save_folder,
                                             datetime.now().strftime("%Y-%m-%d"))
 
-        self._ia_models_dir = os.path.join(os.path.dirname(__file__), "models")
+        self._ia_models_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
 
     def update_ia_outputs_dir(self) -> None:
         """Update inpaint-anything outputs directory.
