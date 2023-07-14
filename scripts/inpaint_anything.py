@@ -76,7 +76,7 @@ def download_model(sam_model_id):
     else:
         return "Model already exists"
 
-def get_sam_mask_generator(sam_checkpoint):
+def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
     """Get SAM mask generator.
 
     Args:
@@ -91,16 +91,22 @@ def get_sam_mask_generator(sam_checkpoint):
         sam_model_registry_local = sam_model_registry_hq
         SamAutomaticMaskGeneratorLocal = SamAutomaticMaskGeneratorHQ
         points_per_batch = 32
+        pred_iou_thresh = 0.88 if not anime_style_chk else 0.83
+        stability_score_thresh = 0.95 if not anime_style_chk else 0.9
     elif "FastSAM" in os.path.basename(sam_checkpoint):
         model_type = os.path.splitext(os.path.basename(sam_checkpoint))[0]
         sam_model_registry_local = fast_sam_model_registry
         SamAutomaticMaskGeneratorLocal = FastSamAutomaticMaskGenerator
         points_per_batch = None
+        pred_iou_thresh = None
+        stability_score_thresh = None
     else:
         model_type = os.path.basename(sam_checkpoint)[4:9]
         sam_model_registry_local = sam_model_registry
         SamAutomaticMaskGeneratorLocal = SamAutomaticMaskGenerator
         points_per_batch = 64
+        pred_iou_thresh = 0.88 if not anime_style_chk else 0.83
+        stability_score_thresh = 0.95 if not anime_style_chk else 0.9
 
     if os.path.isfile(sam_checkpoint):
         torch.load = unsafe_torch_load
@@ -109,7 +115,8 @@ def get_sam_mask_generator(sam_checkpoint):
             sam.to(device="cpu")
         else:
             sam.to(device=devices.device)
-        sam_mask_generator = SamAutomaticMaskGeneratorLocal(sam, points_per_batch=points_per_batch)
+        sam_mask_generator = SamAutomaticMaskGeneratorLocal(
+            model=sam, points_per_batch=points_per_batch, pred_iou_thresh=pred_iou_thresh, stability_score_thresh=stability_score_thresh)
         torch.load = load
     else:
         sam_mask_generator = None
@@ -212,7 +219,7 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
     return pad_image, "Padding done"
 
 @clear_cache_decorator
-def run_sam(input_image, sam_model_id, sam_image):
+def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     global sam_dict
     sam_checkpoint = os.path.join(ia_file_manager.models_dir, sam_model_id)
     if not os.path.isfile(sam_checkpoint):
@@ -237,7 +244,7 @@ def run_sam(input_image, sam_model_id, sam_image):
     seg_colormap = cm_pascal
     seg_colormap = np.array([c for c in seg_colormap if max(c) >= 64], dtype=np.uint8)
     
-    sam_mask_generator = get_sam_mask_generator(sam_checkpoint)
+    sam_mask_generator = get_sam_mask_generator(sam_checkpoint, anime_style_chk)
     ia_logging.info(f"{sam_mask_generator.__class__.__name__} {sam_model_id}")
     try:
         sam_masks = sam_mask_generator.generate(input_image)
@@ -247,6 +254,13 @@ def run_sam(input_image, sam_model_id, sam_image):
         async_post_reload_model_weights()
         ret_sam_image = None if sam_image is None else gr.update()
         return ret_sam_image, "SAM generate failed"
+
+    if anime_style_chk:
+        for sam_mask in sam_masks:
+            sam_mask_seg = sam_mask["segmentation"]
+            sam_mask_seg = cv2.morphologyEx(sam_mask_seg.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
+            sam_mask_seg = cv2.morphologyEx(sam_mask_seg.astype(np.uint8), cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
+            sam_mask["segmentation"] = sam_mask_seg.astype(bool)
 
     ia_logging.info("sam_masks: {}".format(len(sam_masks)))
     sam_masks = sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(np.uint32)))
@@ -929,7 +943,10 @@ def on_ui_tabs():
                                 padding_btn = gr.Button("Run Padding", elem_id="padding_btn")
                 
                 with gr.Row():
-                    sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn", interactive=False)
+                    with gr.Column():
+                        anime_style_chk = gr.Checkbox(label="Anime Style (Up Detection, Down Mask Quality)", elem_id="anime_style_chk", show_label=True, interactive=True)
+                    with gr.Column():
+                        sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn", interactive=False)
                 
                 with gr.Tab("Inpainting", elem_id="inpainting_tab"):
                     prompt = gr.Textbox(label="Inpainting Prompt", elem_id="sd_prompt")
@@ -1120,7 +1137,7 @@ def on_ui_tabs():
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             input_image.upload(input_image_upload, inputs=[input_image, sam_image, sel_mask], outputs=[sam_image, sel_mask, sam_btn])
             padding_btn.click(run_padding, inputs=[input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode], outputs=[input_image, status_text])
-            sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image], outputs=[sam_image, status_text]).then(
+            sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image, anime_style_chk], outputs=[sam_image, status_text]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
