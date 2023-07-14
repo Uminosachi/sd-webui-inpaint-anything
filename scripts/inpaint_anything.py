@@ -91,22 +91,19 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
         sam_model_registry_local = sam_model_registry_hq
         SamAutomaticMaskGeneratorLocal = SamAutomaticMaskGeneratorHQ
         points_per_batch = 32
-        pred_iou_thresh = 0.88 if not anime_style_chk else 0.83
-        stability_score_thresh = 0.95 if not anime_style_chk else 0.9
     elif "FastSAM" in os.path.basename(sam_checkpoint):
         model_type = os.path.splitext(os.path.basename(sam_checkpoint))[0]
         sam_model_registry_local = fast_sam_model_registry
         SamAutomaticMaskGeneratorLocal = FastSamAutomaticMaskGenerator
         points_per_batch = None
-        pred_iou_thresh = None
-        stability_score_thresh = None
     else:
         model_type = os.path.basename(sam_checkpoint)[4:9]
         sam_model_registry_local = sam_model_registry
         SamAutomaticMaskGeneratorLocal = SamAutomaticMaskGenerator
         points_per_batch = 64
-        pred_iou_thresh = 0.88 if not anime_style_chk else 0.83
-        stability_score_thresh = 0.95 if not anime_style_chk else 0.9
+
+    pred_iou_thresh = 0.88 if not anime_style_chk else 0.83
+    stability_score_thresh = 0.95 if not anime_style_chk else 0.9
 
     if os.path.isfile(sam_checkpoint):
         torch.load = unsafe_torch_load
@@ -258,8 +255,8 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     if anime_style_chk:
         for sam_mask in sam_masks:
             sam_mask_seg = sam_mask["segmentation"]
-            sam_mask_seg = cv2.morphologyEx(sam_mask_seg.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
-            sam_mask_seg = cv2.morphologyEx(sam_mask_seg.astype(np.uint8), cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
+            sam_mask_seg = cv2.morphologyEx(sam_mask_seg.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+            sam_mask_seg = cv2.morphologyEx(sam_mask_seg.astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
             sam_mask["segmentation"] = sam_mask_seg.astype(bool)
 
     ia_logging.info("sam_masks: {}".format(len(sam_masks)))

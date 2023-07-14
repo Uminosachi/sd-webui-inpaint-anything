@@ -29,7 +29,7 @@ class FastSamAutomaticMaskGenerator:
         model: FastSAM,
         points_per_batch: int = None,
         pred_iou_thresh: float = None,
-        stability_score_thresh = None,
+        stability_score_thresh: float = None,
     ) -> None:
         self.model = model
         self.points_per_batch = points_per_batch
