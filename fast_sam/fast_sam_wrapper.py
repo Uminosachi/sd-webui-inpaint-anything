@@ -13,14 +13,14 @@ class FastSAM:
         self.model_path = checkpoint
         self.model = YOLO(self.model_path)
 
-    def to(self, device):
+    def to(self, device) -> None:
         self.model.to(device)
 
     @property
     def device(self) -> Any:
         return self.model.device
 
-    def __call__(self, source=None, stream=False, **kwargs):
+    def __call__(self, source=None, stream=False, **kwargs) -> Any:
         return self.model(source=source, stream=stream, **kwargs)
 
 class FastSamAutomaticMaskGenerator:
@@ -28,9 +28,13 @@ class FastSamAutomaticMaskGenerator:
         self,
         model: FastSAM,
         points_per_batch: int = None,
+        pred_iou_thresh: float = None,
+        stability_score_thresh = None,
     ) -> None:
         self.model = model
         self.points_per_batch = points_per_batch
+        self.pred_iou_thresh = pred_iou_thresh
+        self.stability_score_thresh = stability_score_thresh
 
     def generate(self, image: np.ndarray) -> List[Dict[str, Any]]:
         height, width = image.shape[:2]
