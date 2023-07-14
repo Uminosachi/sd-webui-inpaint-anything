@@ -8,7 +8,7 @@ import math
 class FastSAM:
     def __init__(
         self,
-        checkpoint: str,    
+        checkpoint: str,
     ) -> None:
         self.model_path = checkpoint
         self.model = YOLO(self.model_path)
