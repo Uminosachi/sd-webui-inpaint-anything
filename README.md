@@ -41,6 +41,7 @@ To download the model:
   * The `Anime Style` checkbox enhances segmentation mask detection, particularly in anime style images, at the expense of a slight reduction in mask quality.
 * Click on the `Run Segment Anything` button.
 * Use sketching to point the area you want to inpaint. You can undo and adjust the pen size.
+  * Hover over either the SAM image or the mask image and press the `S` key for Fullscreen mode, or the `R` key to Reset zoom.
 * Click on the `Create mask` button. The mask will appear in the selected mask image area.
 
 ### Mask Adjustment

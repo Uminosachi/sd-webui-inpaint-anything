@@ -113,3 +113,270 @@ async function inpaintAnything_clearSelMask() {
 		})
 	);
 }
+
+onUiLoaded(async() => {
+    const elementIDs = {
+        sam_image: "#sam_image",
+		sel_mask: "#sel_mask",
+    };
+
+    // Default config
+    const defaultHotkeysConfig = {
+        canvas_hotkey_reset: "KeyR",
+        canvas_hotkey_fullscreen: "KeyS",
+    };
+
+	const elemData = {};
+
+	function applyZoomAndPan(elemId) {
+        const targetElement = gradioApp().querySelector(elemId);
+
+        if (!targetElement) {
+            console.log("Element not found");
+            return;
+        }
+
+        targetElement.style.transformOrigin = "0 0";
+
+        elemData[elemId] = {
+            zoom: 1,
+            panX: 0,
+            panY: 0
+        };
+        let fullScreenMode = false;
+
+        // Toggle the zIndex of the target element between two values, allowing it to overlap or be overlapped by other elements
+        function toggleOverlap(forced = "") {
+            const zIndex1 = "0";
+            const zIndex2 = "998";
+
+            targetElement.style.zIndex =
+                targetElement.style.zIndex !== zIndex2 ? zIndex2 : zIndex1;
+
+            if (forced === "off") {
+                targetElement.style.zIndex = zIndex1;
+            } else if (forced === "on") {
+                targetElement.style.zIndex = zIndex2;
+            }
+        }
+
+        /**
+         * This function fits the target element to the screen by calculating
+         * the required scale and offsets. It also updates the global variables
+         * zoomLevel, panX, and panY to reflect the new state.
+         */
+
+        function fitToElement() {
+            //Reset Zoom
+            targetElement.style.transform = `translate(${0}px, ${0}px) scale(${1})`;
+
+            // Get element and screen dimensions
+            const elementWidth = targetElement.offsetWidth;
+            const elementHeight = targetElement.offsetHeight;
+            const parentElement = targetElement.parentElement;
+            const screenWidth = parentElement.clientWidth;
+            const screenHeight = parentElement.clientHeight;
+
+            // Get element's coordinates relative to the parent element
+            const elementRect = targetElement.getBoundingClientRect();
+            const parentRect = parentElement.getBoundingClientRect();
+            const elementX = elementRect.x - parentRect.x;
+
+            // Calculate scale and offsets
+            const scaleX = screenWidth / elementWidth;
+            const scaleY = screenHeight / elementHeight;
+            const scale = Math.min(scaleX, scaleY);
+
+            const transformOrigin =
+                window.getComputedStyle(targetElement).transformOrigin;
+            const [originX, originY] = transformOrigin.split(" ");
+            const originXValue = parseFloat(originX);
+            const originYValue = parseFloat(originY);
+
+            const offsetX =
+                (screenWidth - elementWidth * scale) / 2 -
+                originXValue * (1 - scale);
+            const offsetY =
+                (screenHeight - elementHeight * scale) / 2.5 -
+                originYValue * (1 - scale);
+
+            // Apply scale and offsets to the element
+            targetElement.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+
+            // Update global variables
+            elemData[elemId].zoomLevel = scale;
+            elemData[elemId].panX = offsetX;
+            elemData[elemId].panY = offsetY;
+
+            fullScreenMode = false;
+            toggleOverlap("off");
+        }
+
+		// Reset the zoom level and pan position of the target element to their initial values
+        function resetZoom() {
+            elemData[elemId] = {
+                zoomLevel: 1,
+                panX: 0,
+                panY: 0
+            };
+
+            // fixCanvas();
+            targetElement.style.transform = `scale(${elemData[elemId].zoomLevel}) translate(${elemData[elemId].panX}px, ${elemData[elemId].panY}px)`;
+
+            const canvas = gradioApp().querySelector(
+                `${elemId} canvas[key="interface"]`
+            );
+
+            toggleOverlap("off");
+            fullScreenMode = false;
+
+            if (
+                canvas &&
+                parseFloat(canvas.style.width) > 865 &&
+                parseFloat(targetElement.style.width) > 865
+            ) {
+                fitToElement();
+                return;
+            }
+
+            targetElement.style.width = "";
+            if (canvas) {
+                targetElement.style.height = canvas.style.height;
+            }
+        }
+
+        /**
+         * This function fits the target element to the screen by calculating
+         * the required scale and offsets. It also updates the global variables
+         * zoomLevel, panX, and panY to reflect the new state.
+         */
+
+        // Fullscreen mode
+        function fitToScreen() {
+            const canvas = gradioApp().querySelector(
+                `${elemId} canvas[key="interface"]`
+            );
+
+            if (!canvas) return;
+
+            if (canvas.offsetWidth > 862) {
+                targetElement.style.width = canvas.offsetWidth + "px";
+            }
+
+            if (fullScreenMode) {
+                resetZoom();
+                fullScreenMode = false;
+                return;
+            }
+
+            //Reset Zoom
+            targetElement.style.transform = `translate(${0}px, ${0}px) scale(${1})`;
+
+            // Get scrollbar width to right-align the image
+            const scrollbarWidth =
+                window.innerWidth - document.documentElement.clientWidth;
+
+            // Get element and screen dimensions
+            const elementWidth = targetElement.offsetWidth;
+            const elementHeight = targetElement.offsetHeight;
+            const screenWidth = window.innerWidth - scrollbarWidth;
+            const screenHeight = window.innerHeight;
+
+            // Get element's coordinates relative to the page
+            const elementRect = targetElement.getBoundingClientRect();
+            const elementY = elementRect.y;
+            const elementX = elementRect.x;
+
+            // Calculate scale and offsets
+            const scaleX = screenWidth / elementWidth;
+            const scaleY = screenHeight / elementHeight;
+            const scale = Math.min(scaleX, scaleY);
+
+            // Get the current transformOrigin
+            const computedStyle = window.getComputedStyle(targetElement);
+            const transformOrigin = computedStyle.transformOrigin;
+            const [originX, originY] = transformOrigin.split(" ");
+            const originXValue = parseFloat(originX);
+            const originYValue = parseFloat(originY);
+
+            // Calculate offsets with respect to the transformOrigin
+            const offsetX =
+                (screenWidth - elementWidth * scale) / 2 -
+                elementX -
+                originXValue * (1 - scale);
+            const offsetY =
+                (screenHeight - elementHeight * scale) / 2 -
+                elementY -
+                originYValue * (1 - scale);
+
+            // Apply scale and offsets to the element
+            targetElement.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+
+            // Update global variables
+            elemData[elemId].zoomLevel = scale;
+            elemData[elemId].panX = offsetX;
+            elemData[elemId].panY = offsetY;
+
+            fullScreenMode = true;
+            toggleOverlap("on");
+        }
+
+        // Reset zoom when uploading a new image
+        const fileInput = gradioApp().querySelector(
+            `${elemId} input[type="file"][accept="image/*"].svelte-116rqfv`
+        );
+        fileInput.addEventListener("click", resetZoom);
+
+        // Handle keydown events
+        function handleKeyDown(event) {
+            // Disable key locks to make pasting from the buffer work correctly
+            if ((event.ctrlKey && event.code === 'KeyV') || (event.ctrlKey && event.code === 'KeyC') || event.code === "F5") {
+                return;
+            }
+
+            // before activating shortcut, ensure user is not actively typing in an input field
+			if (event.target.nodeName === 'TEXTAREA' || event.target.nodeName === 'INPUT') {
+				return;
+			}
+
+            const hotkeyActions = {
+                [defaultHotkeysConfig.canvas_hotkey_reset]: resetZoom,
+                [defaultHotkeysConfig.canvas_hotkey_fullscreen]: fitToScreen
+            };
+
+            const action = hotkeyActions[event.code];
+            if (action) {
+                event.preventDefault();
+                action(event);
+            }
+		}
+
+		// Handle events only inside the targetElement
+        let isKeyDownHandlerAttached = false;
+
+        function handleMouseMove() {
+            if (!isKeyDownHandlerAttached) {
+                document.addEventListener("keydown", handleKeyDown);
+                isKeyDownHandlerAttached = true;
+
+                activeElement = elemId;
+            }
+        }
+
+        function handleMouseLeave() {
+            if (isKeyDownHandlerAttached) {
+                document.removeEventListener("keydown", handleKeyDown);
+                isKeyDownHandlerAttached = false;
+
+                activeElement = null;
+            }
+        }
+
+        // Add mouse event handlers
+        targetElement.addEventListener("mousemove", handleMouseMove);
+        targetElement.addEventListener("mouseleave", handleMouseLeave);
+	}
+
+	applyZoomAndPan(elementIDs.sam_image);
+	applyZoomAndPan(elementIDs.sel_mask);
+});
