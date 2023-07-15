@@ -87,12 +87,7 @@ async function inpaintAnything_clearSamMask() {
 	if (!remove_image_button) {
 		return;
 	}
-	sam_mask_clear.dispatchEvent(
-		new Event('click', {
-			bubbles: true,
-			composed: true,
-		})
-	);
+    sam_mask_clear?.click();
 }
 
 async function inpaintAnything_clearSelMask() {
@@ -106,12 +101,7 @@ async function inpaintAnything_clearSelMask() {
 	if (!remove_image_button) {
 		return;
 	}
-	sel_mask_clear.dispatchEvent(
-		new Event('click', {
-			bubbles: true,
-			composed: true,
-		})
-	);
+    sel_mask_clear?.click();
 }
 
 onUiLoaded(async() => {
@@ -147,7 +137,8 @@ onUiLoaded(async() => {
 
         // Toggle the zIndex of the target element between two values, allowing it to overlap or be overlapped by other elements
         function toggleOverlap(forced = "") {
-            const zIndex1 = "0";
+            // const zIndex1 = "0";
+            const zIndex1 = null;
             const zIndex2 = "998";
 
             targetElement.style.zIndex =
@@ -239,10 +230,12 @@ onUiLoaded(async() => {
                 return;
             }
 
-            targetElement.style.width = "";
-            if (canvas) {
-                targetElement.style.height = canvas.style.height;
-            }
+            // targetElement.style.width = "";
+            targetElement.style.width = null;
+            // if (canvas) {
+            //     targetElement.style.height = canvas.style.height;
+            // }
+            targetElement.style.height = 480;
         }
 
         /**
