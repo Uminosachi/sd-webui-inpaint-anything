@@ -79,11 +79,11 @@ async function inpaintAnything_sendToInpaint() {
 async function inpaintAnything_clearSamMask() {
 	await new Promise(s => setTimeout(s, 300));
 
-	const sam_mask_clear = document.querySelector("#sam_image").querySelector("button[aria-label='Clear']");
+	const sam_mask_clear = document.querySelector("#ia_sam_image").querySelector("button[aria-label='Clear']");
 	if (!sam_mask_clear) {
 		return;
 	}
-	const remove_image_button = document.querySelector("#sam_image").querySelector("button[aria-label='Remove Image']");
+	const remove_image_button = document.querySelector("#ia_sam_image").querySelector("button[aria-label='Remove Image']");
 	if (!remove_image_button) {
 		return;
 	}
@@ -93,11 +93,11 @@ async function inpaintAnything_clearSamMask() {
 async function inpaintAnything_clearSelMask() {
 	await new Promise(s => setTimeout(s, 300));
 
-	const sel_mask_clear = document.querySelector("#sel_mask").querySelector("button[aria-label='Clear']");
+	const sel_mask_clear = document.querySelector("#ia_sel_mask").querySelector("button[aria-label='Clear']");
 	if (!sel_mask_clear) {
 		return;
 	}
-	const remove_image_button = document.querySelector("#sel_mask").querySelector("button[aria-label='Remove Image']");
+	const remove_image_button = document.querySelector("#ia_sel_mask").querySelector("button[aria-label='Remove Image']");
 	if (!remove_image_button) {
 		return;
 	}
@@ -106,8 +106,8 @@ async function inpaintAnything_clearSelMask() {
 
 onUiLoaded(async() => {
     const elementIDs = {
-        sam_image: "#sam_image",
-		sel_mask: "#sel_mask",
+        ia_sam_image: "#ia_sam_image",
+		ia_sel_mask: "#ia_sel_mask",
     };
 
     // Default config
@@ -370,6 +370,6 @@ onUiLoaded(async() => {
         targetElement.addEventListener("mouseleave", handleMouseLeave);
 	}
 
-	applyZoomAndPan(elementIDs.sam_image);
-	applyZoomAndPan(elementIDs.sel_mask);
+	applyZoomAndPan(elementIDs.ia_sam_image);
+	applyZoomAndPan(elementIDs.ia_sel_mask);
 });

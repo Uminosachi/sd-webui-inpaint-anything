@@ -941,7 +941,7 @@ def on_ui_tabs():
                 
                 with gr.Row():
                     with gr.Column():
-                        anime_style_chk = gr.Checkbox(label="Anime Style (Up Detection, Down Mask Quality)", elem_id="anime_style_chk", show_label=True, interactive=True)
+                        anime_style_chk = gr.Checkbox(label="Anime Style (Up Detection, Down mask Quality)", elem_id="anime_style_chk", show_label=True, interactive=True)
                     with gr.Column():
                         sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn", interactive=False)
                 
@@ -1115,7 +1115,7 @@ def on_ui_tabs():
                 with gr.Row():
                     gr.Markdown("Mouse over image: Press `S` key for Fullscreen mode, `R` key to Reset zoom")
                 with gr.Row():
-                    sam_image = gr.Image(label="Segment Anything image", elem_id="sam_image", type="numpy", tool="sketch", brush_radius=8,
+                    sam_image = gr.Image(label="Segment Anything image", elem_id="ia_sam_image", type="numpy", tool="sketch", brush_radius=8,
                                          show_label=False, interactive=True).style(height=480)
                 with gr.Row():
                     with gr.Column():
@@ -1124,7 +1124,7 @@ def on_ui_tabs():
                         invert_chk = gr.Checkbox(label="Invert mask", elem_id="invert_chk", show_label=True, interactive=True)
 
                 with gr.Row():
-                    sel_mask = gr.Image(label="Selected mask image", elem_id="sel_mask", type="numpy", tool="sketch", brush_radius=12,
+                    sel_mask = gr.Image(label="Selected mask image", elem_id="ia_sel_mask", type="numpy", tool="sketch", brush_radius=12,
                                         show_label=False, interactive=True).style(height=480)
 
                 with gr.Row():
