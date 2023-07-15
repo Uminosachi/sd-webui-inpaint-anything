@@ -35,6 +35,7 @@ class FastSamAutomaticMaskGenerator:
         self.points_per_batch = points_per_batch
         self.pred_iou_thresh = pred_iou_thresh
         self.stability_score_thresh = stability_score_thresh
+        self.conf = 0.25 if stability_score_thresh >= 0.95 else 0.15
 
     def generate(self, image: np.ndarray) -> List[Dict[str, Any]]:
         height, width = image.shape[:2]
@@ -49,7 +50,7 @@ class FastSamAutomaticMaskGenerator:
             device=self.model.device,
             retina_masks=True,
             iou=0.7,
-            conf=0.25,
+            conf=self.conf,
             max_det=256)
         
         annotations = results[0].masks.data
