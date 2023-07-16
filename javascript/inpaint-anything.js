@@ -79,11 +79,20 @@ async function inpaintAnything_sendToInpaint() {
 async function inpaintAnything_clearSamMask() {
 	await new Promise(s => setTimeout(s, 300));
 
-	const sam_mask_clear = document.querySelector("#ia_sam_image").querySelector("button[aria-label='Clear']");
+    const elemId = "#ia_sam_image";
+
+    const targetElement = document.querySelector(elemId);
+    if (!targetElement) {
+        return;
+    }
+    targetElement.style.transform = null;
+    targetElement.style.zIndex = null;
+
+	const sam_mask_clear = document.querySelector(elemId).querySelector("button[aria-label='Clear']");
 	if (!sam_mask_clear) {
 		return;
 	}
-	const remove_image_button = document.querySelector("#ia_sam_image").querySelector("button[aria-label='Remove Image']");
+	const remove_image_button = document.querySelector(elemId).querySelector("button[aria-label='Remove Image']");
 	if (!remove_image_button) {
 		return;
 	}
@@ -93,11 +102,20 @@ async function inpaintAnything_clearSamMask() {
 async function inpaintAnything_clearSelMask() {
 	await new Promise(s => setTimeout(s, 300));
 
-	const sel_mask_clear = document.querySelector("#ia_sel_mask").querySelector("button[aria-label='Clear']");
+    const elemId = "#ia_sel_mask"
+
+    const targetElement = document.querySelector(elemId);
+    if (!targetElement) {
+        return;
+    }
+    targetElement.style.transform = null;
+    targetElement.style.zIndex = null;
+
+	const sel_mask_clear = document.querySelector(elemId).querySelector("button[aria-label='Clear']");
 	if (!sel_mask_clear) {
 		return;
 	}
-	const remove_image_button = document.querySelector("#ia_sel_mask").querySelector("button[aria-label='Remove Image']");
+	const remove_image_button = document.querySelector(elemId).querySelector("button[aria-label='Remove Image']");
 	if (!remove_image_button) {
 		return;
 	}
@@ -129,7 +147,7 @@ onUiLoaded(async() => {
         targetElement.style.transformOrigin = "0 0";
 
         elemData[elemId] = {
-            zoom: 1,
+            zoomLevel: 1,
             panX: 0,
             panY: 0
         };
@@ -221,20 +239,20 @@ onUiLoaded(async() => {
             toggleOverlap("off");
             fullScreenMode = false;
 
-            if (
-                canvas &&
-                parseFloat(canvas.style.width) > 865 &&
-                parseFloat(targetElement.style.width) > 865
-            ) {
-                fitToElement();
-                return;
-            }
+            // if (
+            //     canvas &&
+            //     parseFloat(canvas.style.width) > 865 &&
+            //     parseFloat(targetElement.style.width) > 865
+            // ) {
+            //     fitToElement();
+            //     return;
+            // }
 
             // targetElement.style.width = "";
-            targetElement.style.width = null;
             // if (canvas) {
             //     targetElement.style.height = canvas.style.height;
             // }
+            targetElement.style.width = null;
             targetElement.style.height = 480;
         }
 
@@ -252,9 +270,9 @@ onUiLoaded(async() => {
 
             if (!canvas) return;
 
-            if (canvas.offsetWidth > 862) {
-                targetElement.style.width = canvas.offsetWidth + "px";
-            }
+            // if (canvas.offsetWidth > 862) {
+            //     targetElement.style.width = canvas.offsetWidth + "px";
+            // }
 
             if (fullScreenMode) {
                 resetZoom();
