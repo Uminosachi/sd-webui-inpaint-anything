@@ -54,7 +54,7 @@ class Sam(nn.Module):
         self,
         batched_input: List[Dict[str, Any]],
         multimask_output: bool,
-        hq_token_only: bool =False,
+        hq_token_only: bool = False,
     ) -> List[Dict[str, torch.Tensor]]:
         """
         Predicts masks end-to-end from provided images and prompts.
@@ -96,7 +96,7 @@ class Sam(nn.Module):
         """
         input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
         image_embeddings, interm_embeddings = self.image_encoder(input_images)
-        interm_embeddings = interm_embeddings[0] # early layer
+        interm_embeddings = interm_embeddings[0]  # early layer
 
         outputs = []
         for image_record, curr_embedding, curr_interm in zip(batched_input, image_embeddings, interm_embeddings):

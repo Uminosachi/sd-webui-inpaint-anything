@@ -108,7 +108,7 @@ class ImageEncoderViT(nn.Module):
         if self.pos_embed is not None:
             x = x + self.pos_embed
 
-        interm_embeddings=[]
+        interm_embeddings = []
         for blk in self.blocks:
             x = blk(x)
             if blk.window_size == 0:

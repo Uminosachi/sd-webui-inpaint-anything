@@ -10,3 +10,12 @@ from .mask_decoder_hq import MaskDecoderHQ
 from .mask_decoder import MaskDecoder
 from .prompt_encoder import PromptEncoder
 from .transformer import TwoWayTransformer
+
+__all__ = [
+    "Sam",
+    "ImageEncoderViT",
+    "MaskDecoderHQ",
+    "MaskDecoder",
+    "PromptEncoder",
+    "TwoWayTransformer",
+]
