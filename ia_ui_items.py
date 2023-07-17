@@ -1,5 +1,6 @@
 from huggingface_hub import scan_cache_dir
 
+
 def get_sampler_names():
     """Get sampler name list.
 
@@ -14,6 +15,7 @@ def get_sampler_names():
         "DPM2 a Karras",
         ]
     return sampler_names
+
 
 def get_sam_model_ids():
     """Get SAM model ids list.
@@ -33,7 +35,9 @@ def get_sam_model_ids():
         ]
     return sam_model_ids
 
+
 inp_list_from_cache = None
+
 
 def get_inp_model_ids():
     """Get inpainting model ids list.
@@ -62,8 +66,9 @@ def get_inp_model_ids():
         inp_list_from_cache = sorted(inpaint_repos, reverse=True, key=lambda x: x.split("/")[-1])
         model_ids.extend(inp_list_from_cache)
         return model_ids
-    except:
+    except Exception:
         return model_ids
+
 
 def get_cleaner_model_ids():
     """Get cleaner model ids list.
@@ -81,9 +86,10 @@ def get_cleaner_model_ids():
         ]
     return model_ids
 
+
 def get_padding_mode_names():
     """Get padding mode name list.
-    
+
     Returns:
         list: padding mode name list
     """

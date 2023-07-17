@@ -5,3 +5,5 @@ fast_sam_model_registry = {
     "FastSAM-x": FastSAM,
     "FastSAM-s": FastSAM,
 }
+
+__all__ = ["FastSAM", "FastSamAutomaticMaskGenerator"]

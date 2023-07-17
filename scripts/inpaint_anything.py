@@ -1,25 +1,24 @@
 import os
 import torch
 import numpy as np
-from PIL import Image, ImageFilter, ImageOps
+from PIL import Image, ImageFilter
 import gradio as gr
-from diffusers import StableDiffusionInpaintPipeline, DDIMScheduler, EulerDiscreteScheduler, EulerAncestralDiscreteScheduler, KDPM2DiscreteScheduler, KDPM2AncestralDiscreteScheduler
+from diffusers import (StableDiffusionInpaintPipeline, DDIMScheduler, EulerDiscreteScheduler,
+                       EulerAncestralDiscreteScheduler, KDPM2DiscreteScheduler, KDPM2AncestralDiscreteScheduler)
 from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
 from ia_get_dataset_colormap import create_pascal_label_colormap
 from torch.hub import download_url_to_file
 from torchvision import transforms
 from datetime import datetime
 import gc
-import argparse
 import platform
 from PIL.PngImagePlugin import PngInfo
-import time
 import random
 import cv2
 from lama_cleaner.model_manager import ModelManager
 from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
 
-import modules.scripts as scripts
+# import modules.scripts as scripts
 from modules import shared, script_callbacks, devices
 from modules.safe import unsafe_torch_load, load
 
@@ -46,6 +45,7 @@ from ia_config import IAConfig, setup_ia_config_ini, set_ia_config, get_ia_confi
 from ia_check_versions import ia_check_versions
 from ia_file_manager import IAFileManager, ia_file_manager, download_model_from_hf
 
+
 @clear_cache_decorator
 def download_model(sam_model_id):
     """Download SAM model.
@@ -66,15 +66,16 @@ def download_model(sam_model_id):
     models_dir = ia_file_manager.models_dir
     sam_checkpoint = os.path.join(models_dir, sam_model_id)
     if not os.path.isfile(sam_checkpoint):
-        try:        
+        try:
             download_url_to_file(url_sam, sam_checkpoint)
         except Exception as e:
             ia_logging.error(str(e))
             return str(e)
-        
+
         return IAFileManager.DOWNLOAD_COMPLETE
     else:
         return "Model already exists"
+
 
 def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
     """Get SAM mask generator.
@@ -117,8 +118,9 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
         torch.load = load
     else:
         sam_mask_generator = None
-    
+
     return sam_mask_generator
+
 
 def get_sam_predictor(sam_checkpoint):
     """Get SAM predictor.
@@ -150,18 +152,20 @@ def get_sam_predictor(sam_checkpoint):
         torch.load = load
     else:
         sam_predictor = None
-    
+
     return sam_predictor
+
 
 sam_dict = dict(sam_masks=None, mask_image=None, cnet=None, orig_image=None, pad_mask=None)
 
+
 def save_mask_image(mask_image, save_mask_chk=False):
     """Save mask image.
-    
+
     Args:
         mask_image (np.ndarray): mask image
         save_mask_chk (bool, optional): If True, save mask image. Defaults to False.
-    
+
     Returns:
         None
     """
@@ -169,6 +173,7 @@ def save_mask_image(mask_image, save_mask_chk=False):
         save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
         save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
         Image.fromarray(mask_image).save(save_name)
+
 
 @clear_cache_decorator
 def input_image_upload(input_image, sam_image, sel_mask):
@@ -180,6 +185,7 @@ def input_image_upload(input_image, sam_image, sel_mask):
     ret_sel_mask = np.zeros_like(input_image, dtype=np.uint8) if sel_mask is None else gr.update()
 
     return ret_sam_image, ret_sel_mask, gr.update(interactive=True)
+
 
 @clear_cache_decorator
 def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode="edge"):
@@ -200,8 +206,8 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
     pad_size_r = pad_size_w - pad_size_l
     pad_size_t = int(pad_size_h * pad_tb_barance)
     pad_size_b = pad_size_h - pad_size_t
-    
-    pad_width=[(pad_size_t, pad_size_b), (pad_size_l, pad_size_r), (0, 0)]
+
+    pad_width = [(pad_size_t, pad_size_b), (pad_size_l, pad_size_r), (0, 0)]
     if padding_mode == "constant":
         fill_value = shared.opts.data.get("inpaint_anything_padding_fill", 127)
         pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode, constant_values=fill_value)
@@ -215,6 +221,7 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
 
     return pad_image, "Padding done"
 
+
 @clear_cache_decorator
 def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     global sam_dict
@@ -222,7 +229,7 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     if not os.path.isfile(sam_checkpoint):
         ret_sam_image = None if sam_image is None else gr.update()
         return ret_sam_image, f"{sam_model_id} not found, please download"
-    
+
     if input_image is None:
         ret_sam_image = None if sam_image is None else gr.update()
         return ret_sam_image, "Input image not found"
@@ -236,11 +243,11 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     await_pre_unload_model_weights()
 
     ia_logging.info(f"input_image: {input_image.shape} {input_image.dtype}")
-    
+
     cm_pascal = create_pascal_label_colormap()
     seg_colormap = cm_pascal
     seg_colormap = np.array([c for c in seg_colormap if max(c) >= 64], dtype=np.uint8)
-    
+
     sam_mask_generator = get_sam_mask_generator(sam_checkpoint, anime_style_chk)
     ia_logging.info(f"{sam_mask_generator.__class__.__name__} {sam_model_id}")
     try:
@@ -263,8 +270,8 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     sam_masks = sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(np.uint32)))
     if sam_dict["pad_mask"] is not None:
         if (len(sam_masks) > 0 and
-            sam_masks[0]["segmentation"].shape == sam_dict["pad_mask"]["segmentation"].shape and
-            np.any(sam_dict["pad_mask"]["segmentation"])):
+                sam_masks[0]["segmentation"].shape == sam_dict["pad_mask"]["segmentation"].shape and
+                np.any(sam_dict["pad_mask"]["segmentation"])):
             sam_masks.insert(0, sam_dict["pad_mask"])
             ia_logging.info("insert pad_mask to sam_masks")
     sam_masks = sam_masks[:len(seg_colormap)]
@@ -295,11 +302,10 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
         else:
             canvas_image = temp_canvas_image
     seg_image = canvas_image.astype(np.uint8)
-    
+
     sam_dict["sam_masks"] = copy.deepcopy(sam_masks)
 
     del sam_masks
-    del sam_mask_generator
     async_post_reload_model_weights()
     if sam_image is None:
         return seg_image, "Segment Anything complete"
@@ -309,6 +315,7 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
         else:
             return gr.update(value=seg_image), "Segment Anything complete"
 
+
 @clear_cache_decorator
 def select_mask(input_image, sam_image, invert_chk, sel_mask):
     global sam_dict
@@ -316,10 +323,10 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
         ret_sel_mask = None if sel_mask is None else gr.update()
         return ret_sel_mask
     sam_masks = sam_dict["sam_masks"]
-    
+
     image = sam_image["image"]
-    mask = sam_image["mask"][:,:,0:1]
-    
+    mask = sam_image["mask"][:, :, 0:1]
+
     if len(sam_masks) > 0 and sam_masks[0]["segmentation"].shape[:2] != mask.shape[:2]:
         ia_logging.error("sam_masks shape not match")
         ret_sel_mask = None if sel_mask is None else gr.update()
@@ -334,13 +341,13 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
             mask_region = mask_region + (seg_mask * canvas_mask)
         seg_color = seg_mask * canvas_mask
         canvas_image = canvas_image + seg_color
-    
+
     canvas_mask = np.logical_not(canvas_image.astype(bool)).astype(np.uint8)
     if (canvas_mask * mask).astype(bool).any():
         mask_region = mask_region + (canvas_mask)
-    
+
     mask_region = np.tile(mask_region * 255, (1, 1, 3))
-    
+
     seg_image = mask_region.astype(np.uint8)
 
     if invert_chk:
@@ -361,18 +368,19 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
         else:
             return gr.update(value=ret_image)
 
+
 @clear_cache_decorator
 def expand_mask(input_image, sel_mask, expand_iteration=1):
     global sam_dict
     if sam_dict["mask_image"] is None or sel_mask is None:
         return None
-    
+
     new_sel_mask = sam_dict["mask_image"]
-    
+
     expand_iteration = int(np.clip(expand_iteration, 1, 5))
-    
+
     new_sel_mask = cv2.dilate(new_sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=expand_iteration)
-    
+
     sam_dict["mask_image"] = new_sel_mask
 
     if input_image is not None and input_image.shape == new_sel_mask.shape:
@@ -384,17 +392,18 @@ def expand_mask(input_image, sel_mask, expand_iteration=1):
         return gr.update()
     else:
         return gr.update(value=ret_image)
+
 
 @clear_cache_decorator
 def apply_mask(input_image, sel_mask):
     global sam_dict
     if sam_dict["mask_image"] is None or sel_mask is None:
         return None
-    
+
     sel_mask_image = sam_dict["mask_image"]
-    sel_mask_mask = np.logical_not(sel_mask["mask"][:,:,0:3].astype(bool)).astype(np.uint8)
+    sel_mask_mask = np.logical_not(sel_mask["mask"][:, :, 0:3].astype(bool)).astype(np.uint8)
     new_sel_mask = sel_mask_image * sel_mask_mask
-    
+
     sam_dict["mask_image"] = new_sel_mask
 
     if input_image is not None and input_image.shape == new_sel_mask.shape:
@@ -406,6 +415,7 @@ def apply_mask(input_image, sel_mask):
         return gr.update()
     else:
         return gr.update(value=ret_image)
+
 
 def auto_resize_to_pil(input_image, mask_image):
     init_image = Image.fromarray(input_image).convert("RGB")
@@ -429,8 +439,9 @@ def auto_resize_to_pil(input_image, mask_image):
         init_image = transforms.functional.center_crop(init_image, (new_height, new_width))
         mask_image = transforms.functional.center_crop(mask_image, (new_height, new_width))
         assert init_image.size == mask_image.size, "The size of image and mask do not match"
-    
+
     return init_image, mask_image
+
 
 @clear_cache_decorator
 def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk, sampler_name="DDIM"):
@@ -462,12 +473,12 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     else:
         local_files_only = True
         ia_logging.info("local_files_only: {}".format(str(local_files_only)))
-    
+
     if platform.system() == "Darwin" or devices.device == devices.cpu:
         torch_dtype = torch.float32
     else:
         torch_dtype = torch.float16
-    
+
     try:
         pipe = StableDiffusionInpaintPipeline.from_pretrained(inp_model_id, torch_dtype=torch_dtype, local_files_only=local_files_only)
     except Exception as e:
@@ -500,10 +511,10 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     else:
         ia_logging.info("Sampler fallback to DDIM")
         pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
-    
+
     if seed < 0:
         seed = random.randint(0, 2147483647)
-    
+
     if platform.system() == "Darwin":
         pipe = pipe.to("mps")
         pipe.enable_attention_slicing()
@@ -521,10 +532,10 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
             ia_logging.info("Enable attention slicing")
             pipe.enable_attention_slicing()
         generator = torch.Generator(devices.device).manual_seed(seed)
-    
+
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
-    
+
     pipe_args_dict = {
         "prompt": prompt,
         "image": init_image,
@@ -536,9 +547,9 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         "negative_prompt": n_prompt,
         "generator": generator,
         }
-    
+
     output_image = pipe(**pipe_args_dict).images[0]
-    
+
     if composite_chk:
         mask_image = Image.fromarray(cv2.dilate(np.array(mask_image), np.ones((3, 3), dtype=np.uint8), iterations=4))
         output_image = Image.composite(output_image, init_image, mask_image.convert("L").filter(ImageFilter.GaussianBlur(3)))
@@ -556,23 +567,24 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     prompt_text = prompt if prompt else ""
     negative_prompt_text = "Negative prompt: " + n_prompt if n_prompt else ""
     infotext = f"{prompt_text}\n{negative_prompt_text}\n{generation_params_text}".strip()
-    
+
     metadata = PngInfo()
     metadata.add_text("parameters", infotext)
-    
+
     save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(inp_model_id) + "_" + str(seed) + ".png"
     save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     output_image.save(save_name, pnginfo=metadata)
-    
+
     del pipe
     return output_image
+
 
 @clear_cache_decorator
 def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
-    
+
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
         ia_logging.error("The size of image and mask do not match")
@@ -587,13 +599,13 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
         model = ModelManager(name=cleaner_model_id, device="cpu")
     else:
         model = ModelManager(name=cleaner_model_id, device=devices.device)
-    
+
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
-    
+
     init_image = np.array(init_image)
     mask_image = np.array(mask_image.convert("L"))
-    
+
     config = Config(
         ldm_steps=20,
         ldm_sampler=LDMSampler.ddim,
@@ -605,7 +617,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
         sd_steps=20,
         sd_sampler=SDSampler.ddim
     )
-    
+
     output_image = model(image=init_image, mask=mask_image, config=config)
     output_image = cv2.cvtColor(output_image.astype(np.uint8), cv2.COLOR_BGR2RGB)
     output_image = Image.fromarray(output_image)
@@ -613,16 +625,17 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(cleaner_model_id) + ".png"
     save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     output_image.save(save_name)
-    
+
     del model
     return output_image
+
 
 @clear_cache_decorator
 def run_get_alpha_image(input_image, sel_mask):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None, ""
-    
+
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
         ia_logging.error("The size of image and mask do not match")
@@ -630,33 +643,36 @@ def run_get_alpha_image(input_image, sel_mask):
 
     alpha_image = Image.fromarray(input_image).convert("RGBA")
     mask_image = Image.fromarray(mask_image).convert("L")
-    
+
     alpha_image.putalpha(mask_image)
-    
+
     save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "rgba_image" + ".png"
     save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     alpha_image.save(save_name)
-    
+
     return alpha_image, f"saved: {save_name}"
+
 
 @clear_cache_decorator
 def run_get_mask(sel_mask):
     global sam_dict
     if sam_dict["mask_image"] is None or sel_mask is None:
         return None
-    
+
     mask_image = sam_dict["mask_image"]
 
     save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
     save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     Image.fromarray(mask_image).save(save_name)
-    
+
     return mask_image
+
 
 @clear_cache_decorator
 def run_cn_inpaint(input_image, sel_mask,
                    cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
-                   cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced", cn_ref_resize_mode="tile"):
+                   cn_low_vram_chk, cn_weight, cn_mode,
+                   cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced", cn_ref_resize_mode="tile"):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -681,7 +697,7 @@ def run_cn_inpaint(input_image, sel_mask,
 
     if cn_seed < 0:
         cn_seed = random.randint(0, 2147483647)
-    
+
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
@@ -704,7 +720,7 @@ def run_cn_inpaint(input_image, sel_mask,
         pixel_perfect=True,
         control_mode=cn_mode,
     ))]
-    
+
     if cn_ref_module_id is not None and cn_ref_image is not None:
         if cn_ref_resize_mode == "tile":
             ref_height, ref_width = cn_ref_image.shape[:2]
@@ -719,7 +735,7 @@ def run_cn_inpaint(input_image, sel_mask,
             cn_ref_image = resize_image(1, Image.fromarray(cn_ref_image), width=width, height=height)
             ia_logging.info(f"Reference image is resized to ({height}, {width}) maintaining aspect ratio")
         assert cn_ref_image.size == init_image.size, "The size of reference image and input image do not match"
-        
+
         cn_units.append(cnet.to_processing_unit(dict(
             enabled=True,
             module=cn_ref_module_id,
@@ -735,7 +751,7 @@ def run_cn_inpaint(input_image, sel_mask,
             control_mode=cn_ref_mode,
             threshold_a=0.5,
         )))
-    
+
     p.script_args = np.zeros(get_controlnet_args_to(cnet, p.scripts))
     cnet.update_cn_script_in_processing(p, cn_units)
 
@@ -744,7 +760,7 @@ def run_cn_inpaint(input_image, sel_mask,
     clear_controlnet_cache(cnet, p.scripts)
     restore_alwayson_scripts(p.scripts)
 
-    no_hash_cn_model_id = re.sub("\s\[[0-9a-f]{8,10}\]", "", cn_model_id).strip()
+    no_hash_cn_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", cn_model_id).strip()
 
     if processed is not None:
         if len(processed.images) > 0:
@@ -765,6 +781,7 @@ def run_cn_inpaint(input_image, sel_mask,
 
     return output_image
 
+
 @clear_cache_decorator
 def run_webui_inpaint(input_image, sel_mask,
                       webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk,
@@ -784,12 +801,12 @@ def run_webui_inpaint(input_image, sel_mask,
     if info is None:
         ia_logging.error(f"No model found: {webui_model_id}")
         return None
-    
+
     await_backup_reload_ckpt_info(info=info)
-    
+
     if webui_seed < 0:
         webui_seed = random.randint(0, 2147483647)
-    
+
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
@@ -805,7 +822,7 @@ def run_webui_inpaint(input_image, sel_mask,
 
     restore_alwayson_scripts(p.scripts)
 
-    no_hash_webui_model_id = re.sub("\s\[[0-9a-f]{8,10}\]", "", webui_model_id).strip()
+    no_hash_webui_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", webui_model_id).strip()
     no_hash_webui_model_id = os.path.splitext(no_hash_webui_model_id)[0]
 
     if processed is not None:
@@ -827,22 +844,10 @@ def run_webui_inpaint(input_image, sel_mask,
 
     return output_image
 
-# class Script(scripts.Script):
-#   def __init__(self) -> None:
-#     super().__init__()
-
-#   def title(self):
-#     return "Inpaint Anything"
-
-#   def show(self, is_img2img):
-#     return scripts.AlwaysVisible
-
-#   def ui(self, is_img2img):
-#     return ()
 
 def on_ui_tabs():
     global sam_dict
-    
+
     setup_ia_config_ini()
     sampler_names = get_sampler_names()
     sam_model_ids = get_sam_model_ids()
@@ -889,7 +894,7 @@ def on_ui_tabs():
     else:
         webui_sampler_ids = ["DDIM"]
     webui_sampler_index = webui_sampler_ids.index("Euler a") if "Euler a" in webui_sampler_ids else 0
-    
+
     with gr.Blocks(analytics_enabled=False) as inpaint_anything_interface:
         with gr.Row():
             with gr.Column():
@@ -904,7 +909,7 @@ def on_ui_tabs():
                             status_text = gr.Textbox(label="", elem_id="status_text", max_lines=1, show_label=False, interactive=False)
                 with gr.Row():
                     input_image = gr.Image(label="Input image", elem_id="input_image", source="upload", type="numpy", interactive=True)
-                
+
                 with gr.Row():
                     with gr.Accordion("Padding options", elem_id="padding_options", open=False):
                         with gr.Row():
@@ -922,13 +927,13 @@ def on_ui_tabs():
                                 padding_mode = gr.Dropdown(label="Padding Mode", elem_id="padding_mode", choices=padding_mode_names, value="edge")
                             with gr.Column():
                                 padding_btn = gr.Button("Run Padding", elem_id="padding_btn")
-                
+
                 with gr.Row():
                     with gr.Column():
                         anime_style_chk = gr.Checkbox(label="Anime Style (Up Detection, Down mask Quality)", elem_id="anime_style_chk", show_label=True, interactive=True)
                     with gr.Column():
                         sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn", interactive=False)
-                
+
                 with gr.Tab("Inpainting", elem_id="inpainting_tab"):
                     prompt = gr.Textbox(label="Inpainting Prompt", elem_id="sd_prompt")
                     n_prompt = gr.Textbox(label="Negative Prompt", elem_id="sd_n_prompt")
@@ -960,7 +965,7 @@ def on_ui_tabs():
 
                     with gr.Row():
                         out_image = gr.Image(label="Inpainted image", elem_id="out_image", type="pil", interactive=False).style(height=480)
-                
+
                 with gr.Tab("Cleaner", elem_id="cleaner_tab"):
                     with gr.Row():
                         with gr.Column():
@@ -970,7 +975,7 @@ def on_ui_tabs():
                                 cleaner_btn = gr.Button("Run Cleaner", elem_id="cleaner_btn")
                             with gr.Row():
                                 cleaner_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cleaner_save_mask_chk", show_label=True, interactive=True)
-                    
+
                     with gr.Row():
                         cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil", interactive=False).style(height=480)
 
@@ -980,10 +985,12 @@ def on_ui_tabs():
                         webui_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="webui_sd_n_prompt")
                         with gr.Accordion("Advanced options", elem_id="webui_advanced_options", open=False):
                             webui_mask_blur = gr.Slider(label="Mask blur", minimum=0, maximum=64, step=1, value=4, elem_id="webui_mask_blur")
-                            webui_fill_mode = gr.Radio(label="Masked content", choices=["fill", "original", "latent noise", "latent nothing"], value="original", type="index", elem_id="webui_fill_mode")
+                            webui_fill_mode = gr.Radio(label="Masked content", elem_id="webui_fill_mode",
+                                                       choices=["fill", "original", "latent noise", "latent nothing"], value="original", type="index")
                             with gr.Row():
                                 with gr.Column():
-                                    webui_sampler_id = gr.Dropdown(label="Sampling method webui", elem_id="webui_sampler_id", choices=webui_sampler_ids, value=webui_sampler_ids[webui_sampler_index], show_label=True)
+                                    webui_sampler_id = gr.Dropdown(label="Sampling method webui", elem_id="webui_sampler_id",
+                                                                   choices=webui_sampler_ids, value=webui_sampler_ids[webui_sampler_index], show_label=True)
                                 with gr.Column():
                                     webui_ddim_steps = gr.Slider(label="Sampling steps webui", elem_id="webui_ddim_steps", minimum=1, maximum=150, value=25, step=1)
                             webui_cfg_scale = gr.Slider(label="Guidance scale webui", elem_id="webui_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
@@ -1004,7 +1011,7 @@ def on_ui_tabs():
                                     webui_inpaint_btn = gr.Button("Run Inpainting", elem_id="webui_inpaint_btn")
                                 with gr.Row():
                                     webui_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="webui_save_mask_chk", show_label=True, interactive=True)
-                        
+
                         with gr.Row():
                             webui_out_image = gr.Image(label="Inpainted image", elem_id="webui_out_image", type="pil", interactive=False).style(height=480)
 
@@ -1035,7 +1042,7 @@ def on_ui_tabs():
                                     cn_weight = gr.Slider(label="Control Weight", elem_id="cn_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
                                 with gr.Column():
                                     cn_mode = gr.Dropdown(label="Control Mode", elem_id="cn_mode", choices=cn_modes, value=cn_modes[-1], show_label=True)
-                                
+
                             if cn_ref_only:
                                 with gr.Row():
                                     with gr.Column():
@@ -1048,8 +1055,8 @@ def on_ui_tabs():
                                         cn_ref_mode = gr.Dropdown(label="Reference Control Mode", elem_id="cn_ref_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
                             else:
                                 with gr.Row():
-                                    gr.Markdown("The Multi ControlNet setting is currently set to 1.<br>" + \
-                                        "If you wish to use the Reference-Only Control, please adjust the Multi ControlNet setting to 2 or more and restart the Web UI.")
+                                    gr.Markdown("The Multi ControlNet setting is currently set to 1.<br>"
+                                                "If you wish to use the Reference-Only Control, please adjust the Multi ControlNet setting to 2 or more and restart the Web UI.")
 
                         with gr.Row():
                             with gr.Column():
@@ -1060,20 +1067,20 @@ def on_ui_tabs():
                                     cn_inpaint_btn = gr.Button("Run ControlNet Inpaint", elem_id="cn_inpaint_btn")
                                 with gr.Row():
                                     cn_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cn_save_mask_chk", show_label=True, interactive=True)
-                        
+
                         with gr.Row():
                             cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", type="pil", interactive=False).style(height=480)
-                        
+
                     else:
                         if sam_dict["cnet"] is None:
-                            gr.Markdown("ControlNet extension is not available.<br>" + \
+                            gr.Markdown("ControlNet extension is not available.<br>"
                                         "Requires the [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension.")
                         elif len(cn_module_ids) > 0:
                             cn_models_directory = os.path.join("extensions", "sd-webui-controlnet", "models")
-                            gr.Markdown("ControlNet inpaint model is not available.<br>" + \
+                            gr.Markdown("ControlNet inpaint model is not available.<br>"
                                         f"Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model in the {cn_models_directory} directory.")
                         else:
-                            gr.Markdown("ControlNet inpaint preprocessor is not available.<br>" + \
+                            gr.Markdown("ControlNet inpaint preprocessor is not available.<br>"
                                         "The local version of [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension may be old.")
 
                 with gr.Tab("Mask only", elem_id="mask_only_tab"):
@@ -1082,7 +1089,7 @@ def on_ui_tabs():
                             get_alpha_image_btn = gr.Button("Get mask as alpha of image", elem_id="get_alpha_image_btn")
                         with gr.Column():
                             get_mask_btn = gr.Button("Get mask", elem_id="get_mask_btn")
-                    
+
                     with gr.Row():
                         with gr.Column():
                             alpha_out_image = gr.Image(label="Alpha channel image", elem_id="alpha_out_image", type="pil", image_mode="RGBA", interactive=False)
@@ -1094,7 +1101,7 @@ def on_ui_tabs():
                             get_alpha_status_text = gr.Textbox(label="", elem_id="get_alpha_status_text", max_lines=1, show_label=False, interactive=False)
                         with gr.Column():
                             mask_send_to_inpaint_btn = gr.Button("Send to img2img inpaint", elem_id="mask_send_to_inpaint_btn")
-            
+
             with gr.Column():
                 with gr.Row():
                     gr.Markdown("Mouse over image: Press `S` key for Fullscreen mode, `R` key to Reset zoom")
@@ -1116,7 +1123,7 @@ def on_ui_tabs():
                         expand_mask_btn = gr.Button("Expand mask region", elem_id="expand_mask_btn")
                     with gr.Column():
                         apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
-            
+
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             input_image.upload(input_image_upload, inputs=[input_image, sam_image, sel_mask], outputs=[sam_image, sel_mask, sam_btn])
             padding_btn.click(run_padding, inputs=[input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode], outputs=[input_image, status_text])
@@ -1164,7 +1171,8 @@ def on_ui_tabs():
                     run_cn_inpaint,
                     inputs=[input_image, sel_mask,
                             cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
-                            cn_low_vram_chk, cn_weight, cn_mode, cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode, cn_ref_resize_mode],
+                            cn_low_vram_chk, cn_weight, cn_mode,
+                            cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode, cn_ref_resize_mode],
                     outputs=[cn_out_image]).then(
                     fn=async_post_reload_model_weights, inputs=None, outputs=None)
             if webui_inpaint_enabled:
@@ -1178,6 +1186,7 @@ def on_ui_tabs():
 
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
 
+
 def on_ui_settings():
     section = ("inpaint_anything", "Inpaint Anything")
     shared.opts.add_option("inpaint_anything_save_folder", shared.OptionInfo(
@@ -1185,7 +1194,8 @@ def on_ui_settings():
     shared.opts.add_option("inpaint_anything_offline_inpainting", shared.OptionInfo(
         False, "Enable offline network Inpainting", gr.Checkbox, {"interactive": True}, section=section))
     shared.opts.add_option("inpaint_anything_padding_fill", shared.OptionInfo(
-        127, "Fill value used when Padding is set to constant", gr.Slider, {"minimum":0, "maximum":255, "step":1}, section=section))
+        127, "Fill value used when Padding is set to constant", gr.Slider, {"minimum": 0, "maximum": 255, "step": 1}, section=section))
+
 
 script_callbacks.on_ui_settings(on_ui_settings)
 script_callbacks.on_ui_tabs(on_ui_tabs)

@@ -8,6 +8,7 @@ import copy
 
 original_alwayson_scripts = None
 
+
 def find_controlnet():
     """Find ControlNet external_code
 
@@ -16,13 +17,14 @@ def find_controlnet():
     """
     try:
         cnet = importlib.import_module("extensions.sd-webui-controlnet.scripts.external_code")
-    except:
+    except Exception:
         try:
             cnet = importlib.import_module("extensions-builtin.sd-webui-controlnet.scripts.external_code")
-        except:
+        except Exception:
             cnet = None
-    
+
     return cnet
+
 
 def list_default_scripts():
     """Get list of default scripts
@@ -40,6 +42,7 @@ def list_default_scripts():
 
     return scripts_list
 
+
 def backup_alwayson_scripts(input_scripts):
     """Backup alwayson scripts
 
@@ -49,9 +52,10 @@ def backup_alwayson_scripts(input_scripts):
     global original_alwayson_scripts
     original_alwayson_scripts = copy.copy(input_scripts.alwayson_scripts)
 
+
 def disable_alwayson_scripts_wo_cn(cnet, input_scripts):
     """Disable alwayson scripts
-    
+
     Args:
         input_scripts (ScriptRunner): scripts to disable alwayson scripts
     """
@@ -65,13 +69,14 @@ def disable_alwayson_scripts_wo_cn(cnet, input_scripts):
             continue
         # print("Disabled script: {}".format(script.title()))
         disabled_scripts.append(script)
-    
+
     for script in disabled_scripts:
         input_scripts.alwayson_scripts.remove(script)
 
+
 def disable_all_alwayson_scripts(input_scripts):
     """Disable all alwayson scripts
-    
+
     Args:
         input_scripts (ScriptRunner): scripts to disable alwayson scripts
     """
@@ -83,13 +88,14 @@ def disable_all_alwayson_scripts(input_scripts):
             continue
         # print("Disabled script: {}".format(script.title()))
         disabled_scripts.append(script)
-    
+
     for script in disabled_scripts:
         input_scripts.alwayson_scripts.remove(script)
 
+
 def restore_alwayson_scripts(input_scripts):
     """Restore alwayson scripts
-    
+
     Args:
         input_scripts (ScriptRunner): scripts to restore alwayson scripts
     """
@@ -98,12 +104,13 @@ def restore_alwayson_scripts(input_scripts):
         input_scripts.alwayson_scripts = original_alwayson_scripts
         original_alwayson_scripts = None
 
+
 def get_max_args_to(input_scripts):
     """Get max args_to of scripts
-    
+
     Args:
         input_scripts (ScriptRunner): scripts to get max args_to of scripts
-    
+
     Returns:
         int: max args_to of scripts
     """
@@ -112,6 +119,7 @@ def get_max_args_to(input_scripts):
         if max_args_to < script.args_to:
             max_args_to = script.args_to
     return max_args_to
+
 
 def get_controlnet_args_to(cnet, input_scripts):
     """Get args_to of ControlNet script
@@ -127,6 +135,7 @@ def get_controlnet_args_to(cnet, input_scripts):
             return script.args_to
     return get_max_args_to(input_scripts)
 
+
 def clear_controlnet_cache(cnet, input_scripts):
     """Clear ControlNet cache
 
@@ -139,10 +148,11 @@ def clear_controlnet_cache(cnet, input_scripts):
                 # print("Clear ControlNet cache: {}".format(script.title()))
                 script.clear_control_model_cache()
 
+
 def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_id, ddim_steps, cfg_scale, strength, seed,
                               mask_blur=4, fill_mode=1):
     """Get StableDiffusionProcessingImg2Img instance
-    
+
     Args:
         init_image (PIL.Image): Initial image
         mask_image (PIL.Image): Mask image

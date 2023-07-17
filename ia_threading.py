@@ -8,14 +8,17 @@ from functools import wraps
 backup_ckpt_info = None
 model_access_sem = threading.Semaphore(1)
 
+
 def clear_cache():
     gc.collect()
     torch_gc()
+
 
 def pre_unload_model_weights(sem):
     with sem:
         unload_model_weights()
         clear_cache()
+
 
 def await_pre_unload_model_weights():
     global model_access_sem
@@ -23,16 +26,19 @@ def await_pre_unload_model_weights():
     thread.start()
     thread.join()
 
+
 def pre_reload_model_weights(sem):
     with sem:
         if shared.sd_model is None:
             reload_model_weights()
+
 
 def await_pre_reload_model_weights():
     global model_access_sem
     thread = threading.Thread(target=pre_reload_model_weights, args=(model_access_sem,))
     thread.start()
     thread.join()
+
 
 def backup_reload_ckpt_info(sem, info):
     global backup_ckpt_info
@@ -45,11 +51,13 @@ def backup_reload_ckpt_info(sem, info):
         else:
             reload_model_weights(sd_model=None, info=info)
 
+
 def await_backup_reload_ckpt_info(info):
     global model_access_sem
     thread = threading.Thread(target=backup_reload_ckpt_info, args=(model_access_sem, info))
     thread.start()
     thread.join()
+
 
 def post_reload_model_weights(sem):
     global backup_ckpt_info
@@ -61,10 +69,12 @@ def post_reload_model_weights(sem):
             reload_model_weights(sd_model=None, info=backup_ckpt_info)
             backup_ckpt_info = None
 
+
 def async_post_reload_model_weights():
     global model_access_sem
     thread = threading.Thread(target=post_reload_model_weights, args=(model_access_sem,))
     thread.start()
+
 
 def clear_cache_decorator(func):
     @wraps(func)

@@ -1,9 +1,10 @@
 import torch
 import numpy as np
 import cv2
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 from ultralytics import YOLO
 import math
+
 
 class FastSAM:
     def __init__(
@@ -22,6 +23,7 @@ class FastSAM:
 
     def __call__(self, source=None, stream=False, **kwargs) -> Any:
         return self.model(source=source, stream=stream, **kwargs)
+
 
 class FastSamAutomaticMaskGenerator:
     def __init__(
@@ -52,18 +54,18 @@ class FastSamAutomaticMaskGenerator:
             iou=0.7,
             conf=self.conf,
             max_det=256)
-        
+
         annotations = results[0].masks.data
 
         if isinstance(annotations[0], torch.Tensor):
             annotations = np.array(annotations.cpu())
-        
+
         annotations_list = []
         for i, mask in enumerate(annotations):
             mask = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
             mask = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
             mask = cv2.resize(mask, (width, height), interpolation=cv2.INTER_AREA)
-            
+
             annotations_list.append(dict(segmentation=mask.astype(bool)))
 
         return annotations_list

@@ -4,6 +4,7 @@ from huggingface_hub import snapshot_download
 from ia_logging import ia_logging
 from modules import shared
 
+
 class IAFileManager:
     DOWNLOAD_COMPLETE = "Download complete"
 
@@ -18,7 +19,7 @@ class IAFileManager:
 
     def update_ia_outputs_dir(self) -> None:
         """Update inpaint-anything outputs directory.
-        
+
         Returns:
             None
         """
@@ -31,7 +32,7 @@ class IAFileManager:
     @property
     def outputs_dir(self) -> str:
         """Get inpaint-anything outputs directory.
-        
+
         Returns:
             str: inpaint-anything outputs directory
         """
@@ -43,7 +44,7 @@ class IAFileManager:
     @property
     def models_dir(self) -> str:
         """Get inpaint-anything models directory.
-        
+
         Returns:
             str: inpaint-anything models directory
         """
@@ -51,7 +52,9 @@ class IAFileManager:
             os.makedirs(self._ia_models_dir, exist_ok=True)
         return self._ia_models_dir
 
+
 ia_file_manager = IAFileManager()
+
 
 def download_model_from_hf(hf_model_id, local_files_only=False):
     """Download model from HuggingFace Hub.
