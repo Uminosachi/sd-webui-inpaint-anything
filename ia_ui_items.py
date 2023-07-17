@@ -32,6 +32,7 @@ def get_sam_model_ids():
         "sam_hq_vit_b.pth",
         "FastSAM-x.pt",
         "FastSAM-s.pt",
+        "mobile_sam.pt",
         ]
     return sam_model_ids
 

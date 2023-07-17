@@ -33,6 +33,10 @@ from modules.sd_models import get_closet_checkpoint_match
 from segment_anything_hq import sam_model_registry as sam_model_registry_hq
 from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
 from segment_anything_hq import SamPredictor as SamPredictorHQ
+from mobile_sam import sam_model_registry as sam_model_registry_mobile
+from mobile_sam import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorMobile
+from mobile_sam import SamPredictor as SamPredictorMobile
+
 from ia_logging import ia_logging
 from ia_ui_items import (get_sampler_names, get_sam_model_ids, get_inp_model_ids, get_cleaner_model_ids, get_padding_mode_names)
 from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
@@ -60,6 +64,8 @@ def download_model(sam_model_id):
         url_sam = "https://huggingface.co/Uminosachi/sam-hq/resolve/main/" + sam_model_id
     elif "FastSAM" in sam_model_id:
         url_sam = "https://huggingface.co/Uminosachi/FastSAM/resolve/main/" + sam_model_id
+    elif "mobile_sam" in sam_model_id:
+        url_sam = "https://huggingface.co/Uminosachi/MobileSAM/resolve/main/" + sam_model_id
     else:
         # url_sam_vit_h_4b8939 = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
         url_sam = "https://dl.fbaipublicfiles.com/segment_anything/" + sam_model_id
@@ -97,6 +103,11 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
         sam_model_registry_local = fast_sam_model_registry
         SamAutomaticMaskGeneratorLocal = FastSamAutomaticMaskGenerator
         points_per_batch = None
+    elif "mobile_sam" in os.path.basename(sam_checkpoint):
+        model_type = "vit_t"
+        sam_model_registry_local = sam_model_registry_mobile
+        SamAutomaticMaskGeneratorLocal = SamAutomaticMaskGeneratorMobile
+        points_per_batch = 64
     else:
         model_type = os.path.basename(sam_checkpoint)[4:9]
         sam_model_registry_local = sam_model_registry
@@ -136,6 +147,10 @@ def get_sam_predictor(sam_checkpoint):
         model_type = os.path.basename(sam_checkpoint)[7:12]
         sam_model_registry_local = sam_model_registry_hq
         SamPredictorLocal = SamPredictorHQ
+    elif "mobile_sam" in os.path.basename(sam_checkpoint):
+        model_type = "vit_t"
+        sam_model_registry_local = sam_model_registry_mobile
+        SamPredictorLocal = SamPredictorMobile
     else:
         model_type = os.path.basename(sam_checkpoint)[4:9]
         sam_model_registry_local = sam_model_registry
