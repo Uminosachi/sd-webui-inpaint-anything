@@ -1,53 +1,67 @@
-import os
-import torch
-import numpy as np
-from PIL import Image, ImageFilter
-import gradio as gr
-from diffusers import (StableDiffusionInpaintPipeline, DDIMScheduler, EulerDiscreteScheduler,
-                       EulerAncestralDiscreteScheduler, KDPM2DiscreteScheduler, KDPM2AncestralDiscreteScheduler)
-from segment_anything import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
-from ia_get_dataset_colormap import create_pascal_label_colormap
-from torch.hub import download_url_to_file
-from torchvision import transforms
-from datetime import datetime
+import copy
 import gc
+import math
+import os
 import platform
-from PIL.PngImagePlugin import PngInfo
 import random
+import re
+from datetime import datetime
+
 import cv2
+import gradio as gr
+import numpy as np
+import torch
+from diffusers import (DDIMScheduler, EulerAncestralDiscreteScheduler,
+                       EulerDiscreteScheduler, KDPM2AncestralDiscreteScheduler,
+                       KDPM2DiscreteScheduler, StableDiffusionInpaintPipeline)
 from lama_cleaner.model_manager import ModelManager
 from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
-
 # import modules.scripts as scripts
-from modules import shared, script_callbacks, devices
-from modules.safe import unsafe_torch_load, load
-
-import re
-from ia_webui_controlnet import (find_controlnet, get_sd_img2img_processing,
-                                 backup_alwayson_scripts, disable_alwayson_scripts_wo_cn, restore_alwayson_scripts, disable_all_alwayson_scripts,
-                                 get_controlnet_args_to, clear_controlnet_cache, get_max_args_to)
-from modules.processing import process_images, create_infotext
-from modules.sd_samplers import samplers_for_img2img
+from modules import devices, script_callbacks, shared
 from modules.images import resize_image
+from modules.processing import create_infotext, process_images
+from modules.safe import load, unsafe_torch_load
 from modules.sd_models import get_closet_checkpoint_match
-from segment_anything_hq import sam_model_registry as sam_model_registry_hq
-from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
-from segment_anything_hq import SamPredictor as SamPredictorHQ
-from mobile_sam import sam_model_registry as sam_model_registry_mobile
-from mobile_sam import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorMobile
-from mobile_sam import SamPredictor as SamPredictorMobile
-
-from ia_logging import ia_logging
-from ia_ui_items import (get_sampler_names, get_sam_model_ids, get_inp_model_ids, get_cleaner_model_ids, get_padding_mode_names)
-from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
-import math
-import copy
+from modules.sd_samplers import samplers_for_img2img
+from PIL import Image, ImageFilter
+from PIL.PngImagePlugin import PngInfo
+from segment_anything import (SamAutomaticMaskGenerator, SamPredictor,
+                              sam_model_registry)
+from torch.hub import download_url_to_file
+from torchvision import transforms
 from tqdm import tqdm
-from ia_threading import (clear_cache_decorator, await_pre_unload_model_weights, await_pre_reload_model_weights, await_backup_reload_ckpt_info,
-                          async_post_reload_model_weights)
-from ia_config import IAConfig, setup_ia_config_ini, set_ia_config, get_ia_config_index
+
+from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
 from ia_check_versions import ia_check_versions
-from ia_file_manager import IAFileManager, ia_file_manager, download_model_from_hf
+from ia_config import (IAConfig, get_ia_config_index, set_ia_config,
+                       setup_ia_config_ini)
+from ia_file_manager import (IAFileManager, download_model_from_hf,
+                             ia_file_manager)
+from ia_get_dataset_colormap import create_pascal_label_colormap
+from ia_logging import ia_logging
+from ia_threading import (async_post_reload_model_weights,
+                          await_backup_reload_ckpt_info,
+                          await_pre_reload_model_weights,
+                          await_pre_unload_model_weights,
+                          clear_cache_decorator)
+from ia_ui_items import (get_cleaner_model_ids, get_inp_model_ids,
+                         get_padding_mode_names, get_sam_model_ids,
+                         get_sampler_names)
+from ia_webui_controlnet import (backup_alwayson_scripts,
+                                 clear_controlnet_cache,
+                                 disable_all_alwayson_scripts,
+                                 disable_alwayson_scripts_wo_cn,
+                                 find_controlnet, get_controlnet_args_to,
+                                 get_max_args_to, get_sd_img2img_processing,
+                                 restore_alwayson_scripts)
+from mobile_sam import \
+    SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorMobile
+from mobile_sam import SamPredictor as SamPredictorMobile
+from mobile_sam import sam_model_registry as sam_model_registry_mobile
+from segment_anything_hq import \
+    SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
+from segment_anything_hq import SamPredictor as SamPredictorHQ
+from segment_anything_hq import sam_model_registry as sam_model_registry_hq
 
 
 @clear_cache_decorator
@@ -700,7 +714,11 @@ def run_cn_inpaint(input_image, sel_mask,
     await_pre_reload_model_weights()
 
     if (shared.sd_model.parameterization == "v" and "sd15" in cn_model_id):
-        ia_logging.warning("The SD model is not compatible with the ControlNet model")
+        ia_logging.warning("The SD v2 model is not compatible with the ControlNet model")
+        return None
+
+    if (getattr(shared.sd_model, "is_sdxl", False) and "sd15" in cn_model_id):
+        ia_logging.warning("The SD XL model is not compatible with the ControlNet model")
         return None
 
     cnet = sam_dict.get("cnet", None)
