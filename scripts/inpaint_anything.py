@@ -1178,7 +1178,7 @@ def on_ui_tabs():
                     with gr.Column():
                         with gr.Row():
                             invert_chk = gr.Checkbox(label="Invert mask", elem_id="invert_chk", show_label=True, interactive=True)
-                            ignore_black_chk = gr.Checkbox(label="Ignore black area", elem_id="ignore_black_chk", show_label=True, interactive=True)
+                            ignore_black_chk = gr.Checkbox(label="Ignore black area", elem_id="ignore_black_chk", value=True, show_label=True, interactive=True)
 
                 with gr.Row():
                     sel_mask = gr.Image(label="Selected mask image", elem_id="ia_sel_mask", type="numpy", tool="sketch", brush_radius=12,
