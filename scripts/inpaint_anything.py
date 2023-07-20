@@ -346,7 +346,7 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
 
 
 @clear_cache_decorator
-def select_mask(input_image, sam_image, invert_chk, sel_mask):
+def select_mask(input_image, sam_image, invert_chk, ignore_black_chk, sel_mask):
     global sam_dict
     if sam_dict["sam_masks"] is None or sam_image is None:
         ret_sel_mask = None if sel_mask is None else gr.update()
@@ -371,9 +371,10 @@ def select_mask(input_image, sam_image, invert_chk, sel_mask):
         seg_color = seg_mask * canvas_mask
         canvas_image = canvas_image + seg_color
 
-    canvas_mask = np.logical_not(canvas_image.astype(bool)).astype(np.uint8)
-    if (canvas_mask * mask).astype(bool).any():
-        mask_region = mask_region + (canvas_mask)
+    if not ignore_black_chk:
+        canvas_mask = np.logical_not(canvas_image.astype(bool)).astype(np.uint8)
+        if (canvas_mask * mask).astype(bool).any():
+            mask_region = mask_region + (canvas_mask)
 
     mask_region = np.tile(mask_region * 255, (1, 1, 3))
 
@@ -1175,7 +1176,9 @@ def on_ui_tabs():
                     with gr.Column():
                         select_btn = gr.Button("Create mask", elem_id="select_btn")
                     with gr.Column():
-                        invert_chk = gr.Checkbox(label="Invert mask", elem_id="invert_chk", show_label=True, interactive=True)
+                        with gr.Row():
+                            invert_chk = gr.Checkbox(label="Invert mask", elem_id="invert_chk", show_label=True, interactive=True)
+                            ignore_black_chk = gr.Checkbox(label="Ignore black area", elem_id="ignore_black_chk", show_label=True, interactive=True)
 
                 with gr.Row():
                     sel_mask = gr.Image(label="Selected mask image", elem_id="ia_sel_mask", type="numpy", tool="sketch", brush_radius=12,
@@ -1193,7 +1196,7 @@ def on_ui_tabs():
                               outputs=[input_image, status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image, anime_style_chk], outputs=[sam_image, status_text]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
-            select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask]).then(
+            select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, ignore_black_chk, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
             expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
