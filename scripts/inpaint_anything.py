@@ -23,7 +23,7 @@ from modules.processing import create_infotext, process_images
 from modules.safe import load, unsafe_torch_load
 from modules.sd_models import get_closet_checkpoint_match
 from modules.sd_samplers import samplers_for_img2img
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageDraw
 from PIL.PngImagePlugin import PngInfo
 from segment_anything import (SamAutomaticMaskGenerator, SamPredictor,
                               sam_model_registry)
@@ -699,7 +699,8 @@ def run_get_mask(sel_mask):
 
 @clear_cache_decorator
 def run_cn_inpaint(input_image, sel_mask,
-                   cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
+                   cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed,
+                   cn_module_id, cn_model_id, cn_save_mask_chk,
                    cn_low_vram_chk, cn_weight, cn_mode,
                    cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced", cn_ref_resize_mode="tile"):
     global sam_dict
@@ -715,11 +716,17 @@ def run_cn_inpaint(input_image, sel_mask,
 
     if (shared.sd_model.parameterization == "v" and "sd15" in cn_model_id):
         ia_logging.warning("The SD v2 model is not compatible with the ControlNet model")
-        return None
+        ret_image = Image.fromarray(np.zeros_like(input_image))
+        draw_ret_image = ImageDraw.Draw(ret_image)
+        draw_ret_image.text((0, 0), "The SD v2 model is not compatible with the ControlNet model", fill=(224, 224, 224))
+        return ret_image
 
     if (getattr(shared.sd_model, "is_sdxl", False) and "sd15" in cn_model_id):
         ia_logging.warning("The SD XL model is not compatible with the ControlNet model")
-        return None
+        ret_image = Image.fromarray(np.zeros_like(input_image))
+        draw_ret_image = ImageDraw.Draw(ret_image)
+        draw_ret_image.text((0, 0), "The SD XL model is not compatible with the ControlNet model", fill=(224, 224, 224))
+        return ret_image
 
     cnet = sam_dict.get("cnet", None)
     if cnet is None:
@@ -734,7 +741,8 @@ def run_cn_inpaint(input_image, sel_mask,
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
-    p = get_sd_img2img_processing(init_image, None, cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed)
+    p = get_sd_img2img_processing(init_image, None,
+                                  cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed)
 
     backup_alwayson_scripts(p.scripts)
     disable_alwayson_scripts_wo_cn(cnet, p.scripts)
@@ -817,7 +825,8 @@ def run_cn_inpaint(input_image, sel_mask,
 
 @clear_cache_decorator
 def run_webui_inpaint(input_image, sel_mask,
-                      webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk,
+                      webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
+                      webui_model_id, webui_save_mask_chk,
                       webui_mask_blur, webui_fill_mode):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
@@ -843,7 +852,8 @@ def run_webui_inpaint(input_image, sel_mask,
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
-    p = get_sd_img2img_processing(init_image, mask_image, webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
+    p = get_sd_img2img_processing(init_image, mask_image,
+                                  webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
                                   webui_mask_blur, webui_fill_mode)
 
     backup_alwayson_scripts(p.scripts)
@@ -963,7 +973,8 @@ def on_ui_tabs():
 
                 with gr.Row():
                     with gr.Column():
-                        anime_style_chk = gr.Checkbox(label="Anime Style (Up Detection, Down mask Quality)", elem_id="anime_style_chk", show_label=True, interactive=True)
+                        anime_style_chk = gr.Checkbox(label="Anime Style (Up Detection, Down mask Quality)", elem_id="anime_style_chk",
+                                                      show_label=True, interactive=True)
                     with gr.Column():
                         sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn", interactive=False)
 
@@ -988,7 +999,8 @@ def on_ui_tabs():
                         )
                     with gr.Row():
                         with gr.Column():
-                            inp_model_id = gr.Dropdown(label="Inpainting Model ID", elem_id="inp_model_id", choices=inp_model_ids, value=inp_model_ids[inp_model_index], show_label=True)
+                            inp_model_id = gr.Dropdown(label="Inpainting Model ID", elem_id="inp_model_id",
+                                                       choices=inp_model_ids, value=inp_model_ids[inp_model_index], show_label=True)
                         with gr.Column():
                             with gr.Row():
                                 inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn")
@@ -997,12 +1009,14 @@ def on_ui_tabs():
                                 save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk", show_label=True, interactive=True)
 
                     with gr.Row():
-                        out_image = gr.Image(label="Inpainted image", elem_id="out_image", type="pil", interactive=False).style(height=480)
+                        out_image = gr.Image(label="Inpainted image", elem_id="out_image", type="pil",
+                                             interactive=False, show_label=False).style(height=480)
 
                 with gr.Tab("Cleaner", elem_id="cleaner_tab"):
                     with gr.Row():
                         with gr.Column():
-                            cleaner_model_id = gr.Dropdown(label="Cleaner Model ID", elem_id="cleaner_model_id", choices=cleaner_model_ids, value=cleaner_model_ids[0], show_label=True)
+                            cleaner_model_id = gr.Dropdown(label="Cleaner Model ID", elem_id="cleaner_model_id",
+                                                           choices=cleaner_model_ids, value=cleaner_model_ids[0], show_label=True)
                         with gr.Column():
                             with gr.Row():
                                 cleaner_btn = gr.Button("Run Cleaner", elem_id="cleaner_btn")
@@ -1010,7 +1024,8 @@ def on_ui_tabs():
                                 cleaner_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cleaner_save_mask_chk", show_label=True, interactive=True)
 
                     with gr.Row():
-                        cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil", interactive=False).style(height=480)
+                        cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil",
+                                                     interactive=False, show_label=False).style(height=480)
 
                 if webui_inpaint_enabled:
                     with gr.Tab("Inpainting webui", elem_id="webui_inpainting_tab"):
@@ -1025,9 +1040,11 @@ def on_ui_tabs():
                                     webui_sampler_id = gr.Dropdown(label="Sampling method webui", elem_id="webui_sampler_id",
                                                                    choices=webui_sampler_ids, value=webui_sampler_ids[webui_sampler_index], show_label=True)
                                 with gr.Column():
-                                    webui_ddim_steps = gr.Slider(label="Sampling steps webui", elem_id="webui_ddim_steps", minimum=1, maximum=150, value=25, step=1)
+                                    webui_ddim_steps = gr.Slider(label="Sampling steps webui", elem_id="webui_ddim_steps",
+                                                                 minimum=1, maximum=150, value=25, step=1)
                             webui_cfg_scale = gr.Slider(label="Guidance scale webui", elem_id="webui_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
-                            webui_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength webui', value=0.75, elem_id="webui_strength")
+                            webui_strength = gr.Slider(label="Denoising strength webui", elem_id="webui_strength",
+                                                       minimum=0.0, maximum=1.0, value=0.75, step=0.01)
                             webui_seed = gr.Slider(
                                 label="Seed",
                                 elem_id="webui_sd_seed",
@@ -1038,7 +1055,8 @@ def on_ui_tabs():
                             )
                         with gr.Row():
                             with gr.Column():
-                                webui_model_id = gr.Dropdown(label="Inpainting Model ID webui", elem_id="webui_model_id", choices=webui_model_ids, value=webui_model_ids[0], show_label=True)
+                                webui_model_id = gr.Dropdown(label="Inpainting Model ID webui", elem_id="webui_model_id",
+                                                             choices=webui_model_ids, value=webui_model_ids[0], show_label=True)
                             with gr.Column():
                                 with gr.Row():
                                     webui_inpaint_btn = gr.Button("Run Inpainting", elem_id="webui_inpaint_btn")
@@ -1046,7 +1064,8 @@ def on_ui_tabs():
                                     webui_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="webui_save_mask_chk", show_label=True, interactive=True)
 
                         with gr.Row():
-                            webui_out_image = gr.Image(label="Inpainted image", elem_id="webui_out_image", type="pil", interactive=False).style(height=480)
+                            webui_out_image = gr.Image(label="Inpainted image", elem_id="webui_out_image", type="pil",
+                                                       interactive=False, show_label=False).style(height=480)
 
                 with gr.Tab("ControlNet Inpaint", elem_id="cn_inpaint_tab"):
                     if cn_enabled:
@@ -1055,7 +1074,8 @@ def on_ui_tabs():
                         with gr.Accordion("Advanced options", elem_id="cn_advanced_options", open=False):
                             with gr.Row():
                                 with gr.Column():
-                                    cn_sampler_id = gr.Dropdown(label="Sampling method", elem_id="cn_sampler_id", choices=cn_sampler_ids, value=cn_sampler_ids[cn_sampler_index], show_label=True)
+                                    cn_sampler_id = gr.Dropdown(label="Sampling method", elem_id="cn_sampler_id",
+                                                                choices=cn_sampler_ids, value=cn_sampler_ids[cn_sampler_index], show_label=True)
                                 with gr.Column():
                                     cn_ddim_steps = gr.Slider(label="Sampling steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=25, step=1)
                             cn_cfg_scale = gr.Slider(label="Guidance scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
@@ -1080,21 +1100,29 @@ def on_ui_tabs():
                                 with gr.Row():
                                     with gr.Column():
                                         gr.Markdown("Reference-Only Control (enabled with image below)")
-                                        cn_ref_image = gr.Image(label="Reference Image", elem_id="cn_ref_image", source="upload", type="numpy", interactive=True)
+                                        cn_ref_image = gr.Image(label="Reference Image", elem_id="cn_ref_image", source="upload", type="numpy",
+                                                                interactive=True)
                                     with gr.Column():
-                                        cn_ref_resize_mode = gr.Radio(label="Reference Image Resize Mode", elem_id="cn_ref_resize_mode", choices=["tile", "resize"], value="tile", show_label=True)
-                                        cn_ref_module_id = gr.Dropdown(label="Reference Type", elem_id="cn_ref_module_id", choices=cn_ref_module_ids, value=cn_ref_module_ids[-1], show_label=True)
-                                        cn_ref_weight = gr.Slider(label="Reference Control Weight", elem_id="cn_ref_weight", minimum=0.0, maximum=2.0, value=1.0, step=0.05)
-                                        cn_ref_mode = gr.Dropdown(label="Reference Control Mode", elem_id="cn_ref_mode", choices=cn_modes, value=cn_modes[0], show_label=True)
+                                        cn_ref_resize_mode = gr.Radio(label="Reference Image Resize Mode", elem_id="cn_ref_resize_mode",
+                                                                      choices=["tile", "resize"], value="tile", show_label=True)
+                                        cn_ref_module_id = gr.Dropdown(label="Reference Type", elem_id="cn_ref_module_id",
+                                                                       choices=cn_ref_module_ids, value=cn_ref_module_ids[-1], show_label=True)
+                                        cn_ref_weight = gr.Slider(label="Reference Control Weight", elem_id="cn_ref_weight",
+                                                                  minimum=0.0, maximum=2.0, value=1.0, step=0.05)
+                                        cn_ref_mode = gr.Dropdown(label="Reference Control Mode", elem_id="cn_ref_mode",
+                                                                  choices=cn_modes, value=cn_modes[0], show_label=True)
                             else:
                                 with gr.Row():
                                     gr.Markdown("The Multi ControlNet setting is currently set to 1.<br>"
-                                                "If you wish to use the Reference-Only Control, please adjust the Multi ControlNet setting to 2 or more and restart the Web UI.")
+                                                "If you wish to use the Reference-Only Control, "
+                                                "please adjust the Multi ControlNet setting to 2 or more and restart the Web UI.")
 
                         with gr.Row():
                             with gr.Column():
-                                cn_module_id = gr.Dropdown(label="ControlNet Preprocessor", elem_id="cn_module_id", choices=cn_module_ids, value=cn_module_ids[cn_module_index], show_label=True)
-                                cn_model_id = gr.Dropdown(label="ControlNet Model ID", elem_id="cn_model_id", choices=cn_model_ids, value=cn_model_ids[0], show_label=True)
+                                cn_module_id = gr.Dropdown(label="ControlNet Preprocessor", elem_id="cn_module_id",
+                                                           choices=cn_module_ids, value=cn_module_ids[cn_module_index], show_label=True)
+                                cn_model_id = gr.Dropdown(label="ControlNet Model ID", elem_id="cn_model_id",
+                                                          choices=cn_model_ids, value=cn_model_ids[0], show_label=True)
                             with gr.Column():
                                 with gr.Row():
                                     cn_inpaint_btn = gr.Button("Run ControlNet Inpaint", elem_id="cn_inpaint_btn")
@@ -1102,7 +1130,8 @@ def on_ui_tabs():
                                     cn_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cn_save_mask_chk", show_label=True, interactive=True)
 
                         with gr.Row():
-                            cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", type="pil", interactive=False).style(height=480)
+                            cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", type="pil",
+                                                    interactive=False, show_label=False).style(height=480)
 
                     else:
                         if sam_dict["cnet"] is None:
@@ -1111,7 +1140,8 @@ def on_ui_tabs():
                         elif len(cn_module_ids) > 0:
                             cn_models_directory = os.path.join("extensions", "sd-webui-controlnet", "models")
                             gr.Markdown("ControlNet inpaint model is not available.<br>"
-                                        f"Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model in the {cn_models_directory} directory.")
+                                        "Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model "
+                                        f"in the {cn_models_directory} directory.")
                         else:
                             gr.Markdown("ControlNet inpaint preprocessor is not available.<br>"
                                         "The local version of [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension may be old.")
@@ -1159,7 +1189,8 @@ def on_ui_tabs():
 
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             input_image.upload(input_image_upload, inputs=[input_image, sam_image, sel_mask], outputs=[sam_image, sel_mask, sam_btn])
-            padding_btn.click(run_padding, inputs=[input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode], outputs=[input_image, status_text])
+            padding_btn.click(run_padding, inputs=[input_image, pad_scale_width, pad_scale_height, pad_lr_barance, pad_tb_barance, padding_mode],
+                              outputs=[input_image, status_text])
             sam_btn.click(run_sam, inputs=[input_image, sam_model_id, sam_image, anime_style_chk], outputs=[sam_image, status_text]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, sel_mask], outputs=[sel_mask]).then(
@@ -1195,7 +1226,8 @@ def on_ui_tabs():
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
                     inputs=[input_image, sel_mask,
-                            cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
+                            cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed,
+                            cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_low_vram_chk, cn_weight, cn_mode],
                     outputs=[cn_out_image]).then(
                     fn=async_post_reload_model_weights, inputs=None, outputs=None)
@@ -1203,7 +1235,8 @@ def on_ui_tabs():
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
                     inputs=[input_image, sel_mask,
-                            cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed, cn_module_id, cn_model_id, cn_save_mask_chk,
+                            cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed,
+                            cn_module_id, cn_model_id, cn_save_mask_chk,
                             cn_low_vram_chk, cn_weight, cn_mode,
                             cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode, cn_ref_resize_mode],
                     outputs=[cn_out_image]).then(
@@ -1212,7 +1245,8 @@ def on_ui_tabs():
                 webui_inpaint_btn.click(
                     run_webui_inpaint,
                     inputs=[input_image, sel_mask,
-                            webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed, webui_model_id, webui_save_mask_chk,
+                            webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
+                            webui_model_id, webui_save_mask_chk,
                             webui_mask_blur, webui_fill_mode],
                     outputs=[webui_out_image]).then(
                     fn=async_post_reload_model_weights, inputs=None, outputs=None)
