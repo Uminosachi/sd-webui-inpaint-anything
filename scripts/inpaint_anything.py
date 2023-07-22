@@ -446,6 +446,28 @@ def apply_mask(input_image, sel_mask):
     else:
         return gr.update(value=ret_image)
 
+@clear_cache_decorator
+def add_mask(input_image, sel_mask):
+    global sam_dict
+    if sam_dict["mask_image"] is None or sel_mask is None:
+        return None
+
+    sel_mask_image = sam_dict["mask_image"]
+    sel_mask_mask = sel_mask["mask"][:, :, 0:3].astype(np.uint8)
+    new_sel_mask = sel_mask_image + sel_mask_mask
+
+    sam_dict["mask_image"] = new_sel_mask
+
+    if input_image is not None and input_image.shape == new_sel_mask.shape:
+        ret_image = cv2.addWeighted(input_image, 0.5, new_sel_mask, 0.5, 0)
+    else:
+        ret_image = new_sel_mask
+
+    if sel_mask["image"].shape == ret_image.shape and np.all(sel_mask["image"] == ret_image):
+        return gr.update()
+    else:
+        return gr.update(value=ret_image)
+
 
 def auto_resize_to_pil(input_image, mask_image):
     init_image = Image.fromarray(input_image).convert("RGB")
@@ -1189,6 +1211,8 @@ def on_ui_tabs():
                         expand_mask_btn = gr.Button("Expand mask region", elem_id="expand_mask_btn")
                     with gr.Column():
                         apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
+                    with gr.Column():
+                        add_mask_btn = gr.Button("Add mask by sketch", elem_id="add_mask_btn")
 
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
             input_image.upload(input_image_upload, inputs=[input_image, sam_image, sel_mask], outputs=[sam_image, sel_mask, sam_btn])
@@ -1202,6 +1226,9 @@ def on_ui_tabs():
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
             apply_mask_btn.click(apply_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
+            add_mask_btn.click(add_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
+                fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
+            
             inpaint_btn.click(
                 run_inpaint,
                 inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk, sampler_name],
