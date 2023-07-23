@@ -454,8 +454,8 @@ def add_mask(input_image, sel_mask):
         return None
 
     sel_mask_image = sam_dict["mask_image"]
-    sel_mask_mask = sel_mask["mask"][:, :, 0:3].astype(np.uint8)
-    new_sel_mask = sel_mask_image + (sel_mask_mask * np.logical_not(sel_mask_image.astype(bool)).astype(np.uint8))
+    sel_mask_mask = sel_mask["mask"][:, :, 0:3].astype(bool).astype(np.uint8)
+    new_sel_mask = sel_mask_image + (sel_mask_mask * np.invert(sel_mask_image, dtype=np.uint8))
 
     sam_dict["mask_image"] = new_sel_mask
 

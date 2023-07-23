@@ -46,6 +46,7 @@ To install the software, please follow these steps:
 
 * `Expand mask region` button: Use this to slightly expand the area of the mask for broader coverage.
 * `Trim mask by sketch` button: Clicking this will exclude the sketched area from the mask.
+* `Add mask by sketch` button: Clicking this will add the sketched area to the mask.
 
 ### Inpainting Tab
 

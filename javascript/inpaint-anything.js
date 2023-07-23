@@ -1,83 +1,78 @@
 async function inpaintAnything_sendToInpaint() {
+    const waitForElement = async (parent, selector, exist) => {
+        return new Promise((resolve) => {
+            const observer = new MutationObserver(() => {
+                if (!!parent.querySelector(selector) != exist) {
+                    return;
+                }
+                observer.disconnect();
+                resolve(undefined);
+            });
 
-	const waitForElement = async (
-	    parent,
-	    selector,
-	    exist
-	) => {
-	    return new Promise((resolve) => {
-	        const observer = new MutationObserver(() => {
-	            if (!!parent.querySelector(selector) != exist) {
-	                return;
-	            }
-	            observer.disconnect();
-	            resolve(undefined);
-	        })
+            observer.observe(parent, {
+                childList: true,
+                subtree: true,
+            });
 
-	        observer.observe(parent, {
-	            childList: true,
-	            subtree: true,
-	        })
+            if (!!parent.querySelector(selector) == exist) {
+                resolve(undefined);
+            }
+        });
+    };
 
-	        if (!!parent.querySelector(selector) == exist) {
-	            resolve(undefined);
-	        }
-	    })
-	}
+    const timeout = (ms) => {
+        return new Promise(function (resolve, reject) {
+            setTimeout(() => reject("Timeout"), ms);
+        });
+    };
 
-	const timeout = (ms) => {
-	    return new Promise(function (resolve, reject) {
-	        setTimeout(() => reject('Timeout'), ms)
-	    })
-	};
+    const waitForElementToBeInDocument = (parent, selector) =>
+        Promise.race([waitForElement(parent, selector, true), timeout(10000)]);
 
-	const waitForElementToBeInDocument = (parent, selector) => Promise.race([waitForElement(parent, selector, true), timeout(10000)]);
+    const waitForElementToBeRemoved = (parent, selector) =>
+        Promise.race([waitForElement(parent, selector, false), timeout(10000)]);
 
-	const waitForElementToBeRemoved = (parent, selector) => Promise.race([waitForElement(parent, selector, false), timeout(10000)]);
+    const updateGradioImage = async (element, url, name) => {
+        const blob = await (await fetch(url)).blob();
+        const file = new File([blob], name);
+        const dt = new DataTransfer();
+        dt.items.add(file);
 
-	const updateGradioImage = async (element, url, name) => {
-	    const blob = await (await fetch(url)).blob();
-	    const file = new File([blob], name);
-	    const dt = new DataTransfer();
-	    dt.items.add(file);
+        element.querySelector("button[aria-label='Clear']")?.click();
+        await waitForElementToBeRemoved(element, "button[aria-label='Clear']");
+        const input = element.querySelector("input[type='file']");
+        input.value = "";
+        input.files = dt.files;
+        input.dispatchEvent(
+            new Event("change", {
+                bubbles: true,
+                composed: true,
+            })
+        );
+        await waitForElementToBeInDocument(element, "button[aria-label='Clear']");
+    };
 
-	    element
-	        .querySelector("button[aria-label='Clear']")
-	        ?.click();
-	    await waitForElementToBeRemoved(element, "button[aria-label='Clear']");
-	    const input = element.querySelector("input[type='file']");
-	    input.value = '';
-	    input.files = dt.files;
-	    input.dispatchEvent(
-	        new Event('change', {
-	            bubbles: true,
-	            composed: true,
-	        })
-	    );
-	    await waitForElementToBeInDocument(element, "button[aria-label='Clear']");
-	}
+    const inputImg = document.querySelector("#input_image img");
+    const maskImg = document.querySelector("#mask_out_image img");
 
-	const inputImg = document.querySelector("#input_image img");
-	const maskImg = document.querySelector("#mask_out_image img");
+    if (!inputImg || !maskImg) {
+        return;
+    }
 
-	if (!inputImg || !maskImg) {
-		return;
-	}
+    const inputImgDataUrl = inputImg.src;
+    const maskImgDataUrl = maskImg.src;
 
-	const inputImgDataUrl = inputImg.src;
-	const maskImgDataUrl = maskImg.src;
+    window.scrollTo(0, 0);
+    switch_to_img2img_tab(4);
 
-	window.scrollTo(0, 0);
-	switch_to_img2img_tab(4);
+    await waitForElementToBeInDocument(document.querySelector("#img2img_inpaint_upload_tab"), "#img_inpaint_base");
 
-	await waitForElementToBeInDocument(document.querySelector("#img2img_inpaint_upload_tab"), "#img_inpaint_base");
-
-	await updateGradioImage(document.querySelector("#img_inpaint_base"), inputImgDataUrl, "input.png");
-	await updateGradioImage(document.querySelector("#img_inpaint_mask"), maskImgDataUrl, "mask.png");
+    await updateGradioImage(document.querySelector("#img_inpaint_base"), inputImgDataUrl, "input.png");
+    await updateGradioImage(document.querySelector("#img_inpaint_mask"), maskImgDataUrl, "mask.png");
 }
 
 async function inpaintAnything_clearSamMask() {
-	await new Promise(s => setTimeout(s, 300));
+    await new Promise((s) => setTimeout(s, 300));
 
     const elemId = "#ia_sam_image";
 
@@ -88,21 +83,21 @@ async function inpaintAnything_clearSamMask() {
     targetElement.style.transform = null;
     targetElement.style.zIndex = null;
 
-	const sam_mask_clear = document.querySelector(elemId).querySelector("button[aria-label='Clear']");
-	if (!sam_mask_clear) {
-		return;
-	}
-	const remove_image_button = document.querySelector(elemId).querySelector("button[aria-label='Remove Image']");
-	if (!remove_image_button) {
-		return;
-	}
+    const sam_mask_clear = document.querySelector(elemId).querySelector("button[aria-label='Clear']");
+    if (!sam_mask_clear) {
+        return;
+    }
+    const remove_image_button = document.querySelector(elemId).querySelector("button[aria-label='Remove Image']");
+    if (!remove_image_button) {
+        return;
+    }
     sam_mask_clear?.click();
 }
 
 async function inpaintAnything_clearSelMask() {
-	await new Promise(s => setTimeout(s, 300));
+    await new Promise((s) => setTimeout(s, 300));
 
-    const elemId = "#ia_sel_mask"
+    const elemId = "#ia_sel_mask";
 
     const targetElement = document.querySelector(elemId);
     if (!targetElement) {
@@ -111,21 +106,21 @@ async function inpaintAnything_clearSelMask() {
     targetElement.style.transform = null;
     targetElement.style.zIndex = null;
 
-	const sel_mask_clear = document.querySelector(elemId).querySelector("button[aria-label='Clear']");
-	if (!sel_mask_clear) {
-		return;
-	}
-	const remove_image_button = document.querySelector(elemId).querySelector("button[aria-label='Remove Image']");
-	if (!remove_image_button) {
-		return;
-	}
+    const sel_mask_clear = document.querySelector(elemId).querySelector("button[aria-label='Clear']");
+    if (!sel_mask_clear) {
+        return;
+    }
+    const remove_image_button = document.querySelector(elemId).querySelector("button[aria-label='Remove Image']");
+    if (!remove_image_button) {
+        return;
+    }
     sel_mask_clear?.click();
 }
 
-onUiLoaded(async() => {
+onUiLoaded(async () => {
     const elementIDs = {
         ia_sam_image: "#ia_sam_image",
-		ia_sel_mask: "#ia_sel_mask",
+        ia_sel_mask: "#ia_sel_mask",
     };
 
     // Default config
@@ -134,9 +129,9 @@ onUiLoaded(async() => {
         canvas_hotkey_fullscreen: "KeyS",
     };
 
-	const elemData = {};
+    const elemData = {};
 
-	function applyZoomAndPan(elemId) {
+    function applyZoomAndPan(elemId) {
         const targetElement = gradioApp().querySelector(elemId);
 
         if (!targetElement) {
@@ -149,7 +144,7 @@ onUiLoaded(async() => {
         elemData[elemId] = {
             zoomLevel: 1,
             panX: 0,
-            panY: 0
+            panY: 0,
         };
         let fullScreenMode = false;
 
@@ -159,8 +154,7 @@ onUiLoaded(async() => {
             const zIndex1 = null;
             const zIndex2 = "998";
 
-            targetElement.style.zIndex =
-                targetElement.style.zIndex !== zIndex2 ? zIndex2 : zIndex1;
+            targetElement.style.zIndex = targetElement.style.zIndex !== zIndex2 ? zIndex2 : zIndex1;
 
             if (forced === "off") {
                 targetElement.style.zIndex = zIndex1;
@@ -196,18 +190,13 @@ onUiLoaded(async() => {
             const scaleY = screenHeight / elementHeight;
             const scale = Math.min(scaleX, scaleY);
 
-            const transformOrigin =
-                window.getComputedStyle(targetElement).transformOrigin;
+            const transformOrigin = window.getComputedStyle(targetElement).transformOrigin;
             const [originX, originY] = transformOrigin.split(" ");
             const originXValue = parseFloat(originX);
             const originYValue = parseFloat(originY);
 
-            const offsetX =
-                (screenWidth - elementWidth * scale) / 2 -
-                originXValue * (1 - scale);
-            const offsetY =
-                (screenHeight - elementHeight * scale) / 2.5 -
-                originYValue * (1 - scale);
+            const offsetX = (screenWidth - elementWidth * scale) / 2 - originXValue * (1 - scale);
+            const offsetY = (screenHeight - elementHeight * scale) / 2.5 - originYValue * (1 - scale);
 
             // Apply scale and offsets to the element
             targetElement.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
@@ -221,20 +210,18 @@ onUiLoaded(async() => {
             toggleOverlap("off");
         }
 
-		// Reset the zoom level and pan position of the target element to their initial values
+        // Reset the zoom level and pan position of the target element to their initial values
         function resetZoom() {
             elemData[elemId] = {
                 zoomLevel: 1,
                 panX: 0,
-                panY: 0
+                panY: 0,
             };
 
             // fixCanvas();
             targetElement.style.transform = `scale(${elemData[elemId].zoomLevel}) translate(${elemData[elemId].panX}px, ${elemData[elemId].panY}px)`;
 
-            const canvas = gradioApp().querySelector(
-                `${elemId} canvas[key="interface"]`
-            );
+            const canvas = gradioApp().querySelector(`${elemId} canvas[key="interface"]`);
 
             toggleOverlap("off");
             fullScreenMode = false;
@@ -264,9 +251,7 @@ onUiLoaded(async() => {
 
         // Fullscreen mode
         function fitToScreen() {
-            const canvas = gradioApp().querySelector(
-                `${elemId} canvas[key="interface"]`
-            );
+            const canvas = gradioApp().querySelector(`${elemId} canvas[key="interface"]`);
 
             if (!canvas) return;
 
@@ -284,8 +269,7 @@ onUiLoaded(async() => {
             targetElement.style.transform = `translate(${0}px, ${0}px) scale(${1})`;
 
             // Get scrollbar width to right-align the image
-            const scrollbarWidth =
-                window.innerWidth - document.documentElement.clientWidth;
+            const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
 
             // Get element and screen dimensions
             const elementWidth = targetElement.offsetWidth;
@@ -311,14 +295,8 @@ onUiLoaded(async() => {
             const originYValue = parseFloat(originY);
 
             // Calculate offsets with respect to the transformOrigin
-            const offsetX =
-                (screenWidth - elementWidth * scale) / 2 -
-                elementX -
-                originXValue * (1 - scale);
-            const offsetY =
-                (screenHeight - elementHeight * scale) / 2 -
-                elementY -
-                originYValue * (1 - scale);
+            const offsetX = (screenWidth - elementWidth * scale) / 2 - elementX - originXValue * (1 - scale);
+            const offsetY = (screenHeight - elementHeight * scale) / 2 - elementY - originYValue * (1 - scale);
 
             // Apply scale and offsets to the element
             targetElement.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
@@ -333,26 +311,28 @@ onUiLoaded(async() => {
         }
 
         // Reset zoom when uploading a new image
-        const fileInput = gradioApp().querySelector(
-            `${elemId} input[type="file"][accept="image/*"].svelte-116rqfv`
-        );
+        const fileInput = gradioApp().querySelector(`${elemId} input[type="file"][accept="image/*"].svelte-116rqfv`);
         fileInput.addEventListener("click", resetZoom);
 
         // Handle keydown events
         function handleKeyDown(event) {
             // Disable key locks to make pasting from the buffer work correctly
-            if ((event.ctrlKey && event.code === 'KeyV') || (event.ctrlKey && event.code === 'KeyC') || event.code === "F5") {
+            if (
+                (event.ctrlKey && event.code === "KeyV") ||
+                (event.ctrlKey && event.code === "KeyC") ||
+                event.code === "F5"
+            ) {
                 return;
             }
 
             // before activating shortcut, ensure user is not actively typing in an input field
-			if (event.target.nodeName === 'TEXTAREA' || event.target.nodeName === 'INPUT') {
-				return;
-			}
+            if (event.target.nodeName === "TEXTAREA" || event.target.nodeName === "INPUT") {
+                return;
+            }
 
             const hotkeyActions = {
                 [defaultHotkeysConfig.canvas_hotkey_reset]: resetZoom,
-                [defaultHotkeysConfig.canvas_hotkey_fullscreen]: fitToScreen
+                [defaultHotkeysConfig.canvas_hotkey_fullscreen]: fitToScreen,
             };
 
             const action = hotkeyActions[event.code];
@@ -360,9 +340,9 @@ onUiLoaded(async() => {
                 event.preventDefault();
                 action(event);
             }
-		}
+        }
 
-		// Handle events only inside the targetElement
+        // Handle events only inside the targetElement
         let isKeyDownHandlerAttached = false;
 
         function handleMouseMove() {
@@ -386,8 +366,8 @@ onUiLoaded(async() => {
         // Add mouse event handlers
         targetElement.addEventListener("mousemove", handleMouseMove);
         targetElement.addEventListener("mouseleave", handleMouseLeave);
-	}
+    }
 
-	applyZoomAndPan(elementIDs.ia_sam_image);
-	applyZoomAndPan(elementIDs.ia_sel_mask);
+    applyZoomAndPan(elementIDs.ia_sam_image);
+    applyZoomAndPan(elementIDs.ia_sel_mask);
 });
