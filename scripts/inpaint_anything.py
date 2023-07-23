@@ -446,6 +446,7 @@ def apply_mask(input_image, sel_mask):
     else:
         return gr.update(value=ret_image)
 
+
 @clear_cache_decorator
 def add_mask(input_image, sel_mask):
     global sam_dict
@@ -454,7 +455,7 @@ def add_mask(input_image, sel_mask):
 
     sel_mask_image = sam_dict["mask_image"]
     sel_mask_mask = sel_mask["mask"][:, :, 0:3].astype(np.uint8)
-    new_sel_mask = sel_mask_image + sel_mask_mask
+    new_sel_mask = sel_mask_image + (sel_mask_mask * np.logical_not(sel_mask_image.astype(bool)).astype(np.uint8))
 
     sam_dict["mask_image"] = new_sel_mask
 
@@ -1211,7 +1212,6 @@ def on_ui_tabs():
                         expand_mask_btn = gr.Button("Expand mask region", elem_id="expand_mask_btn")
                     with gr.Column():
                         apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
-                    with gr.Column():
                         add_mask_btn = gr.Button("Add mask by sketch", elem_id="add_mask_btn")
 
             load_model_btn.click(download_model, inputs=[sam_model_id], outputs=[status_text])
@@ -1228,7 +1228,7 @@ def on_ui_tabs():
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
             add_mask_btn.click(add_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
-            
+
             inpaint_btn.click(
                 run_inpaint,
                 inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk, sampler_name],
