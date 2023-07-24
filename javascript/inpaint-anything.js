@@ -52,7 +52,7 @@ async function inpaintAnything_sendToInpaint() {
         await waitForElementToBeInDocument(element, "button[aria-label='Clear']");
     };
 
-    const inputImg = document.querySelector("#input_image img");
+    const inputImg = document.querySelector("#ia_input_image img");
     const maskImg = document.querySelector("#mask_out_image img");
 
     if (!inputImg || !maskImg) {

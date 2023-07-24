@@ -975,7 +975,7 @@ def on_ui_tabs():
                         with gr.Row():
                             status_text = gr.Textbox(label="", elem_id="status_text", max_lines=1, show_label=False, interactive=False)
                 with gr.Row():
-                    input_image = gr.Image(label="Input image", elem_id="input_image", source="upload", type="numpy", interactive=True)
+                    input_image = gr.Image(label="Input image", elem_id="ia_input_image", source="upload", type="numpy", interactive=True)
 
                 with gr.Row():
                     with gr.Accordion("Padding options", elem_id="padding_options", open=False):
