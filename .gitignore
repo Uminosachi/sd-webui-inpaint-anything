@@ -1,6 +1,7 @@
 *.pth
 models/
 ia_config.ini
+.eslintrc
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
