@@ -1207,7 +1207,7 @@ def on_ui_tabs():
                     sel_mask = gr.Image(label="Selected mask image", elem_id="ia_sel_mask", type="numpy", tool="sketch", brush_radius=12,
                                         show_label=False, interactive=True).style(height=480)
 
-                with gr.Row():
+                with gr.Row().style(equal_height=False):
                     with gr.Column():
                         expand_mask_btn = gr.Button("Expand mask region", elem_id="expand_mask_btn")
                     with gr.Column():
