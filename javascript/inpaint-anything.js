@@ -1,5 +1,5 @@
 async function inpaintAnything_sendToInpaint() {
-    const waitForElement = async(parent, selector, exist) => {
+    const waitForElement = async (parent, selector, exist) => {
         return new Promise((resolve) => {
             const observer = new MutationObserver(() => {
                 if (!!parent.querySelector(selector) != exist) {
@@ -21,7 +21,7 @@ async function inpaintAnything_sendToInpaint() {
     };
 
     const timeout = (ms) => {
-        return new Promise(function(resolve, reject) {
+        return new Promise(function (resolve, reject) {
             setTimeout(() => reject("Timeout"), ms);
         });
     };
@@ -32,7 +32,7 @@ async function inpaintAnything_sendToInpaint() {
     const waitForElementToBeRemoved = (parent, selector) =>
         Promise.race([waitForElement(parent, selector, false), timeout(10000)]);
 
-    const updateGradioImage = async(element, url, name) => {
+    const updateGradioImage = async (element, url, name) => {
         const blob = await (await fetch(url)).blob();
         const file = new File([blob], name);
         const dt = new DataTransfer();
@@ -129,7 +129,7 @@ async function inpaintAnything_clearSelMask() {
     removeImageButton.addEventListener("click", clickRemoveImage);
 }
 
-onUiLoaded(async() => {
+onUiLoaded(async () => {
     const elementIDs = {
         ia_sam_image: "#ia_sam_image",
         ia_sel_mask: "#ia_sel_mask",

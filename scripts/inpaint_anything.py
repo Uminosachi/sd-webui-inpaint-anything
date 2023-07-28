@@ -23,10 +23,8 @@ from modules.processing import create_infotext, process_images
 from modules.safe import load, unsafe_torch_load
 from modules.sd_models import get_closet_checkpoint_match
 from modules.sd_samplers import samplers_for_img2img
-from PIL import Image, ImageFilter, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 from PIL.PngImagePlugin import PngInfo
-from segment_anything import (SamAutomaticMaskGenerator, SamPredictor,
-                              sam_model_registry)
 from torch.hub import download_url_to_file
 from torchvision import transforms
 from tqdm import tqdm
@@ -58,6 +56,8 @@ from mobile_sam import \
     SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorMobile
 from mobile_sam import SamPredictor as SamPredictorMobile
 from mobile_sam import sam_model_registry as sam_model_registry_mobile
+from segment_anything_fb import (SamAutomaticMaskGenerator, SamPredictor,
+                                 sam_model_registry)
 from segment_anything_hq import \
     SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
 from segment_anything_hq import SamPredictor as SamPredictorHQ
@@ -135,7 +135,7 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
         torch.load = unsafe_torch_load
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
-            sam.to(device="cpu")
+            sam.to(device="mps")
         else:
             sam.to(device=devices.device)
         sam_mask_generator = SamAutomaticMaskGeneratorLocal(
@@ -174,7 +174,7 @@ def get_sam_predictor(sam_checkpoint):
         torch.load = unsafe_torch_load
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
-            sam.to(device="cpu")
+            sam.to(device="mps")
         else:
             sam.to(device=devices.device)
         sam_predictor = SamPredictorLocal(sam)
