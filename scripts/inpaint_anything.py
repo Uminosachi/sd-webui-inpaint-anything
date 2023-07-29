@@ -3,6 +3,10 @@ import gc
 import math
 import os
 import platform
+
+if platform.system() == "Darwin":
+    os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+
 import random
 import re
 from datetime import datetime
@@ -135,7 +139,10 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
         torch.load = unsafe_torch_load
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
-            sam.to(device="mps")
+            if "FastSAM" in os.path.basename(sam_checkpoint):
+                sam.to(device="cpu")
+            else:
+                sam.to(device="mps")
         else:
             sam.to(device=devices.device)
         sam_mask_generator = SamAutomaticMaskGeneratorLocal(
@@ -174,7 +181,10 @@ def get_sam_predictor(sam_checkpoint):
         torch.load = unsafe_torch_load
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
-            sam.to(device="mps")
+            if "FastSAM" in os.path.basename(sam_checkpoint):
+                sam.to(device="cpu")
+            else:
+                sam.to(device="mps")
         else:
             sam.to(device=devices.device)
         sam_predictor = SamPredictorLocal(sam)
