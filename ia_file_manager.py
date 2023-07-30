@@ -52,6 +52,18 @@ class IAFileManager:
             os.makedirs(self._ia_models_dir, exist_ok=True)
         return self._ia_models_dir
 
+    @property
+    def savename_prefix(self) -> str:
+        """Get inpaint-anything savename prefix.
+
+        Returns:
+            str: inpaint-anything savename prefix
+        """
+        config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+        basename = "inpainta-" if config_save_folder == "img2img-images" else ""
+
+        return basename + datetime.now().strftime("%Y%m%d-%H%M%S")
+
 
 ia_file_manager = IAFileManager()
 

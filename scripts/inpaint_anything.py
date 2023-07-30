@@ -9,7 +9,6 @@ if platform.system() == "Darwin":
 
 import random
 import re
-from datetime import datetime
 
 import cv2
 import gradio as gr
@@ -87,8 +86,8 @@ def download_model(sam_model_id):
     else:
         # url_sam_vit_h_4b8939 = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
         url_sam = "https://dl.fbaipublicfiles.com/segment_anything/" + sam_model_id
-    models_dir = ia_file_manager.models_dir
-    sam_checkpoint = os.path.join(models_dir, sam_model_id)
+
+    sam_checkpoint = os.path.join(ia_file_manager.models_dir, sam_model_id)
     if not os.path.isfile(sam_checkpoint):
         try:
             download_url_to_file(url_sam, sam_checkpoint)
@@ -209,7 +208,7 @@ def save_mask_image(mask_image, save_mask_chk=False):
         None
     """
     if save_mask_chk:
-        save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
+        save_name = "_".join([ia_file_manager.savename_prefix, "created_mask"]) + ".png"
         save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
         Image.fromarray(mask_image).save(save_name)
 
@@ -634,7 +633,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     metadata = PngInfo()
     metadata.add_text("parameters", infotext)
 
-    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(inp_model_id) + "_" + str(seed) + ".png"
+    save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(inp_model_id), str(seed)]) + ".png"
     save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     output_image.save(save_name, pnginfo=metadata)
 
@@ -685,7 +684,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     output_image = cv2.cvtColor(output_image.astype(np.uint8), cv2.COLOR_BGR2RGB)
     output_image = Image.fromarray(output_image)
 
-    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(cleaner_model_id) + ".png"
+    save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(cleaner_model_id)]) + ".png"
     save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     output_image.save(save_name)
 
@@ -709,7 +708,7 @@ def run_get_alpha_image(input_image, sel_mask):
 
     alpha_image.putalpha(mask_image)
 
-    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "rgba_image" + ".png"
+    save_name = "_".join([ia_file_manager.savename_prefix, "rgba_image"]) + ".png"
     save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     alpha_image.save(save_name)
 
@@ -724,7 +723,7 @@ def run_get_mask(sel_mask):
 
     mask_image = sam_dict["mask_image"]
 
-    save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + "created_mask" + ".png"
+    save_name = "_".join([ia_file_manager.savename_prefix, "created_mask"]) + ".png"
     save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
     Image.fromarray(mask_image).save(save_name)
 
@@ -846,7 +845,7 @@ def run_cn_inpaint(input_image, sel_mask,
             metadata = PngInfo()
             metadata.add_text("parameters", infotext)
 
-            save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(no_hash_cn_model_id) + "_" + str(cn_seed) + ".png"
+            save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(no_hash_cn_model_id), str(cn_seed)]) + ".png"
             save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
             output_image.save(save_name, pnginfo=metadata)
         else:
@@ -911,7 +910,7 @@ def run_webui_inpaint(input_image, sel_mask,
             metadata = PngInfo()
             metadata.add_text("parameters", infotext)
 
-            save_name = datetime.now().strftime("%Y%m%d-%H%M%S") + "_" + os.path.basename(no_hash_webui_model_id) + "_" + str(webui_seed) + ".png"
+            save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(no_hash_webui_model_id), str(webui_seed)]) + ".png"
             save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
             output_image.save(save_name, pnginfo=metadata)
         else:
