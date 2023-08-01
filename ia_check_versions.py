@@ -1,8 +1,10 @@
-from packaging.version import parse
 from importlib.util import find_spec
+
+from packaging.version import parse
+
 try:
-    from importlib.metadata import version
     from functools import cached_property
+    from importlib.metadata import version
 except Exception:
     from pkg_resources import get_distribution
     def version(module_name): return get_distribution(module_name).version
@@ -10,7 +12,10 @@ except Exception:
 
 
 def get_module_version(module_name):
-    module_version = version(module_name) if find_spec(module_name) is not None else None
+    try:
+        module_version = version(module_name)
+    except Exception:
+        module_version = None
     return module_version
 
 
