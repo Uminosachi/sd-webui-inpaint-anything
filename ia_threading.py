@@ -1,9 +1,10 @@
-import threading
 import gc
-from modules.devices import torch_gc
-from modules.sd_models import unload_model_weights, reload_model_weights
-from modules import shared
+import threading
 from functools import wraps
+
+from modules import shared
+from modules.devices import torch_gc
+from modules.sd_models import reload_model_weights, unload_model_weights
 
 backup_ckpt_info = None
 model_access_sem = threading.Semaphore(1)
@@ -82,5 +83,14 @@ def clear_cache_decorator(func):
         clear_cache()
         res = func(*args, **kwargs)
         clear_cache()
+        return res
+    return wrapper
+
+
+def post_reload_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        res = func(*args, **kwargs)
+        async_post_reload_model_weights()
         return res
     return wrapper

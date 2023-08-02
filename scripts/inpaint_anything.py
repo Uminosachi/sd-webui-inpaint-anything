@@ -44,7 +44,7 @@ from ia_threading import (async_post_reload_model_weights,
                           await_backup_reload_ckpt_info,
                           await_pre_reload_model_weights,
                           await_pre_unload_model_weights,
-                          clear_cache_decorator)
+                          clear_cache_decorator, post_reload_decorator)
 from ia_ui_items import (get_cleaner_model_ids, get_inp_model_ids,
                          get_padding_mode_names, get_sam_model_ids,
                          get_sampler_names)
@@ -260,6 +260,7 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
     return pad_image, "Padding done"
 
 
+@post_reload_decorator
 @clear_cache_decorator
 def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     global sam_dict
@@ -293,7 +294,6 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     except Exception as e:
         ia_logging.error(str(e))
         del sam_mask_generator
-        async_post_reload_model_weights()
         ret_sam_image = None if sam_image is None else gr.update()
         return ret_sam_image, "SAM generate failed"
 
@@ -344,7 +344,6 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     sam_dict["sam_masks"] = copy.deepcopy(sam_masks)
 
     del sam_masks
-    async_post_reload_model_weights()
     if sam_image is None:
         return seg_image, "Segment Anything complete"
     else:
