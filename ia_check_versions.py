@@ -1,5 +1,6 @@
 from importlib.util import find_spec
 
+import torch
 from packaging.version import parse
 
 try:
@@ -46,6 +47,19 @@ class IACheckVersions:
             return True
         else:
             return False
+
+    @cached_property
+    def torch_available_mps(self):
+        if compare_module_version("torch", "2.0.1") < 0:
+            if not getattr(torch, "has_mps", False):
+                return False
+            try:
+                torch.zeros(1).to(torch.device("mps"))
+                return True
+            except Exception:
+                return False
+        else:
+            return torch.backends.mps.is_available() and torch.backends.mps.is_built()
 
 
 ia_check_versions = IACheckVersions()

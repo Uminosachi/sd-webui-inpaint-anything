@@ -138,10 +138,10 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
         torch.load = unsafe_torch_load
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
-            if "FastSAM" in os.path.basename(sam_checkpoint):
-                sam.to(device="cpu")
+            if "FastSAM" in os.path.basename(sam_checkpoint) or not ia_check_versions.torch_available_mps:
+                sam.to(device=torch.device("cpu"))
             else:
-                sam.to(device="mps")
+                sam.to(device=torch.device("mps"))
         else:
             sam.to(device=devices.device)
         sam_mask_generator = SamAutomaticMaskGeneratorLocal(
@@ -180,10 +180,10 @@ def get_sam_predictor(sam_checkpoint):
         torch.load = unsafe_torch_load
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
-            if "FastSAM" in os.path.basename(sam_checkpoint):
-                sam.to(device="cpu")
+            if "FastSAM" in os.path.basename(sam_checkpoint) or not ia_check_versions.torch_available_mps:
+                sam.to(device=torch.device("cpu"))
             else:
-                sam.to(device="mps")
+                sam.to(device=torch.device("mps"))
         else:
             sam.to(device=devices.device)
         sam_predictor = SamPredictorLocal(sam)
@@ -578,7 +578,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         seed = random.randint(0, 2147483647)
 
     if platform.system() == "Darwin":
-        pipe = pipe.to("mps")
+        pipe = pipe.to("mps" if ia_check_versions.torch_available_mps else "cpu")
         pipe.enable_attention_slicing()
         generator = torch.Generator("cpu").manual_seed(seed)
     else:
@@ -658,7 +658,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
 
     ia_logging.info(f"Loading model {cleaner_model_id}")
     if platform.system() == "Darwin":
-        model = ModelManager(name=cleaner_model_id, device="cpu")
+        model = ModelManager(name=cleaner_model_id, device=devices.cpu)
     else:
         model = ModelManager(name=cleaner_model_id, device=devices.device)
 
