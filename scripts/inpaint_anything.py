@@ -1067,8 +1067,14 @@ def on_ui_tabs():
 
                 if webui_inpaint_enabled:
                     with gr.Tab("Inpainting webui", elem_id="webui_inpainting_tab"):
-                        webui_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="webui_sd_prompt")
-                        webui_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="webui_sd_n_prompt")
+                        with gr.Row():
+                            with gr.Column():
+                                webui_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="ia_webui_sd_prompt")
+                                webui_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="ia_webui_sd_n_prompt")
+                            with gr.Column(scale=0, min_width=120):
+                                gr.Markdown("Get prompt from:")
+                                webui_get_txt2img_prompt_btn = gr.Button("txt2img", elem_id="webui_get_txt2img_prompt_btn")
+                                webui_get_img2img_prompt_btn = gr.Button("img2img", elem_id="webui_get_img2img_prompt_btn")
                         with gr.Accordion("Advanced options", elem_id="webui_advanced_options", open=False):
                             webui_mask_blur = gr.Slider(label="Mask blur", minimum=0, maximum=64, step=1, value=4, elem_id="webui_mask_blur")
                             webui_fill_mode = gr.Radio(label="Masked content", elem_id="webui_fill_mode",
@@ -1107,8 +1113,14 @@ def on_ui_tabs():
 
                 with gr.Tab("ControlNet Inpaint", elem_id="cn_inpaint_tab"):
                     if cn_enabled:
-                        cn_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="cn_sd_prompt")
-                        cn_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="cn_sd_n_prompt")
+                        with gr.Row():
+                            with gr.Column():
+                                cn_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="ia_cn_sd_prompt")
+                                cn_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="ia_cn_sd_n_prompt")
+                            with gr.Column(scale=0, min_width=120):
+                                gr.Markdown("Get prompt from:")
+                                cn_get_txt2img_prompt_btn = gr.Button("txt2img", elem_id="cn_get_txt2img_prompt_btn")
+                                cn_get_img2img_prompt_btn = gr.Button("img2img", elem_id="cn_get_img2img_prompt_btn")
                         with gr.Accordion("Advanced options", elem_id="cn_advanced_options", open=False):
                             with gr.Row():
                                 with gr.Column():
@@ -1270,6 +1282,11 @@ def on_ui_tabs():
                 _js="inpaintAnything_sendToInpaint",
                 inputs=None,
                 outputs=None)
+            if cn_enabled:
+                cn_get_txt2img_prompt_btn.click(
+                    fn=None, inputs=None, outputs=None, _js="inpaintAnything_cnGetTxt2imgPrompt")
+                cn_get_img2img_prompt_btn.click(
+                    fn=None, inputs=None, outputs=None, _js="inpaintAnything_cnGetImg2imgPrompt")
             if cn_enabled and not cn_ref_only:
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
@@ -1290,6 +1307,10 @@ def on_ui_tabs():
                     outputs=[cn_out_image]).then(
                     fn=async_post_reload_model_weights, inputs=None, outputs=None)
             if webui_inpaint_enabled:
+                webui_get_txt2img_prompt_btn.click(
+                    fn=None, inputs=None, outputs=None, _js="inpaintAnything_webuiGetTxt2imgPrompt")
+                webui_get_img2img_prompt_btn.click(
+                    fn=None, inputs=None, outputs=None, _js="inpaintAnything_webuiGetImg2imgPrompt")
                 webui_inpaint_btn.click(
                     run_webui_inpaint,
                     inputs=[input_image, sel_mask,
