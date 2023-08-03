@@ -129,20 +129,20 @@ async function inpaintAnything_clearSelMask() {
     removeImageButton.addEventListener("click", clickRemoveImage);
 }
 
-async function inpaintAnything_getTxt2imgPrompt() {
-    const tabTxt2img = document.querySelector("#tab_txt2img");
+async function inpaintAnything_getPrompt(tabName, promptId, negPromptId) {
+    const tabTxt2img = document.querySelector(`#tab_${tabName}`);
     if (!tabTxt2img) {
         return;
     }
 
-    const txt2imgPrompt = tabTxt2img.querySelector("#txt2img_prompt textarea");
-    const txt2imgNegPrompt = tabTxt2img.querySelector("#txt2img_neg_prompt textarea");
+    const txt2imgPrompt = tabTxt2img.querySelector(`#${tabName}_prompt textarea`);
+    const txt2imgNegPrompt = tabTxt2img.querySelector(`#${tabName}_neg_prompt textarea`);
     if (!txt2imgPrompt || !txt2imgNegPrompt) {
         return;
     }
 
-    const iaSdPrompt = document.querySelector("#ia_sd_prompt textarea");
-    const iaSdNPrompt = document.querySelector("#ia_sd_n_prompt textarea");
+    const iaSdPrompt = document.querySelector(`#${promptId} textarea`);
+    const iaSdNPrompt = document.querySelector(`#${negPromptId} textarea`);
     if (!iaSdPrompt || !iaSdNPrompt) {
         return;
     }
@@ -152,131 +152,30 @@ async function inpaintAnything_getTxt2imgPrompt() {
 
     iaSdPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
     iaSdNPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+async function inpaintAnything_getTxt2imgPrompt() {
+    inpaintAnything_getPrompt("txt2img", "ia_sd_prompt", "ia_sd_n_prompt");
 }
 
 async function inpaintAnything_getImg2imgPrompt() {
-    const tabImg2img = document.querySelector("#tab_img2img");
-    if (!tabImg2img) {
-        return;
-    }
-
-    const img2imgPrompt = tabImg2img.querySelector("#img2img_prompt textarea");
-    const img2imgNegPrompt = tabImg2img.querySelector("#img2img_neg_prompt textarea");
-    if (!img2imgPrompt || !img2imgNegPrompt) {
-        return;
-    }
-
-    const iaSdPrompt = document.querySelector("#ia_sd_prompt textarea");
-    const iaSdNPrompt = document.querySelector("#ia_sd_n_prompt textarea");
-    if (!iaSdPrompt || !iaSdNPrompt) {
-        return;
-    }
-
-    iaSdPrompt.value = img2imgPrompt.value;
-    iaSdNPrompt.value = img2imgNegPrompt.value;
-
-    iaSdPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
-    iaSdNPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
+    inpaintAnything_getPrompt("img2img", "ia_sd_prompt", "ia_sd_n_prompt");
 }
 
 async function inpaintAnything_webuiGetTxt2imgPrompt() {
-    const tabTxt2img = document.querySelector("#tab_txt2img");
-    if (!tabTxt2img) {
-        return;
-    }
-
-    const txt2imgPrompt = tabTxt2img.querySelector("#txt2img_prompt textarea");
-    const txt2imgNegPrompt = tabTxt2img.querySelector("#txt2img_neg_prompt textarea");
-    if (!txt2imgPrompt || !txt2imgNegPrompt) {
-        return;
-    }
-
-    const iaSdPrompt = document.querySelector("#ia_webui_sd_prompt textarea");
-    const iaSdNPrompt = document.querySelector("#ia_webui_sd_n_prompt textarea");
-    if (!iaSdPrompt || !iaSdNPrompt) {
-        return;
-    }
-
-    iaSdPrompt.value = txt2imgPrompt.value;
-    iaSdNPrompt.value = txt2imgNegPrompt.value;
-
-    iaSdPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
-    iaSdNPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
+    inpaintAnything_getPrompt("txt2img", "ia_webui_sd_prompt", "ia_webui_sd_n_prompt");
 }
 
 async function inpaintAnything_webuiGetImg2imgPrompt() {
-    const tabImg2img = document.querySelector("#tab_img2img");
-    if (!tabImg2img) {
-        return;
-    }
-
-    const img2imgPrompt = tabImg2img.querySelector("#img2img_prompt textarea");
-    const img2imgNegPrompt = tabImg2img.querySelector("#img2img_neg_prompt textarea");
-    if (!img2imgPrompt || !img2imgNegPrompt) {
-        return;
-    }
-
-    const iaSdPrompt = document.querySelector("#ia_webui_sd_prompt textarea");
-    const iaSdNPrompt = document.querySelector("#ia_webui_sd_n_prompt textarea");
-    if (!iaSdPrompt || !iaSdNPrompt) {
-        return;
-    }
-
-    iaSdPrompt.value = img2imgPrompt.value;
-    iaSdNPrompt.value = img2imgNegPrompt.value;
-
-    iaSdPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
-    iaSdNPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
+    inpaintAnything_getPrompt("img2img", "ia_webui_sd_prompt", "ia_webui_sd_n_prompt");
 }
 
 async function inpaintAnything_cnGetTxt2imgPrompt() {
-    const tabTxt2img = document.querySelector("#tab_txt2img");
-    if (!tabTxt2img) {
-        return;
-    }
-
-    const txt2imgPrompt = tabTxt2img.querySelector("#txt2img_prompt textarea");
-    const txt2imgNegPrompt = tabTxt2img.querySelector("#txt2img_neg_prompt textarea");
-    if (!txt2imgPrompt || !txt2imgNegPrompt) {
-        return;
-    }
-
-    const iaSdPrompt = document.querySelector("#ia_cn_sd_prompt textarea");
-    const iaSdNPrompt = document.querySelector("#ia_cn_sd_n_prompt textarea");
-    if (!iaSdPrompt || !iaSdNPrompt) {
-        return;
-    }
-
-    iaSdPrompt.value = txt2imgPrompt.value;
-    iaSdNPrompt.value = txt2imgNegPrompt.value;
-
-    iaSdPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
-    iaSdNPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
+    inpaintAnything_getPrompt("txt2img", "ia_cn_sd_prompt", "ia_cn_sd_n_prompt");
 }
 
 async function inpaintAnything_cnGetImg2imgPrompt() {
-    const tabImg2img = document.querySelector("#tab_img2img");
-    if (!tabImg2img) {
-        return;
-    }
-
-    const img2imgPrompt = tabImg2img.querySelector("#img2img_prompt textarea");
-    const img2imgNegPrompt = tabImg2img.querySelector("#img2img_neg_prompt textarea");
-    if (!img2imgPrompt || !img2imgNegPrompt) {
-        return;
-    }
-
-    const iaSdPrompt = document.querySelector("#ia_cn_sd_prompt textarea");
-    const iaSdNPrompt = document.querySelector("#ia_cn_sd_n_prompt textarea");
-    if (!iaSdPrompt || !iaSdNPrompt) {
-        return;
-    }
-
-    iaSdPrompt.value = img2imgPrompt.value;
-    iaSdNPrompt.value = img2imgNegPrompt.value;
-
-    iaSdPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
-    iaSdNPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
+    inpaintAnything_getPrompt("img2img", "ia_cn_sd_prompt", "ia_cn_sd_n_prompt");
 }
 
 onUiLoaded(async () => {
