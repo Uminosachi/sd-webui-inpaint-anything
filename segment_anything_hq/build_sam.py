@@ -105,7 +105,10 @@ def _build_sam(
     if checkpoint is not None:
         with open(checkpoint, "rb") as f:
             if platform.system() == "Darwin":
-                state_dict = torch.load(f, map_location=torch.device("mps"))
+                if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+                    state_dict = torch.load(f, map_location=torch.device("mps"))
+                else:
+                    state_dict = torch.load(f, map_location=torch.device("cpu"))
             else:
                 state_dict = torch.load(f)
         # info = sam.load_state_dict(state_dict, strict=False)
