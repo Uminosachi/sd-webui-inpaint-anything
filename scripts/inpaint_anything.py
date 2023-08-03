@@ -1011,8 +1011,14 @@ def on_ui_tabs():
                         sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn", interactive=False)
 
                 with gr.Tab("Inpainting", elem_id="inpainting_tab"):
-                    prompt = gr.Textbox(label="Inpainting Prompt", elem_id="sd_prompt")
-                    n_prompt = gr.Textbox(label="Negative Prompt", elem_id="sd_n_prompt")
+                    with gr.Row():
+                        with gr.Column():
+                            prompt = gr.Textbox(label="Inpainting Prompt", elem_id="ia_sd_prompt")
+                            n_prompt = gr.Textbox(label="Negative Prompt", elem_id="ia_sd_n_prompt")
+                        with gr.Column(scale=0, min_width=120):
+                            gr.Markdown("Get prompt from:")
+                            get_txt2img_prompt_btn = gr.Button("txt2img", elem_id="get_txt2img_prompt_btn")
+                            get_img2img_prompt_btn = gr.Button("img2img", elem_id="get_img2img_prompt_btn")
                     with gr.Accordion("Advanced options", elem_id="inp_advanced_options", open=False):
                         with gr.Row():
                             with gr.Column():
@@ -1236,6 +1242,10 @@ def on_ui_tabs():
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
             add_mask_btn.click(add_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
+            get_txt2img_prompt_btn.click(
+                fn=None, inputs=None, outputs=None, _js="inpaintAnything_getTxt2imgPrompt")
+            get_img2img_prompt_btn.click(
+                fn=None, inputs=None, outputs=None, _js="inpaintAnything_getImg2imgPrompt")
 
             inpaint_btn.click(
                 run_inpaint,

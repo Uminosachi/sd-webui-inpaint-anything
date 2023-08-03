@@ -77,6 +77,18 @@ def async_post_reload_model_weights():
     thread.start()
 
 
+def acquire_release_semaphore(sem):
+    with sem:
+        pass
+
+
+def await_acquire_release_semaphore():
+    global model_access_sem
+    thread = threading.Thread(target=acquire_release_semaphore, args=(model_access_sem,))
+    thread.start()
+    thread.join()
+
+
 def clear_cache_decorator(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -90,6 +102,7 @@ def clear_cache_decorator(func):
 def post_reload_decorator(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
+        await_acquire_release_semaphore()
         res = func(*args, **kwargs)
         async_post_reload_model_weights()
         return res
