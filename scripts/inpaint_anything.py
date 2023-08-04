@@ -626,8 +626,8 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 
     generation_params_text = ", ".join([k if k == v else f"{k}: {v}" for k, v in generation_params.items() if v is not None])
     prompt_text = prompt if prompt else ""
-    negative_prompt_text = "Negative prompt: " + n_prompt if n_prompt else ""
-    infotext = f"{prompt_text}\n{negative_prompt_text}\n{generation_params_text}".strip()
+    negative_prompt_text = "\nNegative prompt: " + n_prompt if n_prompt else ""
+    infotext = f"{prompt_text}{negative_prompt_text}\n{generation_params_text}".strip()
 
     metadata = PngInfo()
     metadata.add_text("parameters", infotext)
