@@ -55,7 +55,13 @@ To install the software, please follow these steps:
   * In the Advanced options, you can adjust the Sampler, Sampling Steps, Guidance Scale, and Seed.
   * If you enable the `Mask area Only` option, modifications will be confined to the designated mask area only.
 * Inpainting process is performed using [diffusers](https://github.com/huggingface/diffusers).
-* Tips: You can directly drag and drop the inpainted image into the input image field on the Web UI.
+
+#### Tips
+
+* You can directly drag and drop the inpainted image into the input image field on the Web UI. (useful with Chrome and Edge browsers)
+* To load prompts saved in a PNG file, follow these steps:
+  * Drag and drop the image into the 'PNG Info' tab on the Web UI, then click `Send to txt2img (or img2img)`.
+  * Navigate to the 'Inpainting' section within the 'Inpaint Anything' tab and click the `Get prompt from: txt2img (or img2img)` button.
 
 #### Model Cache
 * The inpainting model, which is saved in HuggingFace's cache and includes `inpaint` (case-insensitive) in its repo_id, will also be added to the Inpainting Model ID dropdown list.
