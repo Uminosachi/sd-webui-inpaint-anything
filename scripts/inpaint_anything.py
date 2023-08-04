@@ -617,14 +617,14 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 
     generation_params = {
         "Steps": ddim_steps,
-        "Sampler": pipe.scheduler.__class__.__name__,
+        "Sampler": sampler_name,
         "CFG scale": cfg_scale,
         "Seed": seed,
         "Size": f"{width}x{height}",
         "Model": inp_model_id,
         }
 
-    generation_params_text = ", ".join([k if k == v else f'{k}: {v}' for k, v in generation_params.items() if v is not None])
+    generation_params_text = ", ".join([k if k == v else f"{k}: {v}" for k, v in generation_params.items() if v is not None])
     prompt_text = prompt if prompt else ""
     negative_prompt_text = "Negative prompt: " + n_prompt if n_prompt else ""
     infotext = f"{prompt_text}\n{negative_prompt_text}\n{generation_params_text}".strip()
@@ -1129,7 +1129,7 @@ def on_ui_tabs():
                                 with gr.Column():
                                     cn_ddim_steps = gr.Slider(label="Sampling steps", elem_id="cn_ddim_steps", minimum=1, maximum=150, value=25, step=1)
                             cn_cfg_scale = gr.Slider(label="Guidance scale", elem_id="cn_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
-                            cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength', value=0.75, elem_id="cn_strength")
+                            cn_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="Denoising strength", value=0.75, elem_id="cn_strength")
                             cn_seed = gr.Slider(
                                 label="Seed",
                                 elem_id="cn_sd_seed",
