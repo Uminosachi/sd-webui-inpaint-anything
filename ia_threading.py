@@ -4,7 +4,8 @@ from functools import wraps
 
 from modules import shared
 from modules.devices import torch_gc
-from modules.sd_models import reload_model_weights, unload_model_weights
+from modules.sd_models import (load_model, reload_model_weights,
+                               unload_model_weights)
 
 backup_ckpt_info = None
 model_access_sem = threading.Semaphore(1)
@@ -48,9 +49,9 @@ def backup_reload_ckpt_info(sem, info):
             if info.title != shared.sd_model.sd_checkpoint_info.title:
                 backup_ckpt_info = shared.sd_model.sd_checkpoint_info
                 unload_model_weights()
-                reload_model_weights(sd_model=None, info=info)
+                load_model(checkpoint_info=info)
         else:
-            reload_model_weights(sd_model=None, info=info)
+            load_model(checkpoint_info=info)
 
 
 def await_backup_reload_ckpt_info(info):
@@ -67,7 +68,7 @@ def post_reload_model_weights(sem):
             reload_model_weights()
         elif backup_ckpt_info is not None:
             unload_model_weights()
-            reload_model_weights(sd_model=None, info=backup_ckpt_info)
+            load_model(checkpoint_info=backup_ckpt_info)
             backup_ckpt_info = None
 
 
