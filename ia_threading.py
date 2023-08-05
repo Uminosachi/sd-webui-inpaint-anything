@@ -17,9 +17,11 @@ def clear_cache():
 
 
 def pre_unload_model_weights(sem):
+    global backup_ckpt_info
     with sem:
-        unload_model_weights()
-        clear_cache()
+        if shared.sd_model is not None:
+            backup_ckpt_info = shared.sd_model.sd_checkpoint_info
+            unload_model_weights()
 
 
 def await_pre_unload_model_weights():
@@ -30,9 +32,14 @@ def await_pre_unload_model_weights():
 
 
 def pre_reload_model_weights(sem):
+    global backup_ckpt_info
     with sem:
         if shared.sd_model is None:
-            reload_model_weights()
+            if backup_ckpt_info is not None:
+                load_model(checkpoint_info=backup_ckpt_info)
+                backup_ckpt_info = None
+            else:
+                reload_model_weights()
 
 
 def await_pre_reload_model_weights():
@@ -65,7 +72,11 @@ def post_reload_model_weights(sem):
     global backup_ckpt_info
     with sem:
         if shared.sd_model is None:
-            reload_model_weights()
+            if backup_ckpt_info is not None:
+                load_model(checkpoint_info=backup_ckpt_info)
+                backup_ckpt_info = None
+            else:
+                reload_model_weights()
         elif backup_ckpt_info is not None:
             unload_model_weights()
             load_model(checkpoint_info=backup_ckpt_info)
