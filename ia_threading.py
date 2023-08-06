@@ -15,9 +15,9 @@ def clear_cache():
     devices.torch_gc()
 
 
-def webui_reload_model_weights(info=None):
+def webui_reload_model_weights(sd_model=None, info=None):
     try:
-        reload_model_weights(info=info)
+        reload_model_weights(sd_model=sd_model, info=info)
     except Exception:
         load_model(checkpoint_info=info)
 
@@ -62,8 +62,7 @@ def backup_reload_ckpt_info(sem, info):
         if shared.sd_model is not None:
             if info.title != shared.sd_model.sd_checkpoint_info.title:
                 backup_ckpt_info = shared.sd_model.sd_checkpoint_info
-                unload_model_weights()
-                webui_reload_model_weights(info=info)
+                webui_reload_model_weights(sd_model=shared.sd_model, info=info)
         else:
             webui_reload_model_weights(info=info)
 
@@ -86,8 +85,7 @@ def post_reload_model_weights(sem):
                 webui_reload_model_weights()
 
         elif backup_ckpt_info is not None:
-            unload_model_weights()
-            webui_reload_model_weights(info=backup_ckpt_info)
+            webui_reload_model_weights(sd_model=shared.sd_model, info=backup_ckpt_info)
             backup_ckpt_info = None
 
 
