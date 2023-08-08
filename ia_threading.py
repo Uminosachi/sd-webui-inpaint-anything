@@ -18,6 +18,9 @@ def clear_cache():
 def webui_reload_model_weights(sd_model=None, info=None):
     try:
         reload_model_weights(sd_model=sd_model, info=info)
+        # A1111 web UI PR #12396
+        shared.opts.data["sd_model_checkpoint"] = info.title
+        shared.opts.data["sd_checkpoint_hash"] = info.sha256
     except Exception:
         load_model(checkpoint_info=info)
 
@@ -63,9 +66,8 @@ def backup_reload_ckpt_info(sem, info):
             backup_sd_model.to(devices.device)
             backup_sd_model = None
         if shared.sd_model is not None:
-            if info.title != shared.sd_model.sd_checkpoint_info.title:
-                backup_ckpt_info = shared.sd_model.sd_checkpoint_info
-                webui_reload_model_weights(sd_model=shared.sd_model, info=info)
+            backup_ckpt_info = shared.sd_model.sd_checkpoint_info
+            webui_reload_model_weights(sd_model=shared.sd_model, info=info)
 
 
 def await_backup_reload_ckpt_info(info):
