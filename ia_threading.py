@@ -5,8 +5,7 @@ from functools import wraps
 from modules import devices, shared
 from modules.sd_models import load_model, reload_model_weights
 
-backup_sd_model = None
-backup_ckpt_info = None
+backup_sd_model, backup_device, backup_ckpt_info = None, None, None
 model_access_sem = threading.Semaphore(1)
 
 
@@ -18,7 +17,6 @@ def clear_cache():
 def webui_reload_model_weights(sd_model=None, info=None):
     try:
         reload_model_weights(sd_model=sd_model, info=info)
-        # A1111 web UI PR #12396
         shared.opts.data["sd_model_checkpoint"] = info.title
         shared.opts.data["sd_checkpoint_hash"] = info.sha256
     except Exception:
@@ -26,10 +24,11 @@ def webui_reload_model_weights(sd_model=None, info=None):
 
 
 def pre_unload_model_weights(sem):
-    global backup_sd_model, backup_ckpt_info
+    global backup_sd_model, backup_device, backup_ckpt_info
     with sem:
         if shared.sd_model is not None:
             backup_sd_model = shared.sd_model
+            backup_device = getattr(backup_sd_model, "device", devices.device)
             backup_sd_model.to(devices.cpu)
             clear_cache()
 
@@ -42,11 +41,11 @@ def await_pre_unload_model_weights():
 
 
 def pre_reload_model_weights(sem):
-    global backup_sd_model, backup_ckpt_info
+    global backup_sd_model, backup_device, backup_ckpt_info
     with sem:
-        if backup_sd_model is not None:
-            backup_sd_model.to(devices.device)
-            backup_sd_model = None
+        if backup_sd_model is not None and backup_device is not None:
+            backup_sd_model.to(backup_device)
+            backup_sd_model, backup_device = None, None
         if shared.sd_model is not None and backup_ckpt_info is not None:
             webui_reload_model_weights(sd_model=shared.sd_model, info=backup_ckpt_info)
             backup_ckpt_info = None
@@ -60,11 +59,11 @@ def await_pre_reload_model_weights():
 
 
 def backup_reload_ckpt_info(sem, info):
-    global backup_sd_model, backup_ckpt_info
+    global backup_sd_model, backup_device, backup_ckpt_info
     with sem:
-        if backup_sd_model is not None:
-            backup_sd_model.to(devices.device)
-            backup_sd_model = None
+        if backup_sd_model is not None and backup_device is not None:
+            backup_sd_model.to(backup_device)
+            backup_sd_model, backup_device = None, None
         if shared.sd_model is not None:
             backup_ckpt_info = shared.sd_model.sd_checkpoint_info
             webui_reload_model_weights(sd_model=shared.sd_model, info=info)
@@ -78,11 +77,11 @@ def await_backup_reload_ckpt_info(info):
 
 
 def post_reload_model_weights(sem):
-    global backup_sd_model, backup_ckpt_info
+    global backup_sd_model, backup_device, backup_ckpt_info
     with sem:
-        if backup_sd_model is not None:
-            backup_sd_model.to(devices.device)
-            backup_sd_model = None
+        if backup_sd_model is not None and backup_device is not None:
+            backup_sd_model.to(backup_device)
+            backup_sd_model, backup_device = None, None
         if shared.sd_model is not None and backup_ckpt_info is not None:
             webui_reload_model_weights(sd_model=shared.sd_model, info=backup_ckpt_info)
             backup_ckpt_info = None
