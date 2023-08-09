@@ -72,7 +72,7 @@ async function inpaintAnything_sendToInpaint() {
 }
 
 async function inpaintAnything_clearSamMask() {
-    await new Promise((s) => setTimeout(s, 200));
+    await new Promise((s) => setTimeout(s, 100));
 
     const elemId = "#ia_sam_image";
 
@@ -82,6 +82,7 @@ async function inpaintAnything_clearSamMask() {
     }
     targetElement.style.transform = null;
     targetElement.style.zIndex = null;
+    targetElement.style.overflow = "auto";
 
     const samMaskClear = targetElement.querySelector("button[aria-label='Clear']");
     if (!samMaskClear) {
@@ -101,7 +102,7 @@ async function inpaintAnything_clearSamMask() {
 }
 
 async function inpaintAnything_clearSelMask() {
-    await new Promise((s) => setTimeout(s, 200));
+    await new Promise((s) => setTimeout(s, 100));
 
     const elemId = "#ia_sel_mask";
 
@@ -111,6 +112,7 @@ async function inpaintAnything_clearSelMask() {
     }
     targetElement.style.transform = null;
     targetElement.style.zIndex = null;
+    targetElement.style.overflow = "auto";
 
     const selMaskClear = targetElement.querySelector("button[aria-label='Clear']");
     if (!selMaskClear) {
@@ -150,8 +152,8 @@ async function inpaintAnything_getPrompt(tabName, promptId, negPromptId) {
     iaSdPrompt.value = txt2imgPrompt.value;
     iaSdNPrompt.value = txt2imgNegPrompt.value;
 
-    iaSdPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
-    iaSdNPrompt?.dispatchEvent(new Event("input", { bubbles: true }));
+    iaSdPrompt.dispatchEvent(new Event("input", { bubbles: true }));
+    iaSdNPrompt.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 async function inpaintAnything_getTxt2imgPrompt() {
