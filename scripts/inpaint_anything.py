@@ -14,9 +14,9 @@ import cv2
 import gradio as gr
 import numpy as np
 import torch
-from diffusers import (DDIMScheduler, EulerAncestralDiscreteScheduler,
-                       EulerDiscreteScheduler, KDPM2AncestralDiscreteScheduler,
-                       KDPM2DiscreteScheduler, StableDiffusionInpaintPipeline)
+from diffusers import (DDIMScheduler, EulerAncestralDiscreteScheduler, EulerDiscreteScheduler,
+                       KDPM2AncestralDiscreteScheduler, KDPM2DiscreteScheduler,
+                       StableDiffusionInpaintPipeline)
 from lama_cleaner.model_manager import ModelManager
 from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
 # import modules.scripts as scripts
@@ -34,35 +34,24 @@ from tqdm import tqdm
 
 from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
 from ia_check_versions import ia_check_versions
-from ia_config import (IAConfig, get_ia_config_index, set_ia_config,
-                       setup_ia_config_ini)
-from ia_file_manager import (IAFileManager, download_model_from_hf,
-                             ia_file_manager)
+from ia_config import IAConfig, get_ia_config_index, set_ia_config, setup_ia_config_ini
+from ia_file_manager import IAFileManager, download_model_from_hf, ia_file_manager
 from ia_get_dataset_colormap import create_pascal_label_colormap
 from ia_logging import ia_logging
-from ia_threading import (async_post_reload_model_weights,
-                          await_backup_reload_ckpt_info,
-                          await_pre_reload_model_weights,
-                          await_pre_unload_model_weights,
+from ia_threading import (async_post_reload_model_weights, await_backup_reload_ckpt_info,
+                          await_pre_reload_model_weights, await_pre_unload_model_weights,
                           clear_cache_decorator, post_reload_decorator)
-from ia_ui_items import (get_cleaner_model_ids, get_inp_model_ids,
-                         get_padding_mode_names, get_sam_model_ids,
-                         get_sampler_names)
-from ia_webui_controlnet import (backup_alwayson_scripts,
-                                 clear_controlnet_cache,
-                                 disable_all_alwayson_scripts,
-                                 disable_alwayson_scripts_wo_cn,
-                                 find_controlnet, get_controlnet_args_to,
-                                 get_max_args_to, get_sd_img2img_processing,
-                                 restore_alwayson_scripts)
-from mobile_sam import \
-    SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorMobile
+from ia_ui_items import (get_cleaner_model_ids, get_inp_model_ids, get_padding_mode_names,
+                         get_sam_model_ids, get_sampler_names)
+from ia_webui_controlnet import (backup_alwayson_scripts, clear_controlnet_cache,
+                                 disable_all_alwayson_scripts, disable_alwayson_scripts_wo_cn,
+                                 find_controlnet, get_controlnet_args_to, get_max_args_to,
+                                 get_sd_img2img_processing, restore_alwayson_scripts)
+from mobile_sam import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorMobile
 from mobile_sam import SamPredictor as SamPredictorMobile
 from mobile_sam import sam_model_registry as sam_model_registry_mobile
-from segment_anything_fb import (SamAutomaticMaskGenerator, SamPredictor,
-                                 sam_model_registry)
-from segment_anything_hq import \
-    SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
+from segment_anything_fb import SamAutomaticMaskGenerator, SamPredictor, sam_model_registry
+from segment_anything_hq import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorHQ
 from segment_anything_hq import SamPredictor as SamPredictorHQ
 from segment_anything_hq import sam_model_registry as sam_model_registry_hq
 
@@ -273,7 +262,7 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
         ret_sam_image = None if sam_image is None else gr.update()
         return ret_sam_image, "Input image not found"
 
-    set_ia_config(IAConfig.KEY_SAM_MODEL_ID, sam_model_id, IAConfig.SECTION_USER)
+    set_ia_config(IAConfig.KEYS.SAM_MODEL_ID, sam_model_id, IAConfig.SECTIONS.USER)
 
     if sam_dict["sam_masks"] is not None:
         sam_dict["sam_masks"] = None
@@ -515,7 +504,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         ia_logging.error("The size of image and mask do not match")
         return None
 
-    set_ia_config(IAConfig.KEY_INP_MODEL_ID, inp_model_id, IAConfig.SECTION_USER)
+    set_ia_config(IAConfig.KEYS.INP_MODEL_ID, inp_model_id, IAConfig.SECTIONS.USER)
 
     save_mask_image(mask_image, save_mask_chk)
 
@@ -926,10 +915,10 @@ def on_ui_tabs():
     setup_ia_config_ini()
     sampler_names = get_sampler_names()
     sam_model_ids = get_sam_model_ids()
-    sam_model_index = get_ia_config_index(IAConfig.KEY_SAM_MODEL_ID, IAConfig.SECTION_USER)
+    sam_model_index = get_ia_config_index(IAConfig.KEYS.SAM_MODEL_ID, IAConfig.SECTIONS.USER)
     sam_model_index = sam_model_index if sam_model_index is not None else 1
     inp_model_ids = get_inp_model_ids()
-    inp_model_index = get_ia_config_index(IAConfig.KEY_INP_MODEL_ID, IAConfig.SECTION_USER)
+    inp_model_index = get_ia_config_index(IAConfig.KEYS.INP_MODEL_ID, IAConfig.SECTIONS.USER)
     inp_model_index = inp_model_index if inp_model_index is not None else 0
     cleaner_model_ids = get_cleaner_model_ids()
     padding_mode_names = get_padding_mode_names()
