@@ -950,7 +950,7 @@ def on_ui_tabs():
         cn_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
     else:
         cn_sampler_ids = ["DDIM"]
-    cn_sampler_index = cn_sampler_ids.index("DDIM") if "DDIM" in cn_sampler_ids else -1
+    cn_sampler_index = cn_sampler_ids.index("DDIM") if "DDIM" in cn_sampler_ids else 0
 
     cn_ref_only = False
     if cn_enabled and sam_dict["cnet"].get_max_models_num() > 1:
@@ -968,7 +968,7 @@ def on_ui_tabs():
         webui_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
     else:
         webui_sampler_ids = ["DDIM"]
-    webui_sampler_index = webui_sampler_ids.index("Euler a") if "Euler a" in webui_sampler_ids else 0
+    webui_sampler_index = webui_sampler_ids.index("DDIM") if "DDIM" in webui_sampler_ids else 0
 
     with gr.Blocks(analytics_enabled=False) as inpaint_anything_interface:
         with gr.Row():

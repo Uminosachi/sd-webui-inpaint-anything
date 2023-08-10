@@ -17,8 +17,6 @@ def clear_cache():
 def webui_reload_model_weights(sd_model=None, info=None):
     try:
         reload_model_weights(sd_model=sd_model, info=info)
-        shared.opts.data["sd_model_checkpoint"] = info.title
-        shared.opts.data["sd_checkpoint_hash"] = info.sha256
     except Exception:
         load_model(checkpoint_info=info)
 

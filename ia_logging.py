@@ -1,4 +1,7 @@
 import logging
+import warnings
+
+warnings.simplefilter("ignore", FutureWarning)
 
 ia_logging = logging.getLogger("Inpaint Anything")
 ia_logging.setLevel(logging.INFO)
