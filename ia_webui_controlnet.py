@@ -1,10 +1,10 @@
-import os
-import importlib
-import modules.scripts as scripts
-from modules import paths
-from modules import shared
-from modules.processing import StableDiffusionProcessingImg2Img
 import copy
+import importlib
+import os
+
+import modules.scripts as scripts
+from modules import paths, shared
+from modules.processing import StableDiffusionProcessingImg2Img
 
 original_alwayson_scripts = None
 
@@ -35,7 +35,13 @@ def list_default_scripts():
     scripts_list = []
 
     basedir = os.path.join(paths.script_path, "scripts")
-    if os.path.exists(basedir):
+    if os.path.isdir(basedir):
+        for filename in sorted(os.listdir(basedir)):
+            if filename.endswith(".py"):
+                scripts_list.append(filename)
+
+    basedir = os.path.join(paths.script_path, "modules", "processing_scripts")
+    if os.path.isdir(basedir):
         for filename in sorted(os.listdir(basedir)):
             if filename.endswith(".py"):
                 scripts_list.append(filename)
