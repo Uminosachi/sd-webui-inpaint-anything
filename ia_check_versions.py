@@ -1,6 +1,8 @@
+import os
 from importlib.util import find_spec
 
 import torch
+from modules import paths, sd_samplers_common
 from packaging.version import parse
 
 try:
@@ -49,7 +51,7 @@ class IACheckVersions:
             return False
 
     @cached_property
-    def torch_available_mps(self):
+    def torch_mps_is_available(self):
         if compare_module_version("torch", "2.0.1") < 0:
             if not getattr(torch, "has_mps", False):
                 return False
@@ -60,6 +62,15 @@ class IACheckVersions:
                 return False
         else:
             return torch.backends.mps.is_available() and torch.backends.mps.is_built()
+
+    @cached_property
+    def webui_refiner_is_available(self):
+        basedir = os.path.join(paths.script_path, "modules", "processing_scripts")
+        refiner_script = os.path.join(basedir, "refiner.py")
+        if os.path.isfile(refiner_script) and hasattr(sd_samplers_common, "apply_refiner"):
+            return True
+
+        return False
 
 
 ia_check_versions = IACheckVersions()

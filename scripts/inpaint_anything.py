@@ -127,7 +127,7 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
         torch.load = unsafe_torch_load
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
-            if "FastSAM" in os.path.basename(sam_checkpoint) or not ia_check_versions.torch_available_mps:
+            if "FastSAM" in os.path.basename(sam_checkpoint) or not ia_check_versions.torch_mps_is_available:
                 sam.to(device=torch.device("cpu"))
             else:
                 sam.to(device=torch.device("mps"))
@@ -169,7 +169,7 @@ def get_sam_predictor(sam_checkpoint):
         torch.load = unsafe_torch_load
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
-            if "FastSAM" in os.path.basename(sam_checkpoint) or not ia_check_versions.torch_available_mps:
+            if "FastSAM" in os.path.basename(sam_checkpoint) or not ia_check_versions.torch_mps_is_available:
                 sam.to(device=torch.device("cpu"))
             else:
                 sam.to(device=torch.device("mps"))
@@ -566,7 +566,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         seed = random.randint(0, 2147483647)
 
     if platform.system() == "Darwin":
-        pipe = pipe.to("mps" if ia_check_versions.torch_available_mps else "cpu")
+        pipe = pipe.to("mps" if ia_check_versions.torch_mps_is_available else "cpu")
         pipe.enable_attention_slicing()
         generator = torch.Generator("cpu").manual_seed(seed)
     else:
@@ -814,7 +814,7 @@ def run_cn_inpaint(input_image, sel_mask,
             threshold_a=0.5,
         )))
 
-    p.script_args = np.zeros(get_controlnet_args_to(cnet, p.scripts))
+    p.script_args = np.zeros(get_controlnet_args_to(cnet, p.scripts)).tolist()
     cnet.update_cn_script_in_processing(p, cn_units)
 
     processed = process_images(p)
@@ -848,7 +848,8 @@ def run_cn_inpaint(input_image, sel_mask,
 def run_webui_inpaint(input_image, sel_mask,
                       webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
                       webui_model_id, webui_save_mask_chk,
-                      webui_mask_blur, webui_fill_mode):
+                      webui_mask_blur, webui_fill_mode,
+                      webui_enable_refiner_chk=False, webui_refiner_checkpoint="", webui_refiner_switch_at=0.8):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -880,7 +881,11 @@ def run_webui_inpaint(input_image, sel_mask,
     backup_alwayson_scripts(p.scripts)
     disable_all_alwayson_scripts(p.scripts)
 
-    p.script_args = np.zeros(get_max_args_to(p.scripts))
+    p.script_args = np.zeros(get_max_args_to(p.scripts)).tolist()
+
+    if ia_check_versions.webui_refiner_is_available and webui_enable_refiner_chk:
+        p.refiner_checkpoint = webui_refiner_checkpoint
+        p.refiner_switch_at = webui_refiner_switch_at
 
     processed = process_images(p)
 
@@ -1074,7 +1079,7 @@ def on_ui_tabs():
                                                                    choices=webui_sampler_ids, value=webui_sampler_ids[webui_sampler_index], show_label=True)
                                 with gr.Column():
                                     webui_ddim_steps = gr.Slider(label="Sampling steps webui", elem_id="webui_ddim_steps",
-                                                                 minimum=1, maximum=150, value=25, step=1)
+                                                                 minimum=1, maximum=150, value=30, step=1)
                             webui_cfg_scale = gr.Slider(label="Guidance scale webui", elem_id="webui_cfg_scale", minimum=0.1, maximum=30.0, value=7.5, step=0.1)
                             webui_strength = gr.Slider(label="Denoising strength webui", elem_id="webui_strength",
                                                        minimum=0.0, maximum=1.0, value=0.75, step=0.01)
@@ -1086,6 +1091,17 @@ def on_ui_tabs():
                                 step=1,
                                 value=-1,
                             )
+                        if ia_check_versions.webui_refiner_is_available:
+                            with gr.Accordion("Refiner options", elem_id="webui_refiner_options", open=False):
+                                with gr.Row():
+                                    webui_enable_refiner_chk = gr.Checkbox(label="Enable Refiner", elem_id="webui_enable_refiner_chk",
+                                                                           value=False, show_label=True, interactive=True)
+                                with gr.Row():
+                                    webui_refiner_checkpoint = gr.Dropdown(label="Checkpoint", elem_id="webui_refiner_checkpoint",
+                                                                           choices=shared.list_checkpoint_tiles(), value="")
+                                    webui_refiner_switch_at = gr.Slider(value=0.8, label="Switch at", minimum=0.01, maximum=1.0, step=0.01,
+                                                                        elem_id="webui_refiner_switch_at")
+
                         with gr.Row():
                             with gr.Column():
                                 webui_model_id = gr.Dropdown(label="Inpainting Model ID webui", elem_id="webui_model_id",
@@ -1300,12 +1316,15 @@ def on_ui_tabs():
                     fn=None, inputs=None, outputs=None, _js="inpaintAnything_webuiGetTxt2imgPrompt")
                 webui_get_img2img_prompt_btn.click(
                     fn=None, inputs=None, outputs=None, _js="inpaintAnything_webuiGetImg2imgPrompt")
+                wi_inputs = [input_image, sel_mask,
+                             webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
+                             webui_model_id, webui_save_mask_chk,
+                             webui_mask_blur, webui_fill_mode]
+                if ia_check_versions.webui_refiner_is_available:
+                    wi_inputs.extend([webui_enable_refiner_chk, webui_refiner_checkpoint, webui_refiner_switch_at])
                 webui_inpaint_btn.click(
                     run_webui_inpaint,
-                    inputs=[input_image, sel_mask,
-                            webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
-                            webui_model_id, webui_save_mask_chk,
-                            webui_mask_blur, webui_fill_mode],
+                    inputs=wi_inputs,
                     outputs=[webui_out_image]).then(
                     fn=async_post_reload_model_weights, inputs=None, outputs=None)
 

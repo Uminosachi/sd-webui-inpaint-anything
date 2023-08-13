@@ -40,11 +40,11 @@ def list_default_scripts():
             if filename.endswith(".py"):
                 scripts_list.append(filename)
 
-    basedir = os.path.join(paths.script_path, "modules", "processing_scripts")
-    if os.path.isdir(basedir):
-        for filename in sorted(os.listdir(basedir)):
-            if filename.endswith(".py"):
-                scripts_list.append(filename)
+    # basedir = os.path.join(paths.script_path, "modules", "processing_scripts")
+    # if os.path.isdir(basedir):
+    #     for filename in sorted(os.listdir(basedir)):
+    #         if filename.endswith(".py"):
+    #             scripts_list.append(filename)
 
     return scripts_list
 
