@@ -1,9 +1,11 @@
-import torch
-import numpy as np
-import cv2
-from typing import Any, Dict, List
-from ultralytics import YOLO
+import inspect
 import math
+from typing import Any, Dict, List
+
+import cv2
+import numpy as np
+import torch
+from ultralytics import YOLO
 
 
 class FastSAM:
@@ -45,6 +47,11 @@ class FastSamAutomaticMaskGenerator:
         new_width = math.ceil(width / 32) * 32
         resize_image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
 
+        backup_nn_dict = {}
+        for key, value in torch.nn.__dict__.copy().items():
+            if not inspect.isclass(torch.nn.__dict__.get(key)) and "Norm" in key:
+                backup_nn_dict[key] = torch.nn.__dict__.pop(key)
+
         results = self.model(
             source=resize_image,
             stream=False,
@@ -54,6 +61,10 @@ class FastSamAutomaticMaskGenerator:
             iou=0.7,
             conf=self.conf,
             max_det=256)
+
+        for key, value in backup_nn_dict.items():
+            setattr(torch.nn, key, value)
+            # assert backup_nn_dict[key] == torch.nn.__dict__[key]
 
         annotations = results[0].masks.data
 

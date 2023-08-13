@@ -9,6 +9,7 @@ if platform.system() == "Darwin":
 
 import random
 import re
+import traceback
 
 import cv2
 import gradio as gr
@@ -281,6 +282,7 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     try:
         sam_masks = sam_mask_generator.generate(input_image)
     except Exception as e:
+        print(traceback.format_exc())
         ia_logging.error(str(e))
         del sam_mask_generator
         ret_sam_image = None if sam_image is None else gr.update()
@@ -1097,7 +1099,7 @@ def on_ui_tabs():
                                     webui_enable_refiner_chk = gr.Checkbox(label="Enable Refiner", elem_id="webui_enable_refiner_chk",
                                                                            value=False, show_label=True, interactive=True)
                                 with gr.Row():
-                                    webui_refiner_checkpoint = gr.Dropdown(label="Checkpoint", elem_id="webui_refiner_checkpoint",
+                                    webui_refiner_checkpoint = gr.Dropdown(label="Refiner Model ID", elem_id="webui_refiner_checkpoint",
                                                                            choices=shared.list_checkpoint_tiles(), value="")
                                     webui_refiner_switch_at = gr.Slider(value=0.8, label="Switch at", minimum=0.01, maximum=1.0, step=0.01,
                                                                         elem_id="webui_refiner_switch_at")
