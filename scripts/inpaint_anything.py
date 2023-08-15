@@ -40,8 +40,8 @@ from ia_file_manager import IAFileManager, download_model_from_hf, ia_file_manag
 from ia_get_dataset_colormap import create_pascal_label_colormap
 from ia_logging import ia_logging
 from ia_threading import (async_post_reload_model_weights, await_backup_reload_ckpt_info,
-                          await_pre_reload_model_weights, await_pre_unload_model_weights,
-                          clear_cache_decorator, post_reload_decorator)
+                          await_pre_reload_model_weights, clear_cache_decorator,
+                          offload_reload_decorator)
 from ia_ui_items import (get_cleaner_model_ids, get_inp_model_ids, get_padding_mode_names,
                          get_sam_model_ids, get_sampler_names)
 from ia_webui_controlnet import (backup_alwayson_scripts, clear_controlnet_cache,
@@ -250,7 +250,7 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
     return pad_image, "Padding done"
 
 
-@post_reload_decorator
+@offload_reload_decorator
 @clear_cache_decorator
 def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     global sam_dict
@@ -268,8 +268,6 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     if sam_dict["sam_masks"] is not None:
         sam_dict["sam_masks"] = None
         gc.collect()
-
-    await_pre_unload_model_weights()
 
     ia_logging.info(f"input_image: {input_image.shape} {input_image.dtype}")
 
@@ -495,6 +493,7 @@ def auto_resize_to_pil(input_image, mask_image):
     return init_image, mask_image
 
 
+@offload_reload_decorator
 @clear_cache_decorator
 def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk, sampler_name="DDIM"):
     global sam_dict
@@ -509,8 +508,6 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     set_ia_config(IAConfig.KEYS.INP_MODEL_ID, inp_model_id, IAConfig.SECTIONS.USER)
 
     save_mask_image(mask_image, save_mask_chk)
-
-    await_pre_unload_model_weights()
 
     ia_logging.info(f"Loading model {inp_model_id}")
     config_offline_inpainting = shared.opts.data.get("inpaint_anything_offline_inpainting", False)
@@ -631,6 +628,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     return output_image
 
 
+@offload_reload_decorator
 @clear_cache_decorator
 def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     global sam_dict
@@ -643,8 +641,6 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
         return None
 
     save_mask_image(mask_image, cleaner_save_mask_chk)
-
-    await_pre_unload_model_weights()
 
     ia_logging.info(f"Loading model {cleaner_model_id}")
     if platform.system() == "Darwin":
@@ -830,7 +826,7 @@ def run_cn_inpaint(input_image, sel_mask,
         if len(processed.images) > 0:
             output_image = processed.images[0]
 
-            infotext = create_infotext(p, all_prompts=[cn_prompt], all_seeds=[cn_seed], all_subseeds=[-1])
+            infotext = create_infotext(p, all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds)
 
             metadata = PngInfo()
             metadata.add_text("parameters", infotext)
@@ -900,7 +896,7 @@ def run_webui_inpaint(input_image, sel_mask,
         if len(processed.images) > 0:
             output_image = processed.images[0]
 
-            infotext = create_infotext(p, all_prompts=[webui_prompt], all_seeds=[webui_seed], all_subseeds=[-1])
+            infotext = create_infotext(p, all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds)
 
             metadata = PngInfo()
             metadata.add_text("parameters", infotext)
@@ -1269,13 +1265,11 @@ def on_ui_tabs():
             inpaint_btn.click(
                 run_inpaint,
                 inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk, sampler_name],
-                outputs=[out_image]).then(
-                fn=async_post_reload_model_weights, inputs=None, outputs=None)
+                outputs=[out_image])
             cleaner_btn.click(
                 run_cleaner,
                 inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk],
-                outputs=[cleaner_out_image]).then(
-                fn=async_post_reload_model_weights, inputs=None, outputs=None)
+                outputs=[cleaner_out_image])
             get_alpha_image_btn.click(
                 run_get_alpha_image,
                 inputs=[input_image, sel_mask],
@@ -1294,23 +1288,16 @@ def on_ui_tabs():
                     fn=None, inputs=None, outputs=None, _js="inpaintAnything_cnGetTxt2imgPrompt")
                 cn_get_img2img_prompt_btn.click(
                     fn=None, inputs=None, outputs=None, _js="inpaintAnything_cnGetImg2imgPrompt")
-            if cn_enabled and not cn_ref_only:
+            if cn_enabled:
+                cn_inputs = [input_image, sel_mask,
+                             cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed,
+                             cn_module_id, cn_model_id, cn_save_mask_chk,
+                             cn_low_vram_chk, cn_weight, cn_mode]
+                if cn_ref_only:
+                    cn_inputs.extend([cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode, cn_ref_resize_mode])
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
-                    inputs=[input_image, sel_mask,
-                            cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed,
-                            cn_module_id, cn_model_id, cn_save_mask_chk,
-                            cn_low_vram_chk, cn_weight, cn_mode],
-                    outputs=[cn_out_image]).then(
-                    fn=async_post_reload_model_weights, inputs=None, outputs=None)
-            elif cn_enabled and cn_ref_only:
-                cn_inpaint_btn.click(
-                    run_cn_inpaint,
-                    inputs=[input_image, sel_mask,
-                            cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed,
-                            cn_module_id, cn_model_id, cn_save_mask_chk,
-                            cn_low_vram_chk, cn_weight, cn_mode,
-                            cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode, cn_ref_resize_mode],
+                    inputs=cn_inputs,
                     outputs=[cn_out_image]).then(
                     fn=async_post_reload_model_weights, inputs=None, outputs=None)
             if webui_inpaint_enabled:

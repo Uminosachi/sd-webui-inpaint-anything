@@ -21,7 +21,7 @@ def webui_reload_model_weights(sd_model=None, info=None):
         load_model(checkpoint_info=info)
 
 
-def pre_unload_model_weights(sem):
+def pre_offload_model_weights(sem):
     global backup_sd_model, backup_device, backup_ckpt_info
     with sem:
         if shared.sd_model is not None:
@@ -31,9 +31,9 @@ def pre_unload_model_weights(sem):
             clear_cache()
 
 
-def await_pre_unload_model_weights():
+def await_pre_offload_model_weights():
     global model_access_sem
-    thread = threading.Thread(target=pre_unload_model_weights, args=(model_access_sem,))
+    thread = threading.Thread(target=pre_offload_model_weights, args=(model_access_sem,))
     thread.start()
     thread.join()
 
@@ -118,6 +118,17 @@ def post_reload_decorator(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         await_acquire_release_semaphore()
+        res = func(*args, **kwargs)
+        async_post_reload_model_weights()
+        return res
+
+    return wrapper
+
+
+def offload_reload_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        await_pre_offload_model_weights()
         res = func(*args, **kwargs)
         async_post_reload_model_weights()
         return res
