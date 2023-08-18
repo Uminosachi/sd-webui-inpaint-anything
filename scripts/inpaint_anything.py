@@ -196,37 +196,21 @@ def select_mask(input_image, sam_image, invert_chk, ignore_black_chk, sel_mask):
         return ret_sel_mask
     sam_masks = sam_dict["sam_masks"]
 
-    image = sam_image["image"]
+    # image = sam_image["image"]
     mask = sam_image["mask"][:, :, 0:1]
 
-    if len(sam_masks) > 0 and sam_masks[0]["segmentation"].shape[:2] != mask.shape[:2]:
-        ia_logging.error("sam_masks shape not match")
+    try:
+        seg_image = inpalib.create_mask_image(mask, sam_masks, ignore_black_chk)
+        if invert_chk:
+            seg_image = inpalib.invert_mask(seg_image)
+
+        sam_dict["mask_image"] = seg_image
+
+    except Exception as e:
+        print(traceback.format_exc())
+        ia_logging.error(str(e))
         ret_sel_mask = None if sel_mask is None else gr.update()
         return ret_sel_mask
-
-    canvas_image = np.zeros((*image.shape[:2], 1), dtype=np.uint8)
-    mask_region = np.zeros((*image.shape[:2], 1), dtype=np.uint8)
-    for idx, seg_dict in enumerate(sam_masks):
-        seg_mask = np.expand_dims(seg_dict["segmentation"].astype(np.uint8), axis=-1)
-        canvas_mask = np.logical_not(canvas_image.astype(bool)).astype(np.uint8)
-        if (seg_mask * canvas_mask * mask).astype(bool).any():
-            mask_region = mask_region + (seg_mask * canvas_mask)
-        seg_color = seg_mask * canvas_mask
-        canvas_image = canvas_image + seg_color
-
-    if not ignore_black_chk:
-        canvas_mask = np.logical_not(canvas_image.astype(bool)).astype(np.uint8)
-        if (canvas_mask * mask).astype(bool).any():
-            mask_region = mask_region + (canvas_mask)
-
-    mask_region = np.tile(mask_region * 255, (1, 1, 3))
-
-    seg_image = mask_region.astype(np.uint8)
-
-    if invert_chk:
-        seg_image = np.logical_not(seg_image.astype(bool)).astype(np.uint8) * 255
-
-    sam_dict["mask_image"] = seg_image
 
     if input_image is not None and input_image.shape == seg_image.shape:
         ret_image = cv2.addWeighted(input_image, 0.5, seg_image, 0.5, 0)
