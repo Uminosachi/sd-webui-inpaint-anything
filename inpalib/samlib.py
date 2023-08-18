@@ -1,17 +1,15 @@
-import copy
 import os
 import traceback
-from typing import Any, Optional
+from typing import Any
 
 import cv2
 import numpy as np
-import tqdm
+from tqdm import tqdm
 
 from ia_file_manager import ia_file_manager
 from ia_get_dataset_colormap import create_pascal_label_colormap
 from ia_logging import ia_logging
 from ia_sam_manager import get_sam_mask_generator
-from ia_threading import clear_cache_decorator
 from ia_ui_items import get_sam_model_ids
 
 
@@ -64,19 +62,17 @@ def get_available_sam_ids() -> list[str]:
     return all_sam_ids
 
 
-def check_inputs_run_sam(
+def check_inputs_generate_sam_mask(
         input_image: np.ndarray,
         sam_id: str,
         anime_style_chk: bool = False,
-        insert_mask: Optional[dict[str, Any]] = None,
         ) -> None:
-    """Check run SAM inputs.
+    """Check generate SAM mask inputs.
 
     Args:
         input_image (np.ndarray): input image
         sam_id (str): SAM ID
         anime_style_chk (bool): anime style check
-        insert_mask (Optional[dict[str, Any]]): insert mask
 
     Returns:
         None
@@ -94,45 +90,30 @@ def check_inputs_run_sam(
     if anime_style_chk is None or type(anime_style_chk) != bool:
         raise ValueError("Invalid anime style check")
 
-    if insert_mask is not None:
-        if type(insert_mask) != dict:
-            raise ValueError("Invalid insert mask")
-        elif "segmentation" not in insert_mask:
-            raise ValueError("Insert mask must have segmentation key")
 
-
-@clear_cache_decorator
-def run_sam_mask_generator(
+def generate_sam_mask(
         input_image: np.ndarray,
         sam_id: str,
         anime_style_chk: bool = False,
-        insert_mask: Optional[dict[str, Any]] = None,
-        ) -> tuple[np.ndarray, list[dict[str, Any]]]:
-    """Run SAM mask generator.
+        ) -> np.ndarray:
+    """Generate SAM mask.
 
     Args:
         input_image (np.ndarray): input image
         sam_id (str): SAM ID
         anime_style_chk (bool): anime style check
-        insert_mask (Optional[dict[str, Any]]): insert mask
 
     Returns:
-        tuple[np.ndarray, list[dict[str, Any]]]: segmentation image, SAM masks
+        np.ndarray: SAM mask
     """
     try:
-        check_inputs_run_sam(input_image, sam_id, anime_style_chk, insert_mask)
+        check_inputs_generate_sam_mask(input_image, sam_id, anime_style_chk)
     except Exception as e:
         print(traceback.format_exc())
         ia_logging.error(str(e))
-        return None, None
+        return None
 
-    ia_logging.info(f"input_image: {input_image.shape} {input_image.dtype}")
-
-    cm_pascal = create_pascal_label_colormap()
-    seg_colormap = cm_pascal
-    seg_colormap = np.array([c for c in seg_colormap if max(c) >= 64], dtype=np.uint8)
-
-    sam_checkpoint = os.path.join(ia_file_manager.models_dir, sam_id)
+    sam_checkpoint = sam_file_path(sam_id)
     sam_mask_generator = get_sam_mask_generator(sam_checkpoint, anime_style_chk)
     ia_logging.info(f"{sam_mask_generator.__class__.__name__} {sam_id}")
     try:
@@ -141,7 +122,7 @@ def run_sam_mask_generator(
         print(traceback.format_exc())
         ia_logging.error(str(e))
         del sam_mask_generator
-        return None, None
+        return None
 
     if anime_style_chk:
         for sam_mask in sam_masks:
@@ -151,17 +132,72 @@ def run_sam_mask_generator(
             sam_mask["segmentation"] = sam_mask_seg.astype(bool)
 
     ia_logging.info("sam_masks: {}".format(len(sam_masks)))
-    sam_masks = sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(np.uint32)))
-    try:
-        if insert_mask is not None:
-            if (len(sam_masks) > 0 and
-                    sam_masks[0]["segmentation"].shape == insert_mask["segmentation"].shape and
-                    np.any(insert_mask["segmentation"])):
-                sam_masks.insert(0, insert_mask)
-                ia_logging.info("insert pad_mask to sam_masks")
-    except Exception as e:
-        print(traceback.format_exc())
-        ia_logging.error(str(e))
+
+    return sam_masks
+
+
+def sort_mask_by_size(sam_masks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Sort mask by size.
+
+    Args:
+        sam_masks (list[dict[str, Any]]): SAM masks
+
+    Returns:
+        list[dict[str, Any]]: sorted SAM masks
+    """
+    return sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(np.uint32)))
+
+
+def get_seg_colormap() -> np.ndarray:
+    """Get segmentation colormap.
+
+    Returns:
+        np.ndarray: segmentation colormap
+    """
+    cm_pascal = create_pascal_label_colormap()
+    seg_colormap = cm_pascal
+    seg_colormap = np.array([c for c in seg_colormap if max(c) >= 64], dtype=np.uint8)
+
+    return seg_colormap
+
+
+def insert_mask_to_sam_masks(
+        sam_masks: list[dict[str, Any]],
+        insert_mask: dict[str, Any],
+        ) -> list[dict[str, Any]]:
+    """Insert mask to SAM masks.
+
+    Args:
+        sam_masks (list[dict[str, Any]]): SAM masks
+        insert_mask (dict[str, Any]): insert mask
+
+    Returns:
+        list[dict[str, Any]]: SAM masks
+    """
+    if insert_mask is not None and type(insert_mask) == dict and "segmentation" in insert_mask:
+        if (len(sam_masks) > 0 and
+                sam_masks[0]["segmentation"].shape == insert_mask["segmentation"].shape and
+                np.any(insert_mask["segmentation"])):
+            sam_masks.insert(0, insert_mask)
+            ia_logging.info("insert pad_mask to sam_masks")
+
+    return sam_masks
+
+
+def create_seg_color_image(
+        input_image: np.ndarray,
+        sam_masks: list[dict[str, Any]],
+        ) -> np.ndarray:
+    """Create segmentation color image.
+
+    Args:
+        input_image (np.ndarray): input image
+        sam_masks (list[dict[str, Any]]): SAM masks
+
+    Returns:
+        np.ndarray: segmentation color image
+    """
+    seg_colormap = get_seg_colormap()
     sam_masks = sam_masks[:len(seg_colormap)]
 
     with tqdm(total=len(sam_masks), desc="Processing segments") as progress_bar:
@@ -191,6 +227,4 @@ def run_sam_mask_generator(
             canvas_image = temp_canvas_image
     ret_seg_image = canvas_image.astype(np.uint8)
 
-    ret_sam_masks = copy.deepcopy(sam_masks)
-
-    return ret_seg_image, ret_sam_masks
+    return ret_seg_image
