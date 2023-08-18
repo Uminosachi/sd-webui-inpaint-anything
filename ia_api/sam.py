@@ -40,9 +40,10 @@ def get_available_sam_ids() -> list[str]:
 
 
 def check_run_sam_inputs(
-        input_image: np.ndarray = None,
-        sam_id: str = None,
+        input_image: np.ndarray,
+        sam_id: str,
         anime_style_chk: bool = False,
+        insert_mask: Optional[dict[str, Any]] = None,
         ) -> None:
     """Check run SAM inputs.
 
@@ -50,11 +51,7 @@ def check_run_sam_inputs(
         input_image (np.ndarray): input image
         sam_id (str): SAM ID
         anime_style_chk (bool): anime style check
-
-    Raises:
-        ValueError: invalid input image
-        ValueError: invalid SAM ID
-        ValueError: invalid anime style check
+        insert_mask (Optional[dict[str, Any]]): insert mask
 
     Returns:
         None
@@ -71,6 +68,12 @@ def check_run_sam_inputs(
 
     if anime_style_chk is None or type(anime_style_chk) != bool:
         raise ValueError("Invalid anime style check")
+
+    if insert_mask is not None:
+        if type(insert_mask) != dict:
+            raise ValueError("Invalid insert mask")
+        elif "segmentation" not in insert_mask:
+            raise ValueError("Insert mask must have segmentation key")
 
 
 @clear_cache_decorator
@@ -92,7 +95,7 @@ def run_sam_mask_generator(
         tuple[np.ndarray, list[dict[str, Any]]]: segmentation image, SAM masks
     """
     try:
-        check_run_sam_inputs(input_image, sam_id, anime_style_chk)
+        check_run_sam_inputs(input_image, sam_id, anime_style_chk, insert_mask)
     except Exception as e:
         print(traceback.format_exc())
         ia_logging.error(str(e))
