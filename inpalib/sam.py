@@ -24,6 +24,32 @@ def get_all_sam_ids() -> list[str]:
     return get_sam_model_ids()
 
 
+def sam_file_path(sam_id: str) -> str:
+    """Get SAM file path.
+
+    Args:
+        sam_id (str): SAM ID
+
+    Returns:
+        str: SAM file path
+    """
+    return os.path.join(ia_file_manager.models_dir, sam_id)
+
+
+def sam_file_exists(sam_id: str) -> bool:
+    """Check if SAM file exists.
+
+    Args:
+        sam_id (str): SAM ID
+
+    Returns:
+        bool: True if SAM file exists else False
+    """
+    sam_checkpoint = sam_file_path(sam_id)
+
+    return os.path.isfile(sam_checkpoint)
+
+
 def get_available_sam_ids() -> list[str]:
     """Get available SAM IDs.
 
@@ -32,14 +58,13 @@ def get_available_sam_ids() -> list[str]:
     """
     all_sam_ids = get_all_sam_ids()
     for sam_id in all_sam_ids.copy():
-        sam_checkpoint = os.path.join(ia_file_manager.models_dir, sam_id)
-        if not os.path.isfile(sam_checkpoint):
+        if not sam_file_exists(sam_id):
             all_sam_ids.remove(sam_id)
 
     return all_sam_ids
 
 
-def check_run_sam_inputs(
+def check_inputs_run_sam(
         input_image: np.ndarray,
         sam_id: str,
         anime_style_chk: bool = False,
@@ -95,7 +120,7 @@ def run_sam_mask_generator(
         tuple[np.ndarray, list[dict[str, Any]]]: segmentation image, SAM masks
     """
     try:
-        check_run_sam_inputs(input_image, sam_id, anime_style_chk, insert_mask)
+        check_inputs_run_sam(input_image, sam_id, anime_style_chk, insert_mask)
     except Exception as e:
         print(traceback.format_exc())
         ia_logging.error(str(e))

@@ -31,6 +31,7 @@ from torch.hub import download_url_to_file
 from torchvision import transforms
 from tqdm import tqdm
 
+import inpalib
 from ia_check_versions import ia_check_versions
 from ia_config import IAConfig, get_ia_config_index, set_ia_config, setup_ia_config_ini
 from ia_file_manager import IAFileManager, download_model_from_hf, ia_file_manager
@@ -151,8 +152,7 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
 @clear_cache_decorator
 def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     global sam_dict
-    sam_checkpoint = os.path.join(ia_file_manager.models_dir, sam_model_id)
-    if not os.path.isfile(sam_checkpoint):
+    if not inpalib.sam_file_exists(sam_model_id):
         ret_sam_image = None if sam_image is None else gr.update()
         return ret_sam_image, f"{sam_model_id} not found, please download"
 
@@ -172,7 +172,7 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     seg_colormap = cm_pascal
     seg_colormap = np.array([c for c in seg_colormap if max(c) >= 64], dtype=np.uint8)
 
-    sam_mask_generator = get_sam_mask_generator(sam_checkpoint, anime_style_chk)
+    sam_mask_generator = get_sam_mask_generator(inpalib.sam_file_path(sam_model_id), anime_style_chk)
     ia_logging.info(f"{sam_mask_generator.__class__.__name__} {sam_model_id}")
     try:
         sam_masks = sam_mask_generator.generate(input_image)
