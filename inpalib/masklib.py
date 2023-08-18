@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
+from PIL import Image
 
 
 def invert_mask(mask: np.ndarray) -> np.ndarray:
@@ -15,45 +16,65 @@ def invert_mask(mask: np.ndarray) -> np.ndarray:
     if mask is None or type(mask) != np.ndarray:
         raise ValueError("Invalid mask")
 
-    return np.logical_not(mask.astype(bool)).astype(np.uint8) * 255
+    # return np.logical_not(mask.astype(bool)).astype(np.uint8) * 255
+    return np.invert(mask.astype(np.uint8))
 
 
 def check_inputs_create_mask_image(
-        mask: np.ndarray,
+        mask: Union[np.ndarray, Image.Image],
         sam_masks: list[dict[str, Any]],
         ignore_black_chk: bool = True,
         ) -> None:
     """Check create mask image inputs.
 
     Args:
-        mask (np.ndarray): mask
+        mask (Union[np.ndarray, Image.Image]): mask
         sam_masks (list[dict[str, Any]]): SAM masks
         ignore_black_chk (bool): ignore black check
 
     Returns:
         None
     """
-    if mask is None or type(mask) != np.ndarray:
+    if mask is None or not isinstance(mask, (np.ndarray, Image.Image)):
         raise ValueError("Invalid mask")
-    elif mask.ndim != 3 or (mask.shape[2] != 1 and mask.shape[2] != 3):
-        raise ValueError("Mask must be 3 dimensional with 1 or 3 channels")
 
-    if sam_masks is None or type(sam_masks) != list:
+    if sam_masks is None or not isinstance(sam_masks, list):
         raise ValueError("Invalid SAM masks")
 
-    if ignore_black_chk is None or type(ignore_black_chk) != bool:
+    if ignore_black_chk is None or not isinstance(ignore_black_chk, bool):
         raise ValueError("Invalid ignore black check")
 
 
+def convert_mask(mask: Union[np.ndarray, Image.Image]) -> np.ndarray:
+    """Convert mask.
+
+    Args:
+        mask (Union[np.ndarray, Image.Image]): mask
+
+    Returns:
+        np.ndarray: converted mask
+    """
+    if isinstance(mask, Image.Image):
+        mask = np.array(mask)
+
+    if mask.ndim == 2:
+        mask = mask[:, :, np.newaxis]
+
+    if mask.shape[2] != 1:
+        mask = mask[:, :, 0:1]
+
+    return mask
+
+
 def create_mask_image(
-        mask: np.ndarray,
+        mask: Union[np.ndarray, Image.Image],
         sam_masks: list[dict[str, Any]],
         ignore_black_chk: bool = True,
         ) -> np.ndarray:
     """Create mask image.
 
     Args:
-        mask (np.ndarray): mask
+        mask (Union[np.ndarray, Image.Image]): mask
         sam_masks (list[dict[str, Any]]): SAM masks
         ignore_black_chk (bool): ignore black check
 
@@ -61,11 +82,7 @@ def create_mask_image(
         np.ndarray: mask image
     """
     check_inputs_create_mask_image(mask, sam_masks, ignore_black_chk)
-    if mask.shape[2] == 3:
-        mask = mask[:, :, 0:1]
-
-    if len(sam_masks) > 0 and sam_masks[0]["segmentation"].shape[:2] != mask.shape[:2]:
-        raise ValueError("sam_masks shape not match")
+    mask = convert_mask(mask)
 
     canvas_image = np.zeros(mask.shape, dtype=np.uint8)
     mask_region = np.zeros(mask.shape, dtype=np.uint8)

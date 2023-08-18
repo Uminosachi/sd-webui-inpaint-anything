@@ -1,9 +1,10 @@
 import copy
 import os
-from typing import Any
+from typing import Any, Union
 
 import cv2
 import numpy as np
+from PIL import Image
 from tqdm import tqdm
 
 from ia_file_manager import ia_file_manager
@@ -63,43 +64,62 @@ def get_available_sam_ids() -> list[str]:
 
 
 def check_inputs_generate_sam_masks(
-        input_image: np.ndarray,
+        input_image: Union[np.ndarray, Image.Image],
         sam_id: str,
         anime_style_chk: bool = False,
         ) -> None:
     """Check generate SAM masks inputs.
 
     Args:
-        input_image (np.ndarray): input image
+        input_image (Union[np.ndarray, Image.Image]): input image
         sam_id (str): SAM ID
         anime_style_chk (bool): anime style check
 
     Returns:
         None
     """
-    if input_image is None or type(input_image) != np.ndarray:
+    if input_image is None or not isinstance(input_image, (np.ndarray, Image.Image)):
         raise ValueError("Invalid input image")
-    elif input_image.ndim != 3 or input_image.shape[2] != 3:
-        raise ValueError("Input image must be 3 dimensional with 3 channels")
 
-    if sam_id is None or type(sam_id) != str:
+    if sam_id is None or not isinstance(sam_id, str):
         raise ValueError("Invalid SAM ID")
     elif sam_id not in get_available_sam_ids():
         raise ValueError(f"SAM ID {sam_id} not available")
 
-    if anime_style_chk is None or type(anime_style_chk) != bool:
+    if anime_style_chk is None or not isinstance(anime_style_chk, bool):
         raise ValueError("Invalid anime style check")
 
 
+def convert_input_image(input_image: Union[np.ndarray, Image.Image]) -> np.ndarray:
+    """Convert input image.
+
+    Args:
+        input_image (Union[np.ndarray, Image.Image]): input image
+
+    Returns:
+        np.ndarray: converted input image
+    """
+    if isinstance(input_image, Image.Image):
+        input_image = np.array(input_image)
+
+    if input_image.ndim == 2:
+        input_image = input_image[:, :, np.newaxis]
+
+    if input_image.shape[2] == 1:
+        input_image = np.concatenate([input_image] * 3, axis=-1)
+
+    return input_image
+
+
 def generate_sam_masks(
-        input_image: np.ndarray,
+        input_image: Union[np.ndarray, Image.Image],
         sam_id: str,
         anime_style_chk: bool = False,
         ) -> list[dict[str, Any]]:
     """Generate SAM masks.
 
     Args:
-        input_image (np.ndarray): input image
+        input_image (Union[np.ndarray, Image.Image]): input image
         sam_id (str): SAM ID
         anime_style_chk (bool): anime style check
 
@@ -107,6 +127,7 @@ def generate_sam_masks(
         list[dict[str, Any]]: SAM masks
     """
     check_inputs_generate_sam_masks(input_image, sam_id, anime_style_chk)
+    input_image = convert_input_image(input_image)
 
     sam_checkpoint = sam_file_path(sam_id)
     sam_mask_generator = get_sam_mask_generator(sam_checkpoint, anime_style_chk)
@@ -176,18 +197,20 @@ def insert_mask_to_sam_masks(
 
 
 def create_seg_color_image(
-        input_image: np.ndarray,
+        input_image: Union[np.ndarray, Image.Image],
         sam_masks: list[dict[str, Any]],
         ) -> np.ndarray:
     """Create segmentation color image.
 
     Args:
-        input_image (np.ndarray): input image
+        input_image (Union[np.ndarray, Image.Image]): input image
         sam_masks (list[dict[str, Any]]): SAM masks
 
     Returns:
         np.ndarray: segmentation color image
     """
+    input_image = convert_input_image(input_image)
+
     seg_colormap = get_seg_colormap()
     sam_masks = sam_masks[:len(seg_colormap)]
 
