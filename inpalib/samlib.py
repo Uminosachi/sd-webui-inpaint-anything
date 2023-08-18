@@ -1,5 +1,5 @@
+import copy
 import os
-import traceback
 from typing import Any
 
 import cv2
@@ -62,12 +62,12 @@ def get_available_sam_ids() -> list[str]:
     return all_sam_ids
 
 
-def check_inputs_generate_sam_mask(
+def check_inputs_generate_sam_masks(
         input_image: np.ndarray,
         sam_id: str,
         anime_style_chk: bool = False,
         ) -> None:
-    """Check generate SAM mask inputs.
+    """Check generate SAM masks inputs.
 
     Args:
         input_image (np.ndarray): input image
@@ -91,12 +91,12 @@ def check_inputs_generate_sam_mask(
         raise ValueError("Invalid anime style check")
 
 
-def generate_sam_mask(
+def generate_sam_masks(
         input_image: np.ndarray,
         sam_id: str,
         anime_style_chk: bool = False,
-        ) -> np.ndarray:
-    """Generate SAM mask.
+        ) -> list[dict[str, Any]]:
+    """Generate SAM masks.
 
     Args:
         input_image (np.ndarray): input image
@@ -104,25 +104,15 @@ def generate_sam_mask(
         anime_style_chk (bool): anime style check
 
     Returns:
-        np.ndarray: SAM mask
+        list[dict[str, Any]]: SAM masks
     """
-    try:
-        check_inputs_generate_sam_mask(input_image, sam_id, anime_style_chk)
-    except Exception as e:
-        print(traceback.format_exc())
-        ia_logging.error(str(e))
-        return None
+    check_inputs_generate_sam_masks(input_image, sam_id, anime_style_chk)
 
     sam_checkpoint = sam_file_path(sam_id)
     sam_mask_generator = get_sam_mask_generator(sam_checkpoint, anime_style_chk)
     ia_logging.info(f"{sam_mask_generator.__class__.__name__} {sam_id}")
-    try:
-        sam_masks = sam_mask_generator.generate(input_image)
-    except Exception as e:
-        print(traceback.format_exc())
-        ia_logging.error(str(e))
-        del sam_mask_generator
-        return None
+
+    sam_masks = sam_mask_generator.generate(input_image)
 
     if anime_style_chk:
         for sam_mask in sam_masks:
@@ -133,11 +123,12 @@ def generate_sam_mask(
 
     ia_logging.info("sam_masks: {}".format(len(sam_masks)))
 
+    sam_masks = copy.deepcopy(sam_masks)
     return sam_masks
 
 
-def sort_mask_by_size(sam_masks: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Sort mask by size.
+def sort_masks_by_area(sam_masks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Sort mask by area.
 
     Args:
         sam_masks (list[dict[str, Any]]): SAM masks
@@ -179,7 +170,7 @@ def insert_mask_to_sam_masks(
                 sam_masks[0]["segmentation"].shape == insert_mask["segmentation"].shape and
                 np.any(insert_mask["segmentation"])):
             sam_masks.insert(0, insert_mask)
-            ia_logging.info("insert pad_mask to sam_masks")
+            ia_logging.info("insert mask to sam_masks")
 
     return sam_masks
 

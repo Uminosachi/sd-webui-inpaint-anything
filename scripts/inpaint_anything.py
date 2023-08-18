@@ -1,4 +1,3 @@
-import copy
 import gc
 import math
 import os
@@ -166,13 +165,13 @@ def run_sam(input_image, sam_model_id, sam_image, anime_style_chk=False):
     ia_logging.info(f"input_image: {input_image.shape} {input_image.dtype}")
 
     try:
-        sam_masks = inpalib.generate_sam_mask(input_image, sam_model_id, anime_style_chk)
-        sam_masks = inpalib.sort_mask_by_size(sam_masks)
+        sam_masks = inpalib.generate_sam_masks(input_image, sam_model_id, anime_style_chk)
+        sam_masks = inpalib.sort_masks_by_area(sam_masks)
         sam_masks = inpalib.insert_mask_to_sam_masks(sam_masks, sam_dict["pad_mask"])
 
         seg_image = inpalib.create_seg_color_image(input_image, sam_masks)
-        sam_dict["sam_masks"] = copy.deepcopy(sam_masks)
-        del sam_masks
+
+        sam_dict["sam_masks"] = sam_masks
 
     except Exception as e:
         print(traceback.format_exc())
