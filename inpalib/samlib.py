@@ -1,5 +1,6 @@
 import copy
 import os
+import sys
 from typing import Any, Union
 
 import cv2
@@ -7,11 +8,15 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
-from ia_file_manager import ia_file_manager
-from ia_get_dataset_colormap import create_pascal_label_colormap
-from ia_logging import ia_logging
-from ia_sam_manager import get_sam_mask_generator
-from ia_ui_items import get_sam_model_ids
+inpa_basedir = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+if inpa_basedir not in sys.path:
+    sys.path.append(inpa_basedir)
+
+from ia_file_manager import ia_file_manager  # noqa: E402
+from ia_get_dataset_colormap import create_pascal_label_colormap  # noqa: E402
+from ia_logging import ia_logging  # noqa: E402
+from ia_sam_manager import get_sam_mask_generator  # noqa: E402
+from ia_ui_items import get_sam_model_ids  # noqa: E402
 
 
 def get_all_sam_ids() -> list[str]:
