@@ -83,8 +83,6 @@ def check_inputs_generate_sam_masks(
 
     if sam_id is None or not isinstance(sam_id, str):
         raise ValueError("Invalid SAM ID")
-    elif sam_id not in get_available_sam_ids():
-        raise ValueError(f"SAM ID {sam_id} not available")
 
     if anime_style_chk is None or not isinstance(anime_style_chk, bool):
         raise ValueError("Invalid anime style check")
@@ -186,7 +184,7 @@ def insert_mask_to_sam_masks(
     Returns:
         list[dict[str, Any]]: SAM masks
     """
-    if insert_mask is not None and type(insert_mask) == dict and "segmentation" in insert_mask:
+    if insert_mask is not None and isinstance(insert_mask, dict) and "segmentation" in insert_mask:
         if (len(sam_masks) > 0 and
                 sam_masks[0]["segmentation"].shape == insert_mask["segmentation"].shape and
                 np.any(insert_mask["segmentation"])):

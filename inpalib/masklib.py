@@ -13,7 +13,7 @@ def invert_mask(mask: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: inverted mask
     """
-    if mask is None or type(mask) != np.ndarray:
+    if mask is None or not isinstance(mask, np.ndarray):
         raise ValueError("Invalid mask")
 
     # return np.logical_not(mask.astype(bool)).astype(np.uint8) * 255
