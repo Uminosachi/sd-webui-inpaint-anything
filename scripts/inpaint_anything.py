@@ -24,7 +24,7 @@ from modules.images import resize_image
 from modules.processing import create_infotext, process_images
 from modules.sd_models import get_closet_checkpoint_match
 from modules.sd_samplers import samplers_for_img2img
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageFilter
 from PIL.PngImagePlugin import PngInfo
 from torch.hub import download_url_to_file
 from torchvision import transforms
@@ -33,7 +33,7 @@ import inpalib
 from ia_check_versions import ia_check_versions
 from ia_config import IAConfig, get_ia_config_index, set_ia_config, setup_ia_config_ini
 from ia_file_manager import IAFileManager, download_model_from_hf, ia_file_manager
-from ia_logging import ia_logging
+from ia_logging import draw_text_image, ia_logging
 from ia_threading import (async_post_reload_model_weights, await_backup_reload_ckpt_info,
                           await_pre_reload_model_weights, clear_cache_decorator,
                           offload_reload_decorator)
@@ -564,17 +564,13 @@ def run_cn_inpaint(input_image, sel_mask,
     await_pre_reload_model_weights()
 
     if (shared.sd_model.parameterization == "v" and "sd15" in cn_model_id):
-        ia_logging.warning("The SD v2 model is not compatible with the ControlNet model")
-        ret_image = Image.fromarray(np.zeros_like(input_image))
-        draw_ret_image = ImageDraw.Draw(ret_image)
-        draw_ret_image.text((0, 0), "The SD v2 model is not compatible with the ControlNet model", fill=(224, 224, 224))
+        ia_logging.error("The SDv2 model is not compatible with the ControlNet model")
+        ret_image = draw_text_image(input_image, "The SD v2 model is not compatible with the ControlNet model")
         return ret_image
 
     if (getattr(shared.sd_model, "is_sdxl", False) and "sd15" in cn_model_id):
-        ia_logging.warning("The SD XL model is not compatible with the ControlNet model")
-        ret_image = Image.fromarray(np.zeros_like(input_image))
-        draw_ret_image = ImageDraw.Draw(ret_image)
-        draw_ret_image.text((0, 0), "The SD XL model is not compatible with the ControlNet model", fill=(224, 224, 224))
+        ia_logging.error("The SDXL model is not compatible with the ControlNet model")
+        ret_image = draw_text_image(input_image, "The SD XL model is not compatible with the ControlNet model")
         return ret_image
 
     cnet = sam_dict.get("cnet", None)
@@ -645,7 +641,15 @@ def run_cn_inpaint(input_image, sel_mask,
     p.script_args = np.zeros(get_controlnet_args_to(cnet, p.scripts)).tolist()
     cnet.update_cn_script_in_processing(p, cn_units)
 
-    processed = process_images(p)
+    try:
+        processed = process_images(p)
+    except devices.NansException:
+        ia_logging.error("A tensor with all NaNs was produced in VAE")
+        ret_image = draw_text_image(
+            input_image, "A tensor with all NaNs was produced in VAE")
+        clear_controlnet_cache(cnet, p.scripts)
+        restore_alwayson_scripts(p.scripts)
+        return ret_image
 
     clear_controlnet_cache(cnet, p.scripts)
     restore_alwayson_scripts(p.scripts)
@@ -687,6 +691,12 @@ def run_webui_inpaint(input_image, sel_mask,
         ia_logging.error("The size of image and mask do not match")
         return None
 
+    if "sdxl_vae" in getattr(shared.opts, "sd_vae", ""):
+        ia_logging.error("The SDXL VAE is not compatible with the inpainting model")
+        ret_image = draw_text_image(
+            input_image, "The SDXL VAE is not compatible with the inpainting model")
+        return ret_image
+
     save_mask_image(mask_image, webui_save_mask_chk)
 
     info = get_closet_checkpoint_match(webui_model_id)
@@ -715,7 +725,14 @@ def run_webui_inpaint(input_image, sel_mask,
         p.refiner_checkpoint = webui_refiner_checkpoint
         p.refiner_switch_at = webui_refiner_switch_at
 
-    processed = process_images(p)
+    try:
+        processed = process_images(p)
+    except devices.NansException:
+        ia_logging.error("A tensor with all NaNs was produced in VAE")
+        ret_image = draw_text_image(
+            input_image, "A tensor with all NaNs was produced in VAE")
+        restore_alwayson_scripts(p.scripts)
+        return ret_image
 
     restore_alwayson_scripts(p.scripts)
 
