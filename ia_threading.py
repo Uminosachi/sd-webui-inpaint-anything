@@ -2,7 +2,7 @@ import gc
 import threading
 from functools import wraps
 
-from modules import devices, sd_vae, shared
+from modules import devices, shared
 from modules.sd_models import load_model, reload_model_weights
 
 backup_sd_model, backup_device, backup_ckpt_info = None, None, None
@@ -45,12 +45,7 @@ def pre_reload_model_weights(sem):
             backup_sd_model.to(backup_device)
             backup_sd_model, backup_device = None, None
         if shared.sd_model is not None and backup_ckpt_info is not None:
-            webui_reload_model_weights(sd_model=shared.sd_model, info=backup_ckpt_info["sd_checkpoint_info"])
-            if backup_ckpt_info["checkpoint_info"] != getattr(sd_vae, "checkpoint_info", None):
-                setattr(sd_vae, "base_vae", backup_ckpt_info["base_vae"])
-                setattr(sd_vae, "loaded_vae_file", backup_ckpt_info["loaded_vae_file"])
-                setattr(sd_vae, "checkpoint_info", backup_ckpt_info["checkpoint_info"])
-
+            webui_reload_model_weights(sd_model=shared.sd_model, info=backup_ckpt_info)
             backup_ckpt_info = None
 
 
@@ -68,12 +63,7 @@ def backup_reload_ckpt_info(sem, info):
             backup_sd_model.to(backup_device)
             backup_sd_model, backup_device = None, None
         if shared.sd_model is not None:
-            backup_ckpt_info = dict(
-                sd_checkpoint_info=shared.sd_model.sd_checkpoint_info,
-                base_vae=getattr(sd_vae, "base_vae", None),
-                loaded_vae_file=getattr(sd_vae, "loaded_vae_file", None),
-                checkpoint_info=getattr(sd_vae, "checkpoint_info", None),
-            )
+            backup_ckpt_info = shared.sd_model.sd_checkpoint_info
             webui_reload_model_weights(sd_model=shared.sd_model, info=info)
 
 
@@ -91,12 +81,7 @@ def post_reload_model_weights(sem):
             backup_sd_model.to(backup_device)
             backup_sd_model, backup_device = None, None
         if shared.sd_model is not None and backup_ckpt_info is not None:
-            webui_reload_model_weights(sd_model=shared.sd_model, info=backup_ckpt_info["sd_checkpoint_info"])
-            if backup_ckpt_info["checkpoint_info"] != getattr(sd_vae, "checkpoint_info", None):
-                setattr(sd_vae, "base_vae", backup_ckpt_info["base_vae"])
-                setattr(sd_vae, "loaded_vae_file", backup_ckpt_info["loaded_vae_file"])
-                setattr(sd_vae, "checkpoint_info", backup_ckpt_info["checkpoint_info"])
-
+            webui_reload_model_weights(sd_model=shared.sd_model, info=backup_ckpt_info)
             backup_ckpt_info = None
 
 
