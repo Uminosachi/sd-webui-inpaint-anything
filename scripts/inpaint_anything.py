@@ -31,7 +31,8 @@ from torchvision import transforms
 
 import inpalib
 from ia_check_versions import ia_check_versions
-from ia_config import IAConfig, get_ia_config_index, set_ia_config, setup_ia_config_ini
+from ia_config import (IAConfig, get_ia_config_index, get_webui_setting, set_ia_config,
+                       setup_ia_config_ini)
 from ia_file_manager import IAFileManager, download_model_from_hf, ia_file_manager
 from ia_logging import draw_text_image, ia_logging
 from ia_threading import (async_post_reload_model_weights, await_backup_reload_ckpt_info,
@@ -131,7 +132,7 @@ def run_padding(input_image, pad_scale_width, pad_scale_height, pad_lr_barance, 
 
     pad_width = [(pad_size_t, pad_size_b), (pad_size_l, pad_size_r), (0, 0)]
     if padding_mode == "constant":
-        fill_value = shared.opts.data.get("inpaint_anything_padding_fill", 127)
+        fill_value = get_webui_setting("inpaint_anything_padding_fill", 127)
         pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode, constant_values=fill_value)
     else:
         pad_image = np.pad(orig_image, pad_width=pad_width, mode=padding_mode)
@@ -340,8 +341,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     save_mask_image(mask_image, save_mask_chk)
 
     ia_logging.info(f"Loading model {inp_model_id}")
-    config_offline_inpainting = shared.opts.data.get("inpaint_anything_offline_inpainting", False)
-    config_offline_inpainting = isinstance(config_offline_inpainting, bool) and config_offline_inpainting
+    config_offline_inpainting = get_webui_setting("inpaint_anything_offline_inpainting", False)
     if config_offline_inpainting:
         ia_logging.info("Run Inpainting on offline network: {}".format(str(config_offline_inpainting)))
     local_files_only = False

@@ -1,15 +1,18 @@
 import os
 from datetime import datetime
+
 from huggingface_hub import snapshot_download
-from ia_logging import ia_logging
 from modules import shared
+
+from ia_config import get_webui_setting
+from ia_logging import ia_logging
 
 
 class IAFileManager:
     DOWNLOAD_COMPLETE = "Download complete"
 
     def __init__(self) -> None:
-        config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+        config_save_folder = get_webui_setting("inpaint_anything_save_folder", "inpaint-anything")
         config_save_folder = config_save_folder if config_save_folder in ["inpaint-anything", "img2img-images"] else "inpaint-anything"
         self._ia_outputs_dir = os.path.join(shared.data_path,
                                             "outputs", config_save_folder,
@@ -23,7 +26,7 @@ class IAFileManager:
         Returns:
             None
         """
-        config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+        config_save_folder = get_webui_setting("inpaint_anything_save_folder", "inpaint-anything")
         if config_save_folder in ["inpaint-anything", "img2img-images"]:
             self._ia_outputs_dir = os.path.join(shared.data_path,
                                                 "outputs", config_save_folder,
@@ -59,7 +62,7 @@ class IAFileManager:
         Returns:
             str: inpaint-anything savename prefix
         """
-        config_save_folder = shared.opts.data.get("inpaint_anything_save_folder", "inpaint-anything")
+        config_save_folder = get_webui_setting("inpaint_anything_save_folder", "inpaint-anything")
         basename = "inpainta-" if config_save_folder == "img2img-images" else ""
 
         return basename + datetime.now().strftime("%Y%m%d-%H%M%S")

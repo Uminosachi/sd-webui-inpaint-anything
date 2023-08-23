@@ -115,3 +115,12 @@ def set_ia_config(key, value, section=IAConfig.SECTIONS.DEFAULT):
 
         with open(IAConfig.PATHS.WEBUI_CONFIG, "w", encoding="utf-8") as f:
             json.dump(webui_config, f, indent=4)
+
+
+def get_webui_setting(key, default):
+    value = shared.opts.data.get(key, default)
+
+    if not isinstance(value, type(default)):
+        value = default
+
+    return value

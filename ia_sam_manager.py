@@ -2,10 +2,11 @@ import os
 import platform
 
 import torch
-from modules import devices, safe, shared
+from modules import devices, safe
 
 from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
 from ia_check_versions import ia_check_versions
+from ia_config import get_webui_setting
 from ia_logging import ia_logging
 from mobile_sam import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorMobile
 from mobile_sam import SamPredictor as SamPredictorMobile
@@ -59,8 +60,7 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
             else:
                 sam.to(device=torch.device("mps"))
         else:
-            run_on_cpu = shared.opts.data.get("inpaint_anything_sam_oncpu", False)
-            if isinstance(run_on_cpu, bool) and run_on_cpu:
+            if get_webui_setting("inpaint_anything_sam_oncpu", False):
                 ia_logging.info("SAM is running on CPU... (the option has been checked)")
                 sam.to(device=devices.cpu)
             else:
@@ -108,8 +108,7 @@ def get_sam_predictor(sam_checkpoint):
             else:
                 sam.to(device=torch.device("mps"))
         else:
-            run_on_cpu = shared.opts.data.get("inpaint_anything_sam_oncpu", False)
-            if isinstance(run_on_cpu, bool) and run_on_cpu:
+            if get_webui_setting("inpaint_anything_sam_oncpu", False):
                 ia_logging.info("SAM is running on CPU... (the option has been checked)")
                 sam.to(device=devices.cpu)
             else:
