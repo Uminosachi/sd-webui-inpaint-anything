@@ -341,8 +341,9 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 
     ia_logging.info(f"Loading model {inp_model_id}")
     config_offline_inpainting = shared.opts.data.get("inpaint_anything_offline_inpainting", False)
+    config_offline_inpainting = isinstance(config_offline_inpainting, bool) and config_offline_inpainting
     if config_offline_inpainting:
-        ia_logging.info("Enable offline network Inpainting: {}".format(str(config_offline_inpainting)))
+        ia_logging.info("Run Inpainting on offline network: {}".format(str(config_offline_inpainting)))
     local_files_only = False
     local_file_status = download_model_from_hf(inp_model_id, local_files_only=True)
     if local_file_status != IAFileManager.DOWNLOAD_COMPLETE:
