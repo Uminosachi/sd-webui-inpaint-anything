@@ -1169,12 +1169,34 @@ def on_ui_tabs():
 
 def on_ui_settings():
     section = ("inpaint_anything", "Inpaint Anything")
-    shared.opts.add_option("inpaint_anything_save_folder", shared.OptionInfo(
-        "inpaint-anything", "Folder name where output images will be saved", gr.Radio, {"choices": ["inpaint-anything", "img2img-images"]}, section=section))
-    shared.opts.add_option("inpaint_anything_offline_inpainting", shared.OptionInfo(
-        False, "Enable offline network Inpainting", gr.Checkbox, {"interactive": True}, section=section))
-    shared.opts.add_option("inpaint_anything_padding_fill", shared.OptionInfo(
-        127, "Fill value used when Padding is set to constant", gr.Slider, {"minimum": 0, "maximum": 255, "step": 1}, section=section))
+    shared.opts.add_option("inpaint_anything_save_folder",
+                           shared.OptionInfo(
+                               default="inpaint-anything",
+                               label="Folder name where output images will be saved",
+                               component=gr.Radio,
+                               component_args={"choices": ["inpaint-anything", "img2img-images"]},
+                               section=section))
+    shared.opts.add_option("inpaint_anything_sam_oncpu",
+                           shared.OptionInfo(
+                               default=False,
+                               label="Run Segment Anything on CPU",
+                               component=gr.Checkbox,
+                               component_args={"interactive": True},
+                               section=section))
+    shared.opts.add_option("inpaint_anything_offline_inpainting",
+                           shared.OptionInfo(
+                               default=False,
+                               label="Run Inpainting on offline network",
+                               component=gr.Checkbox,
+                               component_args={"interactive": True},
+                               section=section))
+    shared.opts.add_option("inpaint_anything_padding_fill",
+                           shared.OptionInfo(
+                               default=127,
+                               label="Fill value used when Padding is set to constant",
+                               component=gr.Slider,
+                               component_args={"minimum": 0, "maximum": 255, "step": 1},
+                               section=section))
 
 
 script_callbacks.on_ui_settings(on_ui_settings)
