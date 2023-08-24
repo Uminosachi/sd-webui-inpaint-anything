@@ -1,8 +1,10 @@
 import gc
 import threading
+from contextlib import ContextDecorator
 from functools import wraps
 
-from modules import devices, shared
+import torch
+from modules import devices, safe, shared
 from modules.sd_models import load_model, reload_model_weights
 
 backup_sd_model, backup_device, backup_ckpt_info = None, None, None
@@ -134,3 +136,17 @@ def offload_reload_decorator(func):
         return res
 
     return wrapper
+
+
+class torch_default_load_cd(ContextDecorator):
+    def __init__(self):
+        self.backup_load = safe.load
+
+    def __enter__(self):
+        self.backup_load = torch.load
+        torch.load = safe.unsafe_torch_load
+        return self
+
+    def __exit__(self, *exc):
+        torch.load = self.backup_load
+        return False

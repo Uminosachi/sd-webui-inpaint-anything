@@ -2,12 +2,13 @@ import os
 import platform
 
 import torch
-from modules import devices, safe
+from modules import devices
 
 from fast_sam import FastSamAutomaticMaskGenerator, fast_sam_model_registry
 from ia_check_versions import ia_check_versions
 from ia_config import get_webui_setting
 from ia_logging import ia_logging
+from ia_threading import torch_default_load_cd
 from mobile_sam import SamAutomaticMaskGenerator as SamAutomaticMaskGeneratorMobile
 from mobile_sam import SamPredictor as SamPredictorMobile
 from mobile_sam import sam_model_registry as sam_model_registry_mobile
@@ -17,6 +18,7 @@ from segment_anything_hq import SamPredictor as SamPredictorHQ
 from segment_anything_hq import sam_model_registry as sam_model_registry_hq
 
 
+@torch_default_load_cd()
 def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
     """Get SAM mask generator.
 
@@ -52,7 +54,6 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
     stability_score_thresh = 0.95 if not anime_style_chk else 0.9
 
     if os.path.isfile(sam_checkpoint):
-        torch.load = safe.unsafe_torch_load
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
             if "FastSAM" in os.path.basename(sam_checkpoint) or not ia_check_versions.torch_mps_is_available:
@@ -67,13 +68,13 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
                 sam.to(device=devices.device)
         sam_mask_generator = SamAutomaticMaskGeneratorLocal(
             model=sam, points_per_batch=points_per_batch, pred_iou_thresh=pred_iou_thresh, stability_score_thresh=stability_score_thresh)
-        torch.load = safe.load
     else:
         sam_mask_generator = None
 
     return sam_mask_generator
 
 
+@torch_default_load_cd()
 def get_sam_predictor(sam_checkpoint):
     """Get SAM predictor.
 
@@ -100,7 +101,6 @@ def get_sam_predictor(sam_checkpoint):
         SamPredictorLocal = SamPredictor
 
     if os.path.isfile(sam_checkpoint):
-        torch.load = safe.unsafe_torch_load
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
         if platform.system() == "Darwin":
             if "FastSAM" in os.path.basename(sam_checkpoint) or not ia_check_versions.torch_mps_is_available:
@@ -114,7 +114,6 @@ def get_sam_predictor(sam_checkpoint):
             else:
                 sam.to(device=devices.device)
         sam_predictor = SamPredictorLocal(sam)
-        torch.load = safe.load
     else:
         sam_predictor = None
 
