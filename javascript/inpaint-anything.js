@@ -34,12 +34,35 @@ async function inpaintAnything_sendToInpaint() {
 
     const updateGradioImage = async (element, url, name) => {
         const blob = await (await fetch(url)).blob();
-        const file = new File([blob], name);
+        const file = new File([blob], name, { type: "image/png" });
         const dt = new DataTransfer();
         dt.items.add(file);
 
-        element.querySelector("button[aria-label='Clear']")?.click();
-        await waitForElementToBeRemoved(element, "button[aria-label='Clear']");
+        function getClearButton() {
+            let clearButton = null;
+            let clearLabel = null;
+
+            let allButtons = element.querySelectorAll("button");
+            if (allButtons.length > 0) {
+                for (let button of allButtons) {
+                    let label = button.getAttribute("aria-label");
+                    if (label && !label.includes("Edit") && !label.includes("Éditer")) {
+                        clearButton = button;
+                        clearLabel = label;
+                        break;
+                    }
+                }
+            }
+            return [clearButton, clearLabel];
+        }
+
+        const [clearButton, clearLabel] = getClearButton();
+
+        if (clearButton) {
+            clearButton?.click();
+            await waitForElementToBeRemoved(element, `button[aria-label='${clearLabel}']`);
+        }
+
         const input = element.querySelector("input[type='file']");
         input.value = "";
         input.files = dt.files;
@@ -49,7 +72,7 @@ async function inpaintAnything_sendToInpaint() {
                 composed: true,
             })
         );
-        await waitForElementToBeInDocument(element, "button[aria-label='Clear']");
+        await waitForElementToBeInDocument(element, "button");
     };
 
     const inputImg = document.querySelector("#ia_input_image img");
