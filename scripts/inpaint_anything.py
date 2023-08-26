@@ -848,7 +848,7 @@ def on_ui_tabs():
                         anime_style_chk = gr.Checkbox(label="Anime Style (Up Detection, Down mask Quality)", elem_id="anime_style_chk",
                                                       show_label=True, interactive=True)
                     with gr.Column():
-                        sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn", interactive=False)
+                        sam_btn = gr.Button("Run Segment Anything", elem_id="sam_btn", variant="primary", interactive=False)
 
                 with gr.Tab("Inpainting", elem_id="inpainting_tab"):
                     with gr.Row():
@@ -881,7 +881,7 @@ def on_ui_tabs():
                                                        choices=inp_model_ids, value=inp_model_ids[inp_model_index], show_label=True)
                         with gr.Column():
                             with gr.Row():
-                                inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn")
+                                inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn", variant="primary")
                             with gr.Row():
                                 composite_chk = gr.Checkbox(label="Mask area Only", elem_id="composite_chk", value=True, show_label=True, interactive=True)
                                 save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk", show_label=True, interactive=True)
@@ -897,7 +897,7 @@ def on_ui_tabs():
                                                            choices=cleaner_model_ids, value=cleaner_model_ids[0], show_label=True)
                         with gr.Column():
                             with gr.Row():
-                                cleaner_btn = gr.Button("Run Cleaner", elem_id="cleaner_btn")
+                                cleaner_btn = gr.Button("Run Cleaner", elem_id="cleaner_btn", variant="primary")
                             with gr.Row():
                                 cleaner_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cleaner_save_mask_chk", show_label=True, interactive=True)
 
@@ -954,7 +954,7 @@ def on_ui_tabs():
                                                              choices=webui_model_ids, value=webui_model_ids[0], show_label=True)
                             with gr.Column():
                                 with gr.Row():
-                                    webui_inpaint_btn = gr.Button("Run Inpainting", elem_id="webui_inpaint_btn")
+                                    webui_inpaint_btn = gr.Button("Run Inpainting", elem_id="webui_inpaint_btn", variant="primary")
                                 with gr.Row():
                                     webui_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="webui_save_mask_chk", show_label=True, interactive=True)
 
@@ -1026,7 +1026,7 @@ def on_ui_tabs():
                                                           choices=cn_model_ids, value=cn_model_ids[0], show_label=True)
                             with gr.Column():
                                 with gr.Row():
-                                    cn_inpaint_btn = gr.Button("Run ControlNet Inpaint", elem_id="cn_inpaint_btn")
+                                    cn_inpaint_btn = gr.Button("Run ControlNet Inpaint", elem_id="cn_inpaint_btn", variant="primary")
                                 with gr.Row():
                                     cn_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cn_save_mask_chk", show_label=True, interactive=True)
 
@@ -1074,7 +1074,7 @@ def on_ui_tabs():
                                          show_label=False, interactive=True).style(height=480)
                 with gr.Row():
                     with gr.Column():
-                        select_btn = gr.Button("Create mask", elem_id="select_btn")
+                        select_btn = gr.Button("Create Mask", elem_id="select_btn", variant="primary")
                     with gr.Column():
                         with gr.Row():
                             invert_chk = gr.Checkbox(label="Invert mask", elem_id="invert_chk", show_label=True, interactive=True)
