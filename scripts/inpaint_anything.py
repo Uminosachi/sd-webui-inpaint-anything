@@ -20,11 +20,10 @@ from diffusers import (DDIMScheduler, EulerAncestralDiscreteScheduler, EulerDisc
 from lama_cleaner.model_manager import ModelManager
 from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
 from modules import devices, script_callbacks, shared
-from modules.images import resize_image
 from modules.processing import create_infotext, process_images
 from modules.sd_models import get_closet_checkpoint_match
 from modules.sd_samplers import samplers_for_img2img
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageOps
 from PIL.PngImagePlugin import PngInfo
 from torch.hub import download_url_to_file
 from torchvision import transforms
@@ -313,13 +312,14 @@ def auto_resize_to_pil(input_image, mask_image):
             scale = new_width / width
         resize_height = int(height*scale+0.5)
         resize_width = int(width*scale+0.5)
-        ia_logging.info(f"resize: ({height}, {width}) -> ({resize_height}, {resize_width})")
-        init_image = transforms.functional.resize(init_image, (resize_height, resize_width), transforms.InterpolationMode.LANCZOS)
-        mask_image = transforms.functional.resize(mask_image, (resize_height, resize_width), transforms.InterpolationMode.LANCZOS)
-        ia_logging.info(f"center_crop: ({resize_height}, {resize_width}) -> ({new_height}, {new_width})")
-        init_image = transforms.functional.center_crop(init_image, (new_height, new_width))
-        mask_image = transforms.functional.center_crop(mask_image, (new_height, new_width))
-        assert init_image.size == mask_image.size, "The size of image and mask do not match"
+        if height != resize_height or width != resize_width:
+            ia_logging.info(f"resize: ({height}, {width}) -> ({resize_height}, {resize_width})")
+            init_image = transforms.functional.resize(init_image, (resize_height, resize_width), transforms.InterpolationMode.LANCZOS)
+            mask_image = transforms.functional.resize(mask_image, (resize_height, resize_width), transforms.InterpolationMode.LANCZOS)
+        if resize_height != new_height or resize_width != new_width:
+            ia_logging.info(f"center_crop: ({resize_height}, {resize_width}) -> ({new_height}, {new_width})")
+            init_image = transforms.functional.center_crop(init_image, (new_height, new_width))
+            mask_image = transforms.functional.center_crop(mask_image, (new_height, new_width))
 
     return init_image, mask_image
 
@@ -619,8 +619,8 @@ def run_cn_inpaint(input_image, sel_mask,
             cn_ref_image = transforms.functional.center_crop(Image.fromarray(cn_ref_image), (height, width))
             ia_logging.info(f"Reference image is tiled ({num_h}, {num_w}) times and cropped to ({height}, {width})")
         else:
-            cn_ref_image = resize_image(1, Image.fromarray(cn_ref_image), width=width, height=height)
-            ia_logging.info(f"Reference image is resized to ({height}, {width}) maintaining aspect ratio")
+            cn_ref_image = ImageOps.fit(Image.fromarray(cn_ref_image), (width, height), method=Image.Resampling.LANCZOS)
+            ia_logging.info(f"Reference image is resized and cropped to ({height}, {width})")
         assert cn_ref_image.size == init_image.size, "The size of reference image and input image do not match"
 
         cn_units.append(cnet.to_processing_unit(dict(
