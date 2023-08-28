@@ -397,6 +397,7 @@ def run_inpaint(iteration_count,
     if platform.system() == "Darwin":
         pipe = pipe.to("mps" if ia_check_versions.torch_mps_is_available else "cpu")
         pipe.enable_attention_slicing()
+        torch_generator = torch.Generator(devices.cpu)
     else:
         if ia_check_versions.diffusers_enable_cpu_offload and devices.device != devices.cpu:
             ia_logging.info("Enable model cpu offload")
@@ -409,6 +410,10 @@ def run_inpaint(iteration_count,
         else:
             ia_logging.info("Enable attention slicing")
             pipe.enable_attention_slicing()
+        if "privateuseone" in str(getattr(devices.device, "type", "")):
+            torch_generator = torch.Generator(devices.cpu)
+        else:
+            torch_generator = torch.Generator(devices.device)
 
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
@@ -417,13 +422,7 @@ def run_inpaint(iteration_count,
         if seed < 0 or count > 0:
             seed = random.randint(0, 2147483647)
 
-        if platform.system() == "Darwin":
-            generator = torch.Generator(devices.cpu).manual_seed(seed)
-        else:
-            if "privateuseone" in str(getattr(devices.device, "type", "")):
-                generator = torch.Generator(devices.cpu).manual_seed(seed)
-            else:
-                generator = torch.Generator(devices.device).manual_seed(seed)
+        generator = torch_generator.manual_seed(seed)
 
         pipe_args_dict = {
             "prompt": prompt,
