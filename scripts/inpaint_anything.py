@@ -411,7 +411,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         else:
             ia_logging.info("Enable attention slicing")
             pipe.enable_attention_slicing()
-        if "privateuseone" in str(devices.device):
+        if "privateuseone" in str(getattr(devices.device, "type", "")):
             generator = torch.Generator(devices.cpu).manual_seed(seed)
         else:
             generator = torch.Generator(devices.device).manual_seed(seed)
