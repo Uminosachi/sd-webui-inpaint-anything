@@ -326,7 +326,9 @@ def auto_resize_to_pil(input_image, mask_image):
 
 @offload_reload_decorator
 @clear_cache_decorator
-def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk, sampler_name="DDIM"):
+def run_inpaint(iteration_count,
+                input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk,
+                sampler_name="DDIM"):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -392,13 +394,9 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         ia_logging.info("Sampler fallback to DDIM")
         pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
 
-    if seed < 0:
-        seed = random.randint(0, 2147483647)
-
     if platform.system() == "Darwin":
         pipe = pipe.to("mps" if ia_check_versions.torch_mps_is_available else "cpu")
         pipe.enable_attention_slicing()
-        generator = torch.Generator(devices.cpu).manual_seed(seed)
     else:
         if ia_check_versions.diffusers_enable_cpu_offload and devices.device != devices.cpu:
             ia_logging.info("Enable model cpu offload")
@@ -411,54 +409,62 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         else:
             ia_logging.info("Enable attention slicing")
             pipe.enable_attention_slicing()
-        if "privateuseone" in str(getattr(devices.device, "type", "")):
-            generator = torch.Generator(devices.cpu).manual_seed(seed)
-        else:
-            generator = torch.Generator(devices.device).manual_seed(seed)
 
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
-    pipe_args_dict = {
-        "prompt": prompt,
-        "image": init_image,
-        "width": width,
-        "height": height,
-        "mask_image": mask_image,
-        "num_inference_steps": ddim_steps,
-        "guidance_scale": cfg_scale,
-        "negative_prompt": n_prompt,
-        "generator": generator,
-        }
+    for count in range(iteration_count):
+        if seed < 0 or count > 0:
+            seed = random.randint(0, 2147483647)
 
-    output_image = pipe(**pipe_args_dict).images[0]
+        if platform.system() == "Darwin":
+            generator = torch.Generator(devices.cpu).manual_seed(seed)
+        else:
+            if "privateuseone" in str(getattr(devices.device, "type", "")):
+                generator = torch.Generator(devices.cpu).manual_seed(seed)
+            else:
+                generator = torch.Generator(devices.device).manual_seed(seed)
 
-    if composite_chk:
-        mask_image = Image.fromarray(cv2.dilate(np.array(mask_image), np.ones((3, 3), dtype=np.uint8), iterations=4))
-        output_image = Image.composite(output_image, init_image, mask_image.convert("L").filter(ImageFilter.GaussianBlur(3)))
+        pipe_args_dict = {
+            "prompt": prompt,
+            "image": init_image,
+            "width": width,
+            "height": height,
+            "mask_image": mask_image,
+            "num_inference_steps": ddim_steps,
+            "guidance_scale": cfg_scale,
+            "negative_prompt": n_prompt,
+            "generator": generator,
+            }
 
-    generation_params = {
-        "Steps": ddim_steps,
-        "Sampler": sampler_name,
-        "CFG scale": cfg_scale,
-        "Seed": seed,
-        "Size": f"{width}x{height}",
-        "Model": inp_model_id,
-        }
+        output_image = pipe(**pipe_args_dict).images[0]
 
-    generation_params_text = ", ".join([k if k == v else f"{k}: {v}" for k, v in generation_params.items() if v is not None])
-    prompt_text = prompt if prompt else ""
-    negative_prompt_text = "\nNegative prompt: " + n_prompt if n_prompt else ""
-    infotext = f"{prompt_text}{negative_prompt_text}\n{generation_params_text}".strip()
+        if composite_chk:
+            dilate_mask_image = Image.fromarray(cv2.dilate(np.array(mask_image), np.ones((3, 3), dtype=np.uint8), iterations=4))
+            output_image = Image.composite(output_image, init_image, dilate_mask_image.convert("L").filter(ImageFilter.GaussianBlur(3)))
 
-    metadata = PngInfo()
-    metadata.add_text("parameters", infotext)
+        generation_params = {
+            "Steps": ddim_steps,
+            "Sampler": sampler_name,
+            "CFG scale": cfg_scale,
+            "Seed": seed,
+            "Size": f"{width}x{height}",
+            "Model": inp_model_id,
+            }
 
-    save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(inp_model_id), str(seed)]) + ".png"
-    save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
-    output_image.save(save_name, pnginfo=metadata)
+        generation_params_text = ", ".join([k if k == v else f"{k}: {v}" for k, v in generation_params.items() if v is not None])
+        prompt_text = prompt if prompt else ""
+        negative_prompt_text = "\nNegative prompt: " + n_prompt if n_prompt else ""
+        infotext = f"{prompt_text}{negative_prompt_text}\n{generation_params_text}".strip()
 
-    del pipe
+        metadata = PngInfo()
+        metadata.add_text("parameters", infotext)
+
+        save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(inp_model_id), str(seed)]) + ".png"
+        save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
+        output_image.save(save_name, pnginfo=metadata)
+        gc.collect()
+
     return output_image
 
 
@@ -858,7 +864,7 @@ def on_ui_tabs():
                         with gr.Column():
                             prompt = gr.Textbox(label="Inpainting Prompt", elem_id="ia_sd_prompt")
                             n_prompt = gr.Textbox(label="Negative Prompt", elem_id="ia_sd_n_prompt")
-                        with gr.Column(scale=0, min_width=120):
+                        with gr.Column(scale=0, min_width=128):
                             gr.Markdown("Get prompt from:")
                             get_txt2img_prompt_btn = gr.Button("txt2img", elem_id="get_txt2img_prompt_btn")
                             get_img2img_prompt_btn = gr.Button("img2img", elem_id="get_img2img_prompt_btn")
@@ -887,7 +893,9 @@ def on_ui_tabs():
                                 inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn", variant="primary")
                             with gr.Row():
                                 composite_chk = gr.Checkbox(label="Mask area Only", elem_id="composite_chk", value=True, show_label=True, interactive=True)
-                                save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk", show_label=True, interactive=True)
+                                save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk",
+                                                            value=False, show_label=False, interactive=False, visible=False)
+                                iteration_count = gr.Slider(label="Iteration", elem_id="iteration_count", minimum=1, maximum=10, value=1, step=1)
 
                     with gr.Row():
                         out_image = gr.Image(label="Inpainted image", elem_id="out_image", type="pil",
@@ -914,7 +922,7 @@ def on_ui_tabs():
                             with gr.Column():
                                 webui_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="ia_webui_sd_prompt")
                                 webui_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="ia_webui_sd_n_prompt")
-                            with gr.Column(scale=0, min_width=120):
+                            with gr.Column(scale=0, min_width=128):
                                 gr.Markdown("Get prompt from:")
                                 webui_get_txt2img_prompt_btn = gr.Button("txt2img", elem_id="webui_get_txt2img_prompt_btn")
                                 webui_get_img2img_prompt_btn = gr.Button("img2img", elem_id="webui_get_img2img_prompt_btn")
@@ -971,7 +979,7 @@ def on_ui_tabs():
                             with gr.Column():
                                 cn_prompt = gr.Textbox(label="Inpainting Prompt", elem_id="ia_cn_sd_prompt")
                                 cn_n_prompt = gr.Textbox(label="Negative Prompt", elem_id="ia_cn_sd_n_prompt")
-                            with gr.Column(scale=0, min_width=120):
+                            with gr.Column(scale=0, min_width=128):
                                 gr.Markdown("Get prompt from:")
                                 cn_get_txt2img_prompt_btn = gr.Button("txt2img", elem_id="cn_get_txt2img_prompt_btn")
                                 cn_get_img2img_prompt_btn = gr.Button("img2img", elem_id="cn_get_img2img_prompt_btn")
@@ -1115,7 +1123,9 @@ def on_ui_tabs():
 
             inpaint_btn.click(
                 run_inpaint,
-                inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk, sampler_name],
+                inputs=[iteration_count,
+                        input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk,
+                        sampler_name],
                 outputs=[out_image])
             cleaner_btn.click(
                 run_cleaner,
