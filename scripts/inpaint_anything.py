@@ -301,7 +301,7 @@ def add_mask(input_image, sel_mask):
 def auto_resize_to_pil(input_image, mask_image):
     init_image = Image.fromarray(input_image).convert("RGB")
     mask_image = Image.fromarray(mask_image).convert("RGB")
-    assert init_image.size == mask_image.size, "The size of image and mask do not match"
+    assert init_image.size == mask_image.size, "The sizes of the image and mask do not match"
     width, height = init_image.size
 
     new_height = (height // 8) * 8
@@ -331,12 +331,13 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
                 sampler_name="DDIM", iteration_count=1):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
-        return None
+        ia_logging.error("The image or mask does not exist")
+        return
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        ia_logging.error("The size of image and mask do not match")
-        return None
+        ia_logging.error("The sizes of the image and mask do not match")
+        return
 
     set_ia_config(IAConfig.KEYS.INP_MODEL_ID, inp_model_id, IAConfig.SECTIONS.USER)
 
@@ -351,7 +352,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     if local_file_status != IAFileManager.DOWNLOAD_COMPLETE:
         if config_offline_inpainting:
             ia_logging.warning(local_file_status)
-            return None
+            return
     else:
         local_files_only = True
         ia_logging.info("local_files_only: {}".format(str(local_files_only)))
@@ -374,9 +375,9 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
                     pipe = StableDiffusionInpaintPipeline.from_pretrained(inp_model_id, torch_dtype=torch_dtype, force_download=True)
                 except Exception as e:
                     ia_logging.error(str(e))
-                    return None
+                    return
         else:
-            return None
+            return
     pipe.safety_checker = None
 
     ia_logging.info(f"Using sampler {sampler_name}")
@@ -418,7 +419,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
-    for count in range(iteration_count):
+    for count in range(int(iteration_count)):
         gc.collect()
         if seed < 0 or count > 0:
             seed = random.randint(0, 2147483647)
@@ -472,11 +473,12 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
 def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
+        ia_logging.error("The image or mask does not exist")
         return None
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        ia_logging.error("The size of image and mask do not match")
+        ia_logging.error("The sizes of the image and mask do not match")
         return None
 
     save_mask_image(mask_image, cleaner_save_mask_chk)
@@ -521,11 +523,12 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
 def run_get_alpha_image(input_image, sel_mask):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
+        ia_logging.error("The image or mask does not exist")
         return None, ""
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        ia_logging.error("The size of image and mask do not match")
+        ia_logging.error("The sizes of the image and mask do not match")
         return None, ""
 
     alpha_image = Image.fromarray(input_image).convert("RGBA")
@@ -555,42 +558,42 @@ def run_get_mask(sel_mask):
     return mask_image
 
 
-@clear_cache_decorator
+@clear_cache_yield_decorator
 def run_cn_inpaint(input_image, sel_mask,
                    cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed,
                    cn_module_id, cn_model_id, cn_save_mask_chk,
-                   cn_low_vram_chk, cn_weight, cn_mode,
+                   cn_low_vram_chk, cn_weight, cn_mode, cn_iteration_count=1,
                    cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced", cn_ref_resize_mode="tile"):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
-        return None
+        ia_logging.error("The image or mask does not exist")
+        return
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        ia_logging.error("The size of image and mask do not match")
-        return None
+        ia_logging.error("The sizes of the image and mask do not match")
+        return
 
     await_pre_reload_model_weights()
 
     if (shared.sd_model.parameterization == "v" and "sd15" in cn_model_id):
         ia_logging.error("The SDv2 model is not compatible with the ControlNet model")
         ret_image = draw_text_image(input_image, "The SD v2 model is not compatible with the ControlNet model")
-        return ret_image
+        yield ret_image
+        return
 
     if (getattr(shared.sd_model, "is_sdxl", False) and "sd15" in cn_model_id):
         ia_logging.error("The SDXL model is not compatible with the ControlNet model")
         ret_image = draw_text_image(input_image, "The SD XL model is not compatible with the ControlNet model")
-        return ret_image
+        yield ret_image
+        return
 
     cnet = sam_dict.get("cnet", None)
     if cnet is None:
         ia_logging.warning("The ControlNet extension is not loaded")
-        return None
+        return
 
     save_mask_image(mask_image, cn_save_mask_chk)
-
-    if cn_seed < 0:
-        cn_seed = random.randint(0, 2147483647)
 
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
@@ -629,7 +632,7 @@ def run_cn_inpaint(input_image, sel_mask,
         else:
             cn_ref_image = ImageOps.fit(Image.fromarray(cn_ref_image), (width, height), method=Image.Resampling.LANCZOS)
             ia_logging.info(f"Reference image is resized and cropped to ({height}, {width})")
-        assert cn_ref_image.size == init_image.size, "The size of reference image and input image do not match"
+        assert cn_ref_image.size == init_image.size, "The sizes of the reference image and input image do not match"
 
         cn_units.append(cnet.to_processing_unit(dict(
             enabled=True,
@@ -650,73 +653,80 @@ def run_cn_inpaint(input_image, sel_mask,
     p.script_args = np.zeros(get_controlnet_args_to(cnet, p.scripts)).tolist()
     cnet.update_cn_script_in_processing(p, cn_units)
 
-    try:
-        processed = process_images(p)
-    except devices.NansException:
-        ia_logging.error("A tensor with all NaNs was produced in VAE")
-        ret_image = draw_text_image(
-            input_image, "A tensor with all NaNs was produced in VAE")
-        clear_controlnet_cache(cnet, p.scripts)
-        restore_alwayson_scripts(p.scripts)
-        return ret_image
+    for count in range(int(cn_iteration_count)):
+        gc.collect()
+        if cn_seed < 0 or count > 0:
+            cn_seed = random.randint(0, 2147483647)
+
+        p.seed = cn_seed
+
+        try:
+            processed = process_images(p)
+        except devices.NansException:
+            ia_logging.error("A tensor with all NaNs was produced in VAE")
+            ret_image = draw_text_image(
+                input_image, "A tensor with all NaNs was produced in VAE")
+            clear_controlnet_cache(cnet, p.scripts)
+            restore_alwayson_scripts(p.scripts)
+            yield ret_image
+            return
+
+        no_hash_cn_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", cn_model_id).strip()
+
+        if processed is not None:
+            if len(processed.images) > 0:
+                output_image = processed.images[0]
+
+                infotext = create_infotext(p, all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds)
+
+                metadata = PngInfo()
+                metadata.add_text("parameters", infotext)
+
+                save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(no_hash_cn_model_id), str(cn_seed)]) + ".png"
+                save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
+                output_image.save(save_name, pnginfo=metadata)
+
+                yield output_image
+            else:
+                output_image = None
+        else:
+            output_image = None
 
     clear_controlnet_cache(cnet, p.scripts)
     restore_alwayson_scripts(p.scripts)
 
-    no_hash_cn_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", cn_model_id).strip()
 
-    if processed is not None:
-        if len(processed.images) > 0:
-            output_image = processed.images[0]
-
-            infotext = create_infotext(p, all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds)
-
-            metadata = PngInfo()
-            metadata.add_text("parameters", infotext)
-
-            save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(no_hash_cn_model_id), str(cn_seed)]) + ".png"
-            save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
-            output_image.save(save_name, pnginfo=metadata)
-        else:
-            output_image = None
-    else:
-        output_image = None
-
-    return output_image
-
-
-@clear_cache_decorator
+@clear_cache_yield_decorator
 def run_webui_inpaint(input_image, sel_mask,
                       webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
                       webui_model_id, webui_save_mask_chk,
-                      webui_mask_blur, webui_fill_mode,
+                      webui_mask_blur, webui_fill_mode, webui_iteration_count=1,
                       webui_enable_refiner_chk=False, webui_refiner_checkpoint="", webui_refiner_switch_at=0.8):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
-        return None
+        ia_logging.error("The image or mask does not exist")
+        return
 
     mask_image = sam_dict["mask_image"]
     if input_image.shape != mask_image.shape:
-        ia_logging.error("The size of image and mask do not match")
-        return None
+        ia_logging.error("The sizes of the image and mask do not match")
+        return
 
     if "sdxl_vae" in getattr(shared.opts, "sd_vae", ""):
         ia_logging.error("The SDXL VAE is not compatible with the inpainting model")
         ret_image = draw_text_image(
             input_image, "The SDXL VAE is not compatible with the inpainting model")
-        return ret_image
+        yield ret_image
+        return
 
     save_mask_image(mask_image, webui_save_mask_chk)
 
     info = get_closet_checkpoint_match(webui_model_id)
     if info is None:
         ia_logging.error(f"No model found: {webui_model_id}")
-        return None
+        return
 
     await_backup_reload_ckpt_info(info=info)
-
-    if webui_seed < 0:
-        webui_seed = random.randint(0, 2147483647)
 
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
@@ -734,38 +744,46 @@ def run_webui_inpaint(input_image, sel_mask,
         p.refiner_checkpoint = webui_refiner_checkpoint
         p.refiner_switch_at = webui_refiner_switch_at
 
-    try:
-        processed = process_images(p)
-    except devices.NansException:
-        ia_logging.error("A tensor with all NaNs was produced in VAE")
-        ret_image = draw_text_image(
-            input_image, "A tensor with all NaNs was produced in VAE")
-        restore_alwayson_scripts(p.scripts)
-        return ret_image
+    for count in range(int(webui_iteration_count)):
+        gc.collect()
+        if webui_seed < 0 or count > 0:
+            webui_seed = random.randint(0, 2147483647)
 
-    restore_alwayson_scripts(p.scripts)
+        p.seed = webui_seed
 
-    no_hash_webui_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", webui_model_id).strip()
-    no_hash_webui_model_id = os.path.splitext(no_hash_webui_model_id)[0]
+        try:
+            processed = process_images(p)
+        except devices.NansException:
+            ia_logging.error("A tensor with all NaNs was produced in VAE")
+            ret_image = draw_text_image(
+                input_image, "A tensor with all NaNs was produced in VAE")
+            restore_alwayson_scripts(p.scripts)
+            yield ret_image
+            return
 
-    if processed is not None:
-        if len(processed.images) > 0:
-            output_image = processed.images[0]
+        no_hash_webui_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", webui_model_id).strip()
+        no_hash_webui_model_id = os.path.splitext(no_hash_webui_model_id)[0]
 
-            infotext = create_infotext(p, all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds)
+        if processed is not None:
+            if len(processed.images) > 0:
+                output_image = processed.images[0]
 
-            metadata = PngInfo()
-            metadata.add_text("parameters", infotext)
+                infotext = create_infotext(p, all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds)
 
-            save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(no_hash_webui_model_id), str(webui_seed)]) + ".png"
-            save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
-            output_image.save(save_name, pnginfo=metadata)
+                metadata = PngInfo()
+                metadata.add_text("parameters", infotext)
+
+                save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(no_hash_webui_model_id), str(webui_seed)]) + ".png"
+                save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
+                output_image.save(save_name, pnginfo=metadata)
+
+                yield output_image
+            else:
+                output_image = None
         else:
             output_image = None
-    else:
-        output_image = None
 
-    return output_image
+    restore_alwayson_scripts(p.scripts)
 
 
 def on_ui_tabs():
@@ -868,6 +886,7 @@ def on_ui_tabs():
                             get_txt2img_prompt_btn = gr.Button("txt2img", elem_id="get_txt2img_prompt_btn")
                             get_img2img_prompt_btn = gr.Button("img2img", elem_id="get_img2img_prompt_btn")
                     with gr.Accordion("Advanced options", elem_id="inp_advanced_options", open=False):
+                        composite_chk = gr.Checkbox(label="Mask area Only", elem_id="composite_chk", value=True, show_label=True, interactive=True)
                         with gr.Row():
                             with gr.Column():
                                 sampler_name = gr.Dropdown(label="Sampler", elem_id="sampler_name", choices=sampler_names,
@@ -891,7 +910,6 @@ def on_ui_tabs():
                             with gr.Row():
                                 inpaint_btn = gr.Button("Run Inpainting", elem_id="inpaint_btn", variant="primary")
                             with gr.Row():
-                                composite_chk = gr.Checkbox(label="Mask area Only", elem_id="composite_chk", value=True, show_label=True, interactive=True)
                                 save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk",
                                                             value=False, show_label=False, interactive=False, visible=False)
                                 iteration_count = gr.Slider(label="Iteration", elem_id="iteration_count", minimum=1, maximum=10, value=1, step=1)
@@ -909,7 +927,8 @@ def on_ui_tabs():
                             with gr.Row():
                                 cleaner_btn = gr.Button("Run Cleaner", elem_id="cleaner_btn", variant="primary")
                             with gr.Row():
-                                cleaner_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cleaner_save_mask_chk", show_label=True, interactive=True)
+                                cleaner_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cleaner_save_mask_chk",
+                                                                    value=False, show_label=False, interactive=False, visible=False)
 
                     with gr.Row():
                         cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil",
@@ -966,7 +985,10 @@ def on_ui_tabs():
                                 with gr.Row():
                                     webui_inpaint_btn = gr.Button("Run Inpainting", elem_id="webui_inpaint_btn", variant="primary")
                                 with gr.Row():
-                                    webui_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="webui_save_mask_chk", show_label=True, interactive=True)
+                                    webui_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="webui_save_mask_chk",
+                                                                      value=False, show_label=False, interactive=False, visible=False)
+                                    webui_iteration_count = gr.Slider(label="Iteration", elem_id="webui_iteration_count",
+                                                                      minimum=1, maximum=10, value=1, step=1)
 
                         with gr.Row():
                             webui_out_image = gr.Image(label="Inpainted image", elem_id="webui_out_image", type="pil",
@@ -1038,7 +1060,10 @@ def on_ui_tabs():
                                 with gr.Row():
                                     cn_inpaint_btn = gr.Button("Run ControlNet Inpaint", elem_id="cn_inpaint_btn", variant="primary")
                                 with gr.Row():
-                                    cn_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cn_save_mask_chk", show_label=True, interactive=True)
+                                    cn_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cn_save_mask_chk",
+                                                                   value=False, show_label=False, interactive=False, visible=False)
+                                    cn_iteration_count = gr.Slider(label="Iteration", elem_id="cn_iteration_count",
+                                                                   minimum=1, maximum=10, value=1, step=1)
 
                         with gr.Row():
                             cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", type="pil",
@@ -1151,7 +1176,7 @@ def on_ui_tabs():
                 cn_inputs = [input_image, sel_mask,
                              cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed,
                              cn_module_id, cn_model_id, cn_save_mask_chk,
-                             cn_low_vram_chk, cn_weight, cn_mode]
+                             cn_low_vram_chk, cn_weight, cn_mode, cn_iteration_count]
                 if cn_ref_only:
                     cn_inputs.extend([cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode, cn_ref_resize_mode])
                 cn_inpaint_btn.click(
@@ -1167,7 +1192,7 @@ def on_ui_tabs():
                 wi_inputs = [input_image, sel_mask,
                              webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
                              webui_model_id, webui_save_mask_chk,
-                             webui_mask_blur, webui_fill_mode]
+                             webui_mask_blur, webui_fill_mode, webui_iteration_count]
                 if ia_check_versions.webui_refiner_is_available:
                     wi_inputs.extend([webui_enable_refiner_chk, webui_refiner_checkpoint, webui_refiner_switch_at])
                 webui_inpaint_btn.click(
