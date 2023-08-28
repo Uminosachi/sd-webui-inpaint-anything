@@ -116,6 +116,16 @@ def clear_cache_decorator(func):
     return wrapper
 
 
+def clear_cache_yield_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        clear_cache()
+        yield from func(*args, **kwargs)
+        clear_cache()
+
+    return wrapper
+
+
 def post_reload_decorator(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -134,6 +144,16 @@ def offload_reload_decorator(func):
         res = func(*args, **kwargs)
         async_post_reload_model_weights()
         return res
+
+    return wrapper
+
+
+def offload_reload_yield_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        await_pre_offload_model_weights()
+        yield from func(*args, **kwargs)
+        async_post_reload_model_weights()
 
     return wrapper
 

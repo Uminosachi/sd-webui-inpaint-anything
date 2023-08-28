@@ -36,7 +36,8 @@ from ia_file_manager import IAFileManager, download_model_from_hf, ia_file_manag
 from ia_logging import draw_text_image, ia_logging
 from ia_threading import (async_post_reload_model_weights, await_backup_reload_ckpt_info,
                           await_pre_reload_model_weights, clear_cache_decorator,
-                          offload_reload_decorator)
+                          clear_cache_yield_decorator, offload_reload_decorator,
+                          offload_reload_yield_decorator)
 from ia_ui_items import (get_cleaner_model_ids, get_inp_model_ids, get_padding_mode_names,
                          get_sam_model_ids, get_sampler_names)
 from ia_webui_controlnet import (backup_alwayson_scripts, clear_controlnet_cache,
@@ -324,11 +325,10 @@ def auto_resize_to_pil(input_image, mask_image):
     return init_image, mask_image
 
 
-@offload_reload_decorator
-@clear_cache_decorator
-def run_inpaint(iteration_count,
-                input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk,
-                sampler_name="DDIM"):
+@offload_reload_yield_decorator
+@clear_cache_yield_decorator
+def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk,
+                sampler_name="DDIM", iteration_count=1):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         return None
@@ -419,6 +419,7 @@ def run_inpaint(iteration_count,
     width, height = init_image.size
 
     for count in range(iteration_count):
+        gc.collect()
         if seed < 0 or count > 0:
             seed = random.randint(0, 2147483647)
 
@@ -462,9 +463,8 @@ def run_inpaint(iteration_count,
         save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(inp_model_id), str(seed)]) + ".png"
         save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
         output_image.save(save_name, pnginfo=metadata)
-        gc.collect()
 
-    return output_image
+        yield output_image
 
 
 @offload_reload_decorator
@@ -1122,9 +1122,8 @@ def on_ui_tabs():
 
             inpaint_btn.click(
                 run_inpaint,
-                inputs=[iteration_count,
-                        input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk,
-                        sampler_name],
+                inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk,
+                        sampler_name, iteration_count],
                 outputs=[out_image])
             cleaner_btn.click(
                 run_cleaner,
