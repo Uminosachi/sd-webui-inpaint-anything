@@ -54,7 +54,8 @@ To install the software, please follow these steps:
 * Click on the `Run Inpainting` button (**Please note that it may take some time to download the model for the first time**).
   * In the Advanced options, you can adjust the Sampler, Sampling Steps, Guidance Scale, and Seed.
   * If you enable the `Mask area Only` option, modifications will be confined to the designated mask area only.
-* Inpainting process is performed using [diffusers](https://github.com/huggingface/diffusers).
+* Adjust the iteration slider to perform inpainting multiple times with different seeds.
+* The inpainting process is powered by [diffusers](https://github.com/huggingface/diffusers).
 
 #### Tips
 
