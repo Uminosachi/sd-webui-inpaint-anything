@@ -38,8 +38,8 @@ from ia_threading import (async_post_reload_model_weights, await_backup_reload_c
                           await_pre_reload_model_weights, clear_cache_decorator,
                           clear_cache_yield_decorator, offload_reload_decorator,
                           offload_reload_yield_decorator)
-from ia_ui_items import (get_cleaner_model_ids, get_inp_model_ids, get_padding_mode_names,
-                         get_sam_model_ids, get_sampler_names)
+from ia_ui_items import (get_cleaner_model_ids, get_inp_model_ids, get_inp_webui_model_ids,
+                         get_padding_mode_names, get_sam_model_ids, get_sampler_names)
 from ia_webui_controlnet import (backup_alwayson_scripts, clear_controlnet_cache,
                                  disable_all_alwayson_scripts, disable_alwayson_scripts_wo_cn,
                                  find_controlnet, get_controlnet_args_to, get_max_args_to,
@@ -436,7 +436,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
             "guidance_scale": cfg_scale,
             "negative_prompt": n_prompt,
             "generator": generator,
-            }
+        }
 
         output_image = pipe(**pipe_args_dict).images[0]
 
@@ -451,7 +451,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
             "Seed": seed,
             "Size": f"{width}x{height}",
             "Model": inp_model_id,
-            }
+        }
 
         generation_params_text = ", ".join([k if k == v else f"{k}: {v}" for k, v in generation_params.items() if v is not None])
         prompt_text = prompt if prompt else ""
@@ -825,8 +825,7 @@ def on_ui_tabs():
             cn_ref_only = True
 
     webui_inpaint_enabled = False
-    list_ckpt = shared.list_checkpoint_tiles()
-    webui_model_ids = [ckpt for ckpt in list_ckpt if "inpaint" in ckpt.lower()]
+    webui_model_ids = get_inp_webui_model_ids()
     if len(webui_model_ids) > 0:
         webui_inpaint_enabled = True
 

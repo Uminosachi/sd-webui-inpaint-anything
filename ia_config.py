@@ -5,23 +5,19 @@ from types import SimpleNamespace
 
 from modules import shared
 
-from ia_ui_items import get_inp_model_ids, get_sam_model_ids
+from ia_ui_items import get_inp_model_ids, get_inp_webui_model_ids, get_sam_model_ids
 
 
 class IAConfig:
     SECTIONS = SimpleNamespace(
-        DEFAULT="DEFAULT",
+        DEFAULT=configparser.DEFAULTSECT,
         USER="USER",
     )
 
     KEYS = SimpleNamespace(
         SAM_MODEL_ID="sam_model_id",
         INP_MODEL_ID="inp_model_id",
-    )
-
-    WEBUI_KEYS = SimpleNamespace(
-        SAM_MODEL_ID="inpaint_anything/Segment Anything Model ID/value",
-        INP_MODEL_ID="inpaint_anything/Inpainting Model ID/value",
+        INP_WEBUI_MODEL_ID="inp_webui_model_id",
     )
 
     PATHS = SimpleNamespace(
@@ -29,22 +25,42 @@ class IAConfig:
         WEBUI_CONFIG=os.path.join(shared.data_path, "ui-config.json"),
     )
 
+    def __init__(self):
+        self.ids_dict = {}
+        self.ids_dict[IAConfig.KEYS.SAM_MODEL_ID] = {
+            "list": get_sam_model_ids(),
+            "index": 1,
+        }
+        self.ids_dict[IAConfig.KEYS.INP_MODEL_ID] = {
+            "list": get_inp_model_ids(),
+            "index": 0,
+        }
+        self.ids_dict[IAConfig.KEYS.INP_WEBUI_MODEL_ID] = {
+            "list": get_inp_webui_model_ids(),
+            "index": 0,
+        }
+
+        self.webui_keys = {}
+        self.webui_keys[IAConfig.KEYS.SAM_MODEL_ID] = "inpaint_anything/Segment Anything Model ID/value"
+        self.webui_keys[IAConfig.KEYS.INP_MODEL_ID] = "inpaint_anything/Inpainting Model ID/value"
+        self.webui_keys[IAConfig.KEYS.INP_WEBUI_MODEL_ID] = "inpaint_anything/Inpainting Model ID webui/value"
+
+
+ia_config = IAConfig()
+
 
 def setup_ia_config_ini():
-    if not os.path.isfile(IAConfig.PATHS.INI):
-        ia_config_ini = configparser.ConfigParser()
+    ia_config_ini = configparser.ConfigParser(defaults={})
+    if os.path.isfile(IAConfig.PATHS.INI):
+        ia_config_ini.read(IAConfig.PATHS.INI, encoding="utf-8")
 
-        sam_model_ids = get_sam_model_ids()
-        sam_model_index = 1
-        inp_model_ids = get_inp_model_ids()
-        inp_model_index = 0
+    for key, ids_info in ia_config.ids_dict.items():
+        if not ia_config_ini.has_option(IAConfig.SECTIONS.DEFAULT, key):
+            if len(ids_info["list"]) > ids_info["index"]:
+                ia_config_ini[IAConfig.SECTIONS.DEFAULT][key] = ids_info["list"][ids_info["index"]]
 
-        ia_config_ini[IAConfig.SECTIONS.DEFAULT] = {
-            IAConfig.KEYS.SAM_MODEL_ID: sam_model_ids[sam_model_index],
-            IAConfig.KEYS.INP_MODEL_ID: inp_model_ids[inp_model_index],
-        }
-        with open(IAConfig.PATHS.INI, "w", encoding="utf-8") as f:
-            ia_config_ini.write(f)
+    with open(IAConfig.PATHS.INI, "w", encoding="utf-8") as f:
+        ia_config_ini.write(f)
 
 
 def get_ia_config(key, section=IAConfig.SECTIONS.DEFAULT):
@@ -69,16 +85,13 @@ def get_ia_config_index(key, section=IAConfig.SECTIONS.DEFAULT):
     if value is None:
         return None
 
-    if key == IAConfig.KEYS.SAM_MODEL_ID:
-        sam_model_ids = get_sam_model_ids()
-        idx = sam_model_ids.index(value) if value in sam_model_ids else 1
-    elif key == IAConfig.KEYS.INP_MODEL_ID:
-        inp_model_ids = get_inp_model_ids()
-        idx = inp_model_ids.index(value) if value in inp_model_ids else 0
-    else:
-        idx = None
+    if key in ia_config.ids_dict.keys():
+        ids_info = ia_config.ids_dict[key]
+        idx = ids_info["list"].index(value) if value in ids_info["list"] else ids_info["index"]
 
-    return idx
+        return idx
+
+    return None
 
 
 def set_ia_config(key, value, section=IAConfig.SECTIONS.DEFAULT):
@@ -103,18 +116,20 @@ def set_ia_config(key, value, section=IAConfig.SECTIONS.DEFAULT):
         ia_config_ini.write(f)
 
     if os.path.isfile(IAConfig.PATHS.WEBUI_CONFIG):
-        with open(IAConfig.PATHS.WEBUI_CONFIG, "r", encoding="utf-8") as f:
-            webui_config = json.load(f)
+        try:
+            with open(IAConfig.PATHS.WEBUI_CONFIG, "r", encoding="utf-8") as f:
+                webui_config = json.load(f)
 
-        if key == IAConfig.KEYS.SAM_MODEL_ID:
-            if IAConfig.WEBUI_KEYS.SAM_MODEL_ID in webui_config.keys():
-                webui_config[IAConfig.WEBUI_KEYS.SAM_MODEL_ID] = value
-        elif key == IAConfig.KEYS.INP_MODEL_ID:
-            if IAConfig.WEBUI_KEYS.INP_MODEL_ID in webui_config.keys():
-                webui_config[IAConfig.WEBUI_KEYS.INP_MODEL_ID] = value
+            if key in ia_config.webui_keys.keys():
+                webui_key = ia_config.webui_keys[key]
+                if webui_key in webui_config.keys():
+                    webui_config[webui_key] = value
 
-        with open(IAConfig.PATHS.WEBUI_CONFIG, "w", encoding="utf-8") as f:
-            json.dump(webui_config, f, indent=4)
+                    with open(IAConfig.PATHS.WEBUI_CONFIG, "w", encoding="utf-8") as f:
+                        json.dump(webui_config, f, indent=4)
+
+        except Exception:
+            pass
 
 
 def get_webui_setting(key, default):
