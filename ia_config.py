@@ -54,19 +54,26 @@ def setup_ia_config_ini():
     if os.path.isfile(IAConfig.PATHS.INI):
         ia_config_ini.read(IAConfig.PATHS.INI, encoding="utf-8")
 
+    changed = False
     for key, ids_info in ia_config.ids_dict.items():
         if not ia_config_ini.has_option(IAConfig.SECTIONS.DEFAULT, key):
             if len(ids_info["list"]) > ids_info["index"]:
                 ia_config_ini[IAConfig.SECTIONS.DEFAULT][key] = ids_info["list"][ids_info["index"]]
+                changed = True
+        else:
+            if len(ids_info["list"]) > ids_info["index"] and ia_config_ini[IAConfig.SECTIONS.DEFAULT][key] != ids_info["list"][ids_info["index"]]:
+                ia_config_ini[IAConfig.SECTIONS.DEFAULT][key] = ids_info["list"][ids_info["index"]]
+                changed = True
 
-    with open(IAConfig.PATHS.INI, "w", encoding="utf-8") as f:
-        ia_config_ini.write(f)
+    if changed:
+        with open(IAConfig.PATHS.INI, "w", encoding="utf-8") as f:
+            ia_config_ini.write(f)
 
 
 def get_ia_config(key, section=IAConfig.SECTIONS.DEFAULT):
     setup_ia_config_ini()
 
-    ia_config_ini = configparser.ConfigParser()
+    ia_config_ini = configparser.ConfigParser(defaults={})
     ia_config_ini.read(IAConfig.PATHS.INI, encoding="utf-8")
 
     if ia_config_ini.has_option(section, key):
@@ -82,29 +89,32 @@ def get_ia_config(key, section=IAConfig.SECTIONS.DEFAULT):
 def get_ia_config_index(key, section=IAConfig.SECTIONS.DEFAULT):
     value = get_ia_config(key, section)
 
+    ids_dict = ia_config.ids_dict
     if value is None:
-        return None
-
-    if key in ia_config.ids_dict.keys():
-        ids_info = ia_config.ids_dict[key]
-        idx = ids_info["list"].index(value) if value in ids_info["list"] else ids_info["index"]
-
-        return idx
-
-    return None
+        if key in ids_dict.keys():
+            ids_info = ids_dict[key]
+            return ids_info["index"]
+        else:
+            return 0
+    else:
+        if key in ids_dict.keys():
+            ids_info = ids_dict[key]
+            return ids_info["list"].index(value) if value in ids_info["list"] else ids_info["index"]
+        else:
+            return 0
 
 
 def set_ia_config(key, value, section=IAConfig.SECTIONS.DEFAULT):
     setup_ia_config_ini()
 
-    ia_config_ini = configparser.ConfigParser()
+    ia_config_ini = configparser.ConfigParser(defaults={})
     ia_config_ini.read(IAConfig.PATHS.INI, encoding="utf-8")
+
+    if ia_config_ini.has_option(section, key) and ia_config_ini[section][key] == value:
+        return
 
     if section != IAConfig.SECTIONS.DEFAULT and not ia_config_ini.has_section(section):
         ia_config_ini[section] = {}
-    else:
-        if ia_config_ini.has_option(section, key) and ia_config_ini[section][key] == value:
-            return
 
     try:
         ia_config_ini[section][key] = value
@@ -120,13 +130,12 @@ def set_ia_config(key, value, section=IAConfig.SECTIONS.DEFAULT):
             with open(IAConfig.PATHS.WEBUI_CONFIG, "r", encoding="utf-8") as f:
                 webui_config = json.load(f)
 
-            if key in ia_config.webui_keys.keys():
-                webui_key = ia_config.webui_keys[key]
-                if webui_key in webui_config.keys():
-                    webui_config[webui_key] = value
+            webui_keys = ia_config.webui_keys
+            if key in webui_keys.keys() and webui_keys[key] in webui_config.keys():
+                webui_config[webui_keys[key]] = value
 
-                    with open(IAConfig.PATHS.WEBUI_CONFIG, "w", encoding="utf-8") as f:
-                        json.dump(webui_config, f, indent=4)
+                with open(IAConfig.PATHS.WEBUI_CONFIG, "w", encoding="utf-8") as f:
+                    json.dump(webui_config, f, indent=4)
 
         except Exception:
             pass

@@ -719,6 +719,8 @@ def run_webui_inpaint(input_image, sel_mask,
         yield ret_image
         return
 
+    set_ia_config(IAConfig.KEYS.INP_WEBUI_MODEL_ID, webui_model_id, IAConfig.SECTIONS.USER)
+
     save_mask_image(mask_image, webui_save_mask_chk)
 
     info = get_closet_checkpoint_match(webui_model_id)
@@ -793,10 +795,8 @@ def on_ui_tabs():
     sampler_names = get_sampler_names()
     sam_model_ids = get_sam_model_ids()
     sam_model_index = get_ia_config_index(IAConfig.KEYS.SAM_MODEL_ID, IAConfig.SECTIONS.USER)
-    sam_model_index = sam_model_index if sam_model_index is not None else 1
     inp_model_ids = get_inp_model_ids()
     inp_model_index = get_ia_config_index(IAConfig.KEYS.INP_MODEL_ID, IAConfig.SECTIONS.USER)
-    inp_model_index = inp_model_index if inp_model_index is not None else 0
     cleaner_model_ids = get_cleaner_model_ids()
     padding_mode_names = get_padding_mode_names()
     sam_dict["cnet"] = find_controlnet()
@@ -828,6 +828,7 @@ def on_ui_tabs():
     webui_model_ids = get_inp_webui_model_ids()
     if len(webui_model_ids) > 0:
         webui_inpaint_enabled = True
+        webui_model_index = get_ia_config_index(IAConfig.KEYS.INP_WEBUI_MODEL_ID, IAConfig.SECTIONS.USER)
 
     if samplers_for_img2img is not None and len(samplers_for_img2img) > 0:
         webui_sampler_ids = [sampler.name for sampler in samplers_for_img2img]
@@ -979,7 +980,7 @@ def on_ui_tabs():
                         with gr.Row():
                             with gr.Column():
                                 webui_model_id = gr.Dropdown(label="Inpainting Model ID webui", elem_id="webui_model_id",
-                                                             choices=webui_model_ids, value=webui_model_ids[0], show_label=True)
+                                                             choices=webui_model_ids, value=webui_model_ids[webui_model_index], show_label=True)
                             with gr.Column():
                                 with gr.Row():
                                     webui_inpaint_btn = gr.Button("Run Inpainting", elem_id="webui_inpaint_btn", variant="primary")
