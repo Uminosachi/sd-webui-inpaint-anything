@@ -465,7 +465,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
         output_image.save(save_name, pnginfo=metadata)
 
-        yield output_image
+        yield output_image, max([1, iteration_count - (count + 1)])
 
 
 @offload_reload_decorator
@@ -579,13 +579,13 @@ def run_cn_inpaint(input_image, sel_mask,
     if (shared.sd_model.parameterization == "v" and "sd15" in cn_model_id):
         ia_logging.error("The SDv2 model is not compatible with the ControlNet model")
         ret_image = draw_text_image(input_image, "The SD v2 model is not compatible with the ControlNet model")
-        yield ret_image
+        yield ret_image, 1
         return
 
     if (getattr(shared.sd_model, "is_sdxl", False) and "sd15" in cn_model_id):
         ia_logging.error("The SDXL model is not compatible with the ControlNet model")
         ret_image = draw_text_image(input_image, "The SD XL model is not compatible with the ControlNet model")
-        yield ret_image
+        yield ret_image, 1
         return
 
     cnet = sam_dict.get("cnet", None)
@@ -598,7 +598,8 @@ def run_cn_inpaint(input_image, sel_mask,
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
-    p = get_sd_img2img_processing(init_image, None,
+    input_mask = None if "inpaint_only" in cn_module_id else mask_image
+    p = get_sd_img2img_processing(init_image, input_mask,
                                   cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed)
 
     backup_alwayson_scripts(p.scripts)
@@ -653,6 +654,8 @@ def run_cn_inpaint(input_image, sel_mask,
     p.script_args = np.zeros(get_controlnet_args_to(cnet, p.scripts)).tolist()
     cnet.update_cn_script_in_processing(p, cn_units)
 
+    no_hash_cn_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", cn_model_id).strip()
+
     for count in range(int(cn_iteration_count)):
         gc.collect()
         if cn_seed < 0 or count > 0:
@@ -668,29 +671,22 @@ def run_cn_inpaint(input_image, sel_mask,
                 input_image, "A tensor with all NaNs was produced in VAE")
             clear_controlnet_cache(cnet, p.scripts)
             restore_alwayson_scripts(p.scripts)
-            yield ret_image
+            yield ret_image, 1
             return
 
-        no_hash_cn_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", cn_model_id).strip()
+        if processed is not None and len(processed.images) > 0:
+            output_image = processed.images[0]
 
-        if processed is not None:
-            if len(processed.images) > 0:
-                output_image = processed.images[0]
+            infotext = create_infotext(p, all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds)
 
-                infotext = create_infotext(p, all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds)
+            metadata = PngInfo()
+            metadata.add_text("parameters", infotext)
 
-                metadata = PngInfo()
-                metadata.add_text("parameters", infotext)
+            save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(no_hash_cn_model_id), str(cn_seed)]) + ".png"
+            save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
+            output_image.save(save_name, pnginfo=metadata)
 
-                save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(no_hash_cn_model_id), str(cn_seed)]) + ".png"
-                save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
-                output_image.save(save_name, pnginfo=metadata)
-
-                yield output_image
-            else:
-                output_image = None
-        else:
-            output_image = None
+            yield output_image, max([1, cn_iteration_count - (count + 1)])
 
     clear_controlnet_cache(cnet, p.scripts)
     restore_alwayson_scripts(p.scripts)
@@ -716,7 +712,7 @@ def run_webui_inpaint(input_image, sel_mask,
         ia_logging.error("The SDXL VAE is not compatible with the inpainting model")
         ret_image = draw_text_image(
             input_image, "The SDXL VAE is not compatible with the inpainting model")
-        yield ret_image
+        yield ret_image, 1
         return
 
     set_ia_config(IAConfig.KEYS.INP_WEBUI_MODEL_ID, webui_model_id, IAConfig.SECTIONS.USER)
@@ -746,6 +742,9 @@ def run_webui_inpaint(input_image, sel_mask,
         p.refiner_checkpoint = webui_refiner_checkpoint
         p.refiner_switch_at = webui_refiner_switch_at
 
+    no_hash_webui_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", webui_model_id).strip()
+    no_hash_webui_model_id = os.path.splitext(no_hash_webui_model_id)[0]
+
     for count in range(int(webui_iteration_count)):
         gc.collect()
         if webui_seed < 0 or count > 0:
@@ -760,30 +759,22 @@ def run_webui_inpaint(input_image, sel_mask,
             ret_image = draw_text_image(
                 input_image, "A tensor with all NaNs was produced in VAE")
             restore_alwayson_scripts(p.scripts)
-            yield ret_image
+            yield ret_image, 1
             return
 
-        no_hash_webui_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", webui_model_id).strip()
-        no_hash_webui_model_id = os.path.splitext(no_hash_webui_model_id)[0]
+        if processed is not None and len(processed.images) > 0:
+            output_image = processed.images[0]
 
-        if processed is not None:
-            if len(processed.images) > 0:
-                output_image = processed.images[0]
+            infotext = create_infotext(p, all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds)
 
-                infotext = create_infotext(p, all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds)
+            metadata = PngInfo()
+            metadata.add_text("parameters", infotext)
 
-                metadata = PngInfo()
-                metadata.add_text("parameters", infotext)
+            save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(no_hash_webui_model_id), str(webui_seed)]) + ".png"
+            save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
+            output_image.save(save_name, pnginfo=metadata)
 
-                save_name = "_".join([ia_file_manager.savename_prefix, os.path.basename(no_hash_webui_model_id), str(webui_seed)]) + ".png"
-                save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
-                output_image.save(save_name, pnginfo=metadata)
-
-                yield output_image
-            else:
-                output_image = None
-        else:
-            output_image = None
+            yield output_image, max([1, webui_iteration_count - (count + 1)])
 
     restore_alwayson_scripts(p.scripts)
 
@@ -1149,7 +1140,7 @@ def on_ui_tabs():
                 run_inpaint,
                 inputs=[input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk,
                         sampler_name, iteration_count],
-                outputs=[out_image])
+                outputs=[out_image, iteration_count])
             cleaner_btn.click(
                 run_cleaner,
                 inputs=[input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk],
@@ -1182,7 +1173,7 @@ def on_ui_tabs():
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
                     inputs=cn_inputs,
-                    outputs=[cn_out_image]).then(
+                    outputs=[cn_out_image, cn_iteration_count]).then(
                     fn=async_post_reload_model_weights, inputs=None, outputs=None)
             if webui_inpaint_enabled:
                 webui_get_txt2img_prompt_btn.click(
@@ -1198,7 +1189,7 @@ def on_ui_tabs():
                 webui_inpaint_btn.click(
                     run_webui_inpaint,
                     inputs=wi_inputs,
-                    outputs=[webui_out_image]).then(
+                    outputs=[webui_out_image, webui_iteration_count]).then(
                     fn=async_post_reload_model_weights, inputs=None, outputs=None)
 
     return [(inpaint_anything_interface, "Inpaint Anything", "inpaint_anything")]
