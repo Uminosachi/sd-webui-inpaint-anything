@@ -906,7 +906,7 @@ def on_ui_tabs():
                                 iteration_count = gr.Slider(label="Iteration", elem_id="iteration_count", minimum=1, maximum=10, value=1, step=1)
 
                     with gr.Row():
-                        out_image = gr.Image(label="Inpainted image", elem_id="out_image", type="pil",
+                        out_image = gr.Image(label="Inpainted image", elem_id="ia_out_image", type="pil",
                                              interactive=False, show_label=False).style(height=480)
 
                 with gr.Tab("Cleaner", elem_id="cleaner_tab"):
@@ -922,7 +922,7 @@ def on_ui_tabs():
                                                                     value=False, show_label=False, interactive=False, visible=False)
 
                     with gr.Row():
-                        cleaner_out_image = gr.Image(label="Cleaned image", elem_id="cleaner_out_image", type="pil",
+                        cleaner_out_image = gr.Image(label="Cleaned image", elem_id="ia_cleaner_out_image", type="pil",
                                                      interactive=False, show_label=False).style(height=480)
 
                 if webui_inpaint_enabled:
@@ -982,7 +982,7 @@ def on_ui_tabs():
                                                                       minimum=1, maximum=10, value=1, step=1)
 
                         with gr.Row():
-                            webui_out_image = gr.Image(label="Inpainted image", elem_id="webui_out_image", type="pil",
+                            webui_out_image = gr.Image(label="Inpainted image", elem_id="ia_webui_out_image", type="pil",
                                                        interactive=False, show_label=False).style(height=480)
 
                 with gr.Tab("ControlNet Inpaint", elem_id="cn_inpaint_tab"):
@@ -1057,7 +1057,7 @@ def on_ui_tabs():
                                                                    minimum=1, maximum=10, value=1, step=1)
 
                         with gr.Row():
-                            cn_out_image = gr.Image(label="Inpainted image", elem_id="cn_out_image", type="pil",
+                            cn_out_image = gr.Image(label="Inpainted image", elem_id="ia_cn_out_image", type="pil",
                                                     interactive=False, show_label=False).style(height=480)
 
                     else:
