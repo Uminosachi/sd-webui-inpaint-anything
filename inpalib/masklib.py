@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 from PIL import Image
@@ -22,14 +22,14 @@ def invert_mask(mask: np.ndarray) -> np.ndarray:
 
 def check_inputs_create_mask_image(
         mask: Union[np.ndarray, Image.Image],
-        sam_masks: list[dict[str, Any]],
+        sam_masks: List[Dict[str, Any]],
         ignore_black_chk: bool = True,
         ) -> None:
     """Check create mask image inputs.
 
     Args:
         mask (Union[np.ndarray, Image.Image]): mask
-        sam_masks (list[dict[str, Any]]): SAM masks
+        sam_masks (List[Dict[str, Any]]): SAM masks
         ignore_black_chk (bool): ignore black check
 
     Returns:
@@ -68,14 +68,14 @@ def convert_mask(mask: Union[np.ndarray, Image.Image]) -> np.ndarray:
 
 def create_mask_image(
         mask: Union[np.ndarray, Image.Image],
-        sam_masks: list[dict[str, Any]],
+        sam_masks: List[Dict[str, Any]],
         ignore_black_chk: bool = True,
         ) -> np.ndarray:
     """Create mask image.
 
     Args:
         mask (Union[np.ndarray, Image.Image]): mask
-        sam_masks (list[dict[str, Any]]): SAM masks
+        sam_masks (List[Dict[str, Any]]): SAM masks
         ignore_black_chk (bool): ignore black check
 
     Returns:

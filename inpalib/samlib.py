@@ -1,7 +1,7 @@
 import copy
 import os
 import sys
-from typing import Any, Union
+from typing import Any, Dict, List, Union
 
 import cv2
 import numpy as np
@@ -19,11 +19,11 @@ from ia_sam_manager import get_sam_mask_generator  # noqa: E402
 from ia_ui_items import get_sam_model_ids  # noqa: E402
 
 
-def get_all_sam_ids() -> list[str]:
+def get_all_sam_ids() -> List[str]:
     """Get all SAM IDs.
 
     Returns:
-        list[str]: SAM IDs
+        List[str]: SAM IDs
     """
     return get_sam_model_ids()
 
@@ -54,11 +54,11 @@ def sam_file_exists(sam_id: str) -> bool:
     return os.path.isfile(sam_checkpoint)
 
 
-def get_available_sam_ids() -> list[str]:
+def get_available_sam_ids() -> List[str]:
     """Get available SAM IDs.
 
     Returns:
-        list[str]: available SAM IDs
+        List[str]: available SAM IDs
     """
     all_sam_ids = get_all_sam_ids()
     for sam_id in all_sam_ids.copy():
@@ -118,7 +118,7 @@ def generate_sam_masks(
         input_image: Union[np.ndarray, Image.Image],
         sam_id: str,
         anime_style_chk: bool = False,
-        ) -> list[dict[str, Any]]:
+        ) -> List[Dict[str, Any]]:
     """Generate SAM masks.
 
     Args:
@@ -127,7 +127,7 @@ def generate_sam_masks(
         anime_style_chk (bool): anime style check
 
     Returns:
-        list[dict[str, Any]]: SAM masks
+        List[Dict[str, Any]]: SAM masks
     """
     check_inputs_generate_sam_masks(input_image, sam_id, anime_style_chk)
     input_image = convert_input_image(input_image)
@@ -151,14 +151,16 @@ def generate_sam_masks(
     return sam_masks
 
 
-def sort_masks_by_area(sam_masks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def sort_masks_by_area(
+        sam_masks: List[Dict[str, Any]],
+        ) -> List[Dict[str, Any]]:
     """Sort mask by area.
 
     Args:
-        sam_masks (list[dict[str, Any]]): SAM masks
+        sam_masks (List[Dict[str, Any]]): SAM masks
 
     Returns:
-        list[dict[str, Any]]: sorted SAM masks
+        List[Dict[str, Any]]: sorted SAM masks
     """
     return sorted(sam_masks, key=lambda x: np.sum(x.get("segmentation").astype(np.uint32)))
 
@@ -177,17 +179,17 @@ def get_seg_colormap() -> np.ndarray:
 
 
 def insert_mask_to_sam_masks(
-        sam_masks: list[dict[str, Any]],
-        insert_mask: dict[str, Any],
-        ) -> list[dict[str, Any]]:
+        sam_masks: List[Dict[str, Any]],
+        insert_mask: Dict[str, Any],
+        ) -> List[Dict[str, Any]]:
     """Insert mask to SAM masks.
 
     Args:
-        sam_masks (list[dict[str, Any]]): SAM masks
-        insert_mask (dict[str, Any]): insert mask
+        sam_masks (List[Dict[str, Any]]): SAM masks
+        insert_mask (Dict[str, Any]): insert mask
 
     Returns:
-        list[dict[str, Any]]: SAM masks
+        List[Dict[str, Any]]: SAM masks
     """
     if insert_mask is not None and isinstance(insert_mask, dict) and "segmentation" in insert_mask:
         if (len(sam_masks) > 0 and
@@ -201,13 +203,13 @@ def insert_mask_to_sam_masks(
 
 def create_seg_color_image(
         input_image: Union[np.ndarray, Image.Image],
-        sam_masks: list[dict[str, Any]],
+        sam_masks: List[Dict[str, Any]],
         ) -> np.ndarray:
     """Create segmentation color image.
 
     Args:
         input_image (Union[np.ndarray, Image.Image]): input image
-        sam_masks (list[dict[str, Any]]): SAM masks
+        sam_masks (List[Dict[str, Any]]): SAM masks
 
     Returns:
         np.ndarray: segmentation color image
