@@ -1041,9 +1041,9 @@ def on_ui_tabs():
                                     with gr.Column():
                                         cn_md_text = "Reference-Only Control (enabled with image below)"
                                         if not cn_ip_adapter:
-                                            cn_md_text = cn_md_text + ("<br>"
-                                                                       "<span style='color: gray;'>IP-Adapter is not available. "
-                                                                       "Reference-Only is used.</span>")
+                                            cn_md_text = cn_md_text + ("<br><span style='color: gray;'>"
+                                                                       "[IP-Adapter](https://huggingface.co/lllyasviel/sd_control_collection/tree/main) "
+                                                                       "is not available. Reference-Only is used.</span>")
                                         gr.Markdown(cn_md_text)
                                         if cn_ip_adapter:
                                             cn_ipa_or_ref = gr.Radio(label="IP-Adapter or Reference-Only", elem_id="cn_ipa_or_ref",
@@ -1056,7 +1056,7 @@ def on_ui_tabs():
                                         if cn_ip_adapter:
                                             cn_ipa_model_id = gr.Dropdown(label="IP-Adapter Model ID", elem_id="cn_ipa_model_id",
                                                                           choices=cn_ipa_model_ids, value=cn_ipa_model_ids[0], show_label=True)
-                                        cn_ref_module_id = gr.Dropdown(label="Reference Type", elem_id="cn_ref_module_id",
+                                        cn_ref_module_id = gr.Dropdown(label="Reference Type for Reference-Only", elem_id="cn_ref_module_id",
                                                                        choices=cn_ref_module_ids, value=cn_ref_module_ids[-1], show_label=True)
                                         cn_ref_weight = gr.Slider(label="Reference Control Weight", elem_id="cn_ref_weight",
                                                                   minimum=0.0, maximum=2.0, value=1.0, step=0.05)
@@ -1094,7 +1094,7 @@ def on_ui_tabs():
                         elif len(cn_module_ids) > 0:
                             cn_models_directory = os.path.join("extensions", "sd-webui-controlnet", "models")
                             gr.Markdown("ControlNet inpaint model is not available.<br>"
-                                        "Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model "
+                                        "Requires the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1/tree/main) inpaint model "
                                         f"in the {cn_models_directory} directory.")
                         else:
                             gr.Markdown("ControlNet inpaint preprocessor is not available.<br>"
