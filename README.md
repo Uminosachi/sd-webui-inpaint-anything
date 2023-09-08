@@ -92,14 +92,15 @@ exit()
 
 ### ControlNet Inpaint Tab
 
-* To execute inpainting, use the Stable Diffusion checkpoint, located in the upper left of the Web UI, with the ControlNet inpaint model.
+* To execute inpainting, use the Stable Diffusion checkpoint located in the upper left of the Web UI, and pair it with the ControlNet inpaint model.
 * Enter your desired Prompt and Negative Prompt.
 * Click on the `Run ControlNet Inpaint` button to start the process.
   * In the Advanced options, you can adjust the Sampler, Sampling Steps, Guidance Scale, Denoising Strength, and Seed.
 * The Control Weight and Control Mode can be modified in the ControlNet options.
   * The Reference-Only Control can be utilized if the Multi ControlNet setting is configured to 2 or higher.
+  * The IP-Adapter can be utilized if the [IP-Adapter model](https://huggingface.co/lllyasviel/sd_control_collection/tree/main) is present in the `extensions/sd-webui-controlnet/models` directory, and the ControlNet version is updated.
 * Make sure to install the ControlNet extension that supports the `inpaint_only` preprocessor and the ControlNet inpaint model.
-* Requires: The [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension and the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1) inpaint model in the `extensions/sd-webui-controlnet/models` directory.
+* Requires: The [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) extension and the [ControlNet-v1-1](https://huggingface.co/lllyasviel/ControlNet-v1-1/tree/main) inpaint model in the `extensions/sd-webui-controlnet/models` directory.
 
 ### Mask only Tab
 

@@ -1,17 +1,11 @@
 import os
+from functools import cached_property
+from importlib.metadata import version
 from importlib.util import find_spec
 
 import torch
 from modules import paths, sd_samplers_common
 from packaging.version import parse
-
-try:
-    from functools import cached_property
-    from importlib.metadata import version
-except Exception:
-    from pkg_resources import get_distribution
-    def version(module_name): return get_distribution(module_name).version
-    cached_property = property
 
 
 def get_module_version(module_name):

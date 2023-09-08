@@ -563,7 +563,8 @@ def run_cn_inpaint(input_image, sel_mask,
                    cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed,
                    cn_module_id, cn_model_id, cn_save_mask_chk,
                    cn_low_vram_chk, cn_weight, cn_mode, cn_iteration_count=1,
-                   cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced", cn_ref_resize_mode="tile"):
+                   cn_ref_module_id=None, cn_ref_image=None, cn_ref_weight=1.0, cn_ref_mode="Balanced", cn_ref_resize_mode="resize",
+                   cn_ipa_or_ref=None, cn_ipa_model_id=None):
     global sam_dict
     if input_image is None or sam_dict["mask_image"] is None or sel_mask is None:
         ia_logging.error("The image or mask does not exist")
@@ -635,10 +636,17 @@ def run_cn_inpaint(input_image, sel_mask,
             ia_logging.info(f"Reference image is resized and cropped to ({height}, {width})")
         assert cn_ref_image.size == init_image.size, "The sizes of the reference image and input image do not match"
 
+        cn_ref_model_id = None
+        if cn_ipa_or_ref is not None and cn_ipa_model_id is not None:
+            cn_ipa_module_ids = [cn for cn in cnet.get_modules() if "ip-adapter" in cn and "sd15" in cn]
+            if len(cn_ipa_module_ids) > 0 and cn_ipa_or_ref == "IP-Adapter":
+                cn_ref_module_id = cn_ipa_module_ids[0]
+                cn_ref_model_id = cn_ipa_model_id
+
         cn_units.append(cnet.to_processing_unit(dict(
             enabled=True,
             module=cn_ref_module_id,
-            model=None,
+            model=cn_ref_model_id,
             weight=cn_ref_weight,
             image={"image": np.array(cn_ref_image), "mask": None},
             resize_mode=cnet.ResizeMode.RESIZE,
@@ -814,6 +822,14 @@ def on_ui_tabs():
         cn_ref_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "reference" in cn]
         if len(cn_ref_module_ids) > 0:
             cn_ref_only = True
+
+    cn_ip_adapter = False
+    if cn_ref_only:
+        cn_ipa_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "ip-adapter" in cn and "sd15" in cn]
+        cn_ipa_model_ids = [cn for cn in sam_dict["cnet"].get_models() if "ip-adapter" in cn and "sd15" in cn]
+
+        if len(cn_ipa_module_ids) > 0 and len(cn_ipa_model_ids) > 0:
+            cn_ip_adapter = True
 
     webui_inpaint_enabled = False
     webui_model_ids = get_inp_webui_model_ids()
@@ -1023,12 +1039,23 @@ def on_ui_tabs():
                             if cn_ref_only:
                                 with gr.Row():
                                     with gr.Column():
-                                        gr.Markdown("Reference-Only Control (enabled with image below)")
+                                        cn_md_text = "Reference-Only Control (enabled with image below)"
+                                        if not cn_ip_adapter:
+                                            cn_md_text = cn_md_text + ("<br>"
+                                                                       "<span style='color: gray;'>IP-Adapter is not available. "
+                                                                       "Reference-Only is used.</span>")
+                                        gr.Markdown(cn_md_text)
+                                        if cn_ip_adapter:
+                                            cn_ipa_or_ref = gr.Radio(label="IP-Adapter or Reference-Only", elem_id="cn_ipa_or_ref",
+                                                                     choices=["IP-Adapter", "Reference-Only"], value="IP-Adapter", show_label=False)
                                         cn_ref_image = gr.Image(label="Reference Image", elem_id="cn_ref_image", source="upload", type="numpy",
                                                                 interactive=True)
                                     with gr.Column():
                                         cn_ref_resize_mode = gr.Radio(label="Reference Image Resize Mode", elem_id="cn_ref_resize_mode",
-                                                                      choices=["tile", "resize"], value="tile", show_label=True)
+                                                                      choices=["resize", "tile"], value="resize", show_label=True)
+                                        if cn_ip_adapter:
+                                            cn_ipa_model_id = gr.Dropdown(label="IP-Adapter Model ID", elem_id="cn_ipa_model_id",
+                                                                          choices=cn_ipa_model_ids, value=cn_ipa_model_ids[0], show_label=True)
                                         cn_ref_module_id = gr.Dropdown(label="Reference Type", elem_id="cn_ref_module_id",
                                                                        choices=cn_ref_module_ids, value=cn_ref_module_ids[-1], show_label=True)
                                         cn_ref_weight = gr.Slider(label="Reference Control Weight", elem_id="cn_ref_weight",
@@ -1170,6 +1197,8 @@ def on_ui_tabs():
                              cn_low_vram_chk, cn_weight, cn_mode, cn_iteration_count]
                 if cn_ref_only:
                     cn_inputs.extend([cn_ref_module_id, cn_ref_image, cn_ref_weight, cn_ref_mode, cn_ref_resize_mode])
+                if cn_ip_adapter:
+                    cn_inputs.extend([cn_ipa_or_ref, cn_ipa_model_id])
                 cn_inpaint_btn.click(
                     run_cn_inpaint,
                     inputs=cn_inputs,
