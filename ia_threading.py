@@ -16,6 +16,11 @@ def clear_cache():
     devices.torch_gc()
 
 
+def is_sdxl_lowvram(sd_model):
+    return (shared.cmd_opts.lowvram or shared.cmd_opts.medvram or getattr(shared.cmd_opts, "medvram_sdxl", False)
+            and hasattr(sd_model, "conditioner"))
+
+
 def webui_reload_model_weights(sd_model=None, info=None):
     try:
         reload_model_weights(sd_model=sd_model, info=info)
@@ -26,7 +31,7 @@ def webui_reload_model_weights(sd_model=None, info=None):
 def pre_offload_model_weights(sem):
     global backup_sd_model, backup_device, backup_ckpt_info
     with sem:
-        if shared.sd_model is not None and not getattr(shared.sd_model, "is_sdxl", False):
+        if shared.sd_model is not None and not is_sdxl_lowvram(shared.sd_model):
             backup_sd_model = shared.sd_model
             backup_device = getattr(backup_sd_model, "device", devices.device)
             backup_sd_model.to(devices.cpu)
