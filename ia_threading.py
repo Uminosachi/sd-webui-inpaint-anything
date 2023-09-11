@@ -26,7 +26,7 @@ def webui_reload_model_weights(sd_model=None, info=None):
 def pre_offload_model_weights(sem):
     global backup_sd_model, backup_device, backup_ckpt_info
     with sem:
-        if shared.sd_model is not None:
+        if shared.sd_model is not None and not getattr(shared.sd_model, "is_sdxl", False):
             backup_sd_model = shared.sd_model
             backup_device = getattr(backup_sd_model, "device", devices.device)
             backup_sd_model.to(devices.cpu)
