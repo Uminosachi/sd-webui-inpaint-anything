@@ -356,7 +356,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         local_files_only = True
         ia_logging.info("local_files_only: {}".format(str(local_files_only)))
 
-    if platform.system() == "Darwin" or devices.device == devices.cpu:
+    if platform.system() == "Darwin" or devices.device == devices.cpu or ia_check_versions.torch_on_amd_rocm:
         torch_dtype = torch.float32
     else:
         torch_dtype = torch.float16

@@ -66,5 +66,12 @@ class IACheckVersions:
 
         return False
 
+    @cached_property
+    def torch_on_amd_rocm(self):
+        if find_spec("torch") is not None and "rocm" in version("torch"):
+            return True
+        else:
+            return False
+
 
 ia_check_versions = IACheckVersions()
