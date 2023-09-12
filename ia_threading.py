@@ -1,4 +1,5 @@
 import gc
+import inspect
 import threading
 from contextlib import ContextDecorator
 from functools import wraps
@@ -17,8 +18,8 @@ def clear_cache():
 
 
 def is_sdxl_lowvram(sd_model):
-    return (shared.cmd_opts.lowvram or shared.cmd_opts.medvram or getattr(shared.cmd_opts, "medvram_sdxl", False)
-            and hasattr(sd_model, "conditioner"))
+    return (shared.cmd_opts.lowvram or shared.cmd_opts.medvram or
+            getattr(shared.cmd_opts, "medvram_sdxl", False) and hasattr(sd_model, "conditioner"))
 
 
 def webui_reload_model_weights(sd_model=None, info=None):
@@ -31,7 +32,8 @@ def webui_reload_model_weights(sd_model=None, info=None):
 def pre_offload_model_weights(sem):
     global backup_sd_model, backup_device, backup_ckpt_info
     with sem:
-        if shared.sd_model is not None and not is_sdxl_lowvram(shared.sd_model) and getattr(shared.sd_model, "device", devices.cpu) != devices.cpu:
+        if (shared.sd_model is not None and not is_sdxl_lowvram(shared.sd_model) and
+                getattr(shared.sd_model, "device", devices.cpu) != devices.cpu):
             backup_sd_model = shared.sd_model
             backup_device = getattr(backup_sd_model, "device")
             backup_sd_model.to(devices.cpu)
@@ -112,26 +114,31 @@ def await_acquire_release_semaphore():
 
 def clear_cache_decorator(func):
     @wraps(func)
+    def yield_wrapper(*args, **kwargs):
+        clear_cache()
+        yield from func(*args, **kwargs)
+        clear_cache()
+
+    @wraps(func)
     def wrapper(*args, **kwargs):
         clear_cache()
         res = func(*args, **kwargs)
         clear_cache()
         return res
 
-    return wrapper
-
-
-def clear_cache_yield_decorator(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        clear_cache()
-        yield from func(*args, **kwargs)
-        clear_cache()
-
-    return wrapper
+    if inspect.isgeneratorfunction(func):
+        return yield_wrapper
+    else:
+        return wrapper
 
 
 def post_reload_decorator(func):
+    @wraps(func)
+    def yield_wrapper(*args, **kwargs):
+        await_acquire_release_semaphore()
+        yield from func(*args, **kwargs)
+        async_post_reload_model_weights()
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         await_acquire_release_semaphore()
@@ -139,10 +146,19 @@ def post_reload_decorator(func):
         async_post_reload_model_weights()
         return res
 
-    return wrapper
+    if inspect.isgeneratorfunction(func):
+        return yield_wrapper
+    else:
+        return wrapper
 
 
 def offload_reload_decorator(func):
+    @wraps(func)
+    def yield_wrapper(*args, **kwargs):
+        await_pre_offload_model_weights()
+        yield from func(*args, **kwargs)
+        async_post_reload_model_weights()
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         await_pre_offload_model_weights()
@@ -150,17 +166,10 @@ def offload_reload_decorator(func):
         async_post_reload_model_weights()
         return res
 
-    return wrapper
-
-
-def offload_reload_yield_decorator(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        await_pre_offload_model_weights()
-        yield from func(*args, **kwargs)
-        async_post_reload_model_weights()
-
-    return wrapper
+    if inspect.isgeneratorfunction(func):
+        return yield_wrapper
+    else:
+        return wrapper
 
 
 class torch_default_load_cd(ContextDecorator):

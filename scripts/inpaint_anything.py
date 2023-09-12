@@ -36,8 +36,7 @@ from ia_file_manager import IAFileManager, download_model_from_hf, ia_file_manag
 from ia_logging import draw_text_image, ia_logging
 from ia_threading import (async_post_reload_model_weights, await_backup_reload_ckpt_info,
                           await_pre_reload_model_weights, clear_cache_decorator,
-                          clear_cache_yield_decorator, offload_reload_decorator,
-                          offload_reload_yield_decorator)
+                          offload_reload_decorator)
 from ia_ui_items import (get_cleaner_model_ids, get_inp_model_ids, get_inp_webui_model_ids,
                          get_padding_mode_names, get_sam_model_ids, get_sampler_names)
 from ia_webui_controlnet import (backup_alwayson_scripts, clear_controlnet_cache,
@@ -325,8 +324,8 @@ def auto_resize_to_pil(input_image, mask_image):
     return init_image, mask_image
 
 
-@offload_reload_yield_decorator
-@clear_cache_yield_decorator
+@offload_reload_decorator
+@clear_cache_decorator
 def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, seed, inp_model_id, save_mask_chk, composite_chk,
                 sampler_name="DDIM", iteration_count=1):
     global sam_dict
@@ -558,7 +557,7 @@ def run_get_mask(sel_mask):
     return mask_image
 
 
-@clear_cache_yield_decorator
+@clear_cache_decorator
 def run_cn_inpaint(input_image, sel_mask,
                    cn_prompt, cn_n_prompt, cn_sampler_id, cn_ddim_steps, cn_cfg_scale, cn_strength, cn_seed,
                    cn_module_id, cn_model_id, cn_save_mask_chk,
@@ -700,7 +699,7 @@ def run_cn_inpaint(input_image, sel_mask,
     restore_alwayson_scripts(p.scripts)
 
 
-@clear_cache_yield_decorator
+@clear_cache_decorator
 def run_webui_inpaint(input_image, sel_mask,
                       webui_prompt, webui_n_prompt, webui_sampler_id, webui_ddim_steps, webui_cfg_scale, webui_strength, webui_seed,
                       webui_model_id, webui_save_mask_chk,

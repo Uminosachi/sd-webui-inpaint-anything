@@ -50,8 +50,8 @@ def get_inp_model_ids():
     global inp_list_from_cache
     model_ids = [
         "stabilityai/stable-diffusion-2-inpainting",
-        "Uminosachi/dreamshaper_7-inpainting",
-        "Uminosachi/Deliberate-inpainting",
+        "Uminosachi/dreamshaper_8Inpainting",
+        "Uminosachi/deliberate_v3-inpainting",
         "Uminosachi/realisticVisionV51_v51VAE-inpainting",
         "Uminosachi/revAnimated_v121Inp-inpainting",
         "runwayml/stable-diffusion-inpainting",
