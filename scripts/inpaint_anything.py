@@ -668,6 +668,7 @@ def run_cn_inpaint(input_image, sel_mask,
         if cn_seed < 0 or count > 0:
             cn_seed = random.randint(0, 2147483647)
 
+        p.init_images = [init_image]
         p.seed = cn_seed
 
         try:
@@ -757,6 +758,7 @@ def run_webui_inpaint(input_image, sel_mask,
         if webui_seed < 0 or count > 0:
             webui_seed = random.randint(0, 2147483647)
 
+        p.init_images = [init_image]
         p.seed = webui_seed
 
         try:
