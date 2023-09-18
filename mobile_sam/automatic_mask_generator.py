@@ -4,32 +4,20 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import torch
 from torchvision.ops.boxes import batched_nms, box_area  # type: ignore
 
-from typing import Any, Dict, List, Optional, Tuple
-
 from .modeling import Sam
 from .predictor import SamPredictor
-from .utils.amg import (
-    MaskData,
-    area_from_rle,
-    batch_iterator,
-    batched_mask_to_box,
-    box_xyxy_to_xywh,
-    build_all_layer_point_grids,
-    calculate_stability_score,
-    coco_encode_rle,
-    generate_crop_boxes,
-    is_box_near_crop_edge,
-    mask_to_rle_pytorch,
-    remove_small_regions,
-    rle_to_mask,
-    uncrop_boxes_xyxy,
-    uncrop_masks,
-    uncrop_points,
-)
+from .utils.amg import (MaskData, area_from_rle, batch_iterator, batched_mask_to_box,
+                        box_xyxy_to_xywh, build_all_layer_point_grids, calculate_stability_score,
+                        coco_encode_rle, generate_crop_boxes, is_box_near_crop_edge,
+                        mask_to_rle_pytorch, remove_small_regions, rle_to_mask, uncrop_boxes_xyxy,
+                        uncrop_masks, uncrop_points)
+from .utils.torch_nms import nms
 
 
 class SamAutomaticMaskGenerator:
@@ -211,12 +199,19 @@ class SamAutomaticMaskGenerator:
             # Prefer masks from smaller crops
             scores = 1 / box_area(data["crop_boxes"])
             scores = scores.to(data["boxes"].device)
-            keep_by_nms = batched_nms(
-                data["boxes"].float(),
-                scores,
-                torch.zeros_like(data["boxes"][:, 0]),  # categories
-                iou_threshold=self.crop_nms_thresh,
-            )
+            try:
+                keep_by_nms = batched_nms(
+                    data["boxes"].float(),
+                    scores,
+                    torch.zeros_like(data["boxes"][:, 0]),  # categories
+                    iou_threshold=self.crop_nms_thresh,
+                )
+            except Exception:
+                keep_by_nms = nms(
+                    data["boxes"].float(),
+                    scores,
+                    iou_threshold=self.crop_nms_thresh,
+                )
             data.filter(keep_by_nms)
 
         data.to_numpy()
@@ -248,12 +243,19 @@ class SamAutomaticMaskGenerator:
         self.predictor.reset_image()
 
         # Remove duplicates within this crop.
-        keep_by_nms = batched_nms(
-            data["boxes"].float(),
-            data["iou_preds"],
-            torch.zeros_like(data["boxes"][:, 0]),  # categories
-            iou_threshold=self.box_nms_thresh,
-        )
+        try:
+            keep_by_nms = batched_nms(
+                data["boxes"].float(),
+                data["iou_preds"],
+                torch.zeros_like(data["boxes"][:, 0]),  # categories
+                iou_threshold=self.box_nms_thresh,
+            )
+        except Exception:
+            keep_by_nms = nms(
+                data["boxes"].float(),
+                data["iou_preds"],
+                iou_threshold=self.box_nms_thresh,
+            )
         data.filter(keep_by_nms)
 
         # Return to the original image frame
@@ -356,12 +358,19 @@ class SamAutomaticMaskGenerator:
         # Recalculate boxes and remove any new duplicates
         masks = torch.cat(new_masks, dim=0)
         boxes = batched_mask_to_box(masks)
-        keep_by_nms = batched_nms(
-            boxes.float(),
-            torch.as_tensor(scores),
-            torch.zeros_like(boxes[:, 0]),  # categories
-            iou_threshold=nms_thresh,
-        )
+        try:
+            keep_by_nms = batched_nms(
+                boxes.float(),
+                torch.as_tensor(scores),
+                torch.zeros_like(boxes[:, 0]),  # categories
+                iou_threshold=nms_thresh,
+            )
+        except Exception:
+            keep_by_nms = nms(
+                boxes.float(),
+                torch.as_tensor(scores),
+                iou_threshold=nms_thresh,
+            )
 
         # Only recalculate RLEs for masks that have changed
         for i_mask in keep_by_nms:

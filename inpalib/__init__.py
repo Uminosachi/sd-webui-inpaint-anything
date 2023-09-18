@@ -15,4 +15,4 @@ __all__ = [
     "sam_file_exists",
     "sam_file_path",
     "sort_masks_by_area",
-    ]
+]
