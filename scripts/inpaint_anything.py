@@ -819,10 +819,13 @@ def on_ui_tabs():
     cn_sampler_index = cn_sampler_ids.index("DDIM") if "DDIM" in cn_sampler_ids else 0
 
     cn_ref_only = False
-    if cn_enabled and sam_dict["cnet"].get_max_models_num() > 1:
-        cn_ref_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "reference" in cn]
-        if len(cn_ref_module_ids) > 0:
-            cn_ref_only = True
+    try:
+        if cn_enabled and sam_dict["cnet"].get_max_models_num() > 1:
+            cn_ref_module_ids = [cn for cn in sam_dict["cnet"].get_modules() if "reference" in cn]
+            if len(cn_ref_module_ids) > 0:
+                cn_ref_only = True
+    except AttributeError:
+        pass
 
     cn_ip_adapter = False
     if cn_ref_only:
@@ -1040,7 +1043,7 @@ def on_ui_tabs():
                             if cn_ref_only:
                                 with gr.Row():
                                     with gr.Column():
-                                        cn_md_text = "Reference-Only Control (enabled with image below)"
+                                        cn_md_text = "Reference Control (enabled with image below)"
                                         if not cn_ip_adapter:
                                             cn_md_text = cn_md_text + ("<br><span style='color: gray;'>"
                                                                        "[IP-Adapter](https://huggingface.co/lllyasviel/sd_control_collection/tree/main) "

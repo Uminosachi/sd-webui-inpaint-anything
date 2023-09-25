@@ -40,12 +40,6 @@ def list_default_scripts():
             if filename.endswith(".py"):
                 scripts_list.append(filename)
 
-    # basedir = os.path.join(paths.script_path, "modules", "processing_scripts")
-    # if os.path.isdir(basedir):
-    #     for filename in sorted(os.listdir(basedir)):
-    #         if filename.endswith(".py"):
-    #             scripts_list.append(filename)
-
     return scripts_list
 
 
@@ -202,6 +196,7 @@ def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_
         restore_faces=False,
         tiling=False,
         do_not_save_samples=True,
+        do_not_save_grid=True,
     )
 
     p = StableDiffusionProcessingImg2Img(**sd_img2img_args)
