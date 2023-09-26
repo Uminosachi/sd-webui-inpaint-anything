@@ -1144,6 +1144,7 @@ def on_ui_tabs():
                 with gr.Row().style(equal_height=False):
                     with gr.Column():
                         expand_mask_btn = gr.Button("Expand mask region", elem_id="expand_mask_btn")
+                        expand_mask_iteration_count = gr.Slider(label="Expand Mask Iterations", elem_id="expand_mask_iteration_count", minimum=1, maximum=100, value=1, step=1)
                     with gr.Column():
                         apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
                         add_mask_btn = gr.Button("Add mask by sketch", elem_id="add_mask_btn")
@@ -1156,7 +1157,7 @@ def on_ui_tabs():
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSamMask")
             select_btn.click(select_mask, inputs=[input_image, sam_image, invert_chk, ignore_black_chk, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
-            expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
+            expand_mask_btn.click(expand_mask, inputs=[input_image, sel_mask, expand_mask_iteration_count], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
             apply_mask_btn.click(apply_mask, inputs=[input_image, sel_mask], outputs=[sel_mask]).then(
                 fn=None, inputs=None, outputs=None, _js="inpaintAnything_clearSelMask")
