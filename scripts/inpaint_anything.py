@@ -234,7 +234,7 @@ def expand_mask(input_image, sel_mask, expand_iteration=1):
 
     new_sel_mask = sam_dict["mask_image"]
 
-    expand_iteration = int(np.clip(expand_iteration, 1, 5))
+    expand_iteration = int(np.clip(expand_iteration, 1, 100))
 
     new_sel_mask = cv2.dilate(new_sel_mask, np.ones((3, 3), dtype=np.uint8), iterations=expand_iteration)
 
