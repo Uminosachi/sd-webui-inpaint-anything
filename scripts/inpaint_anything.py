@@ -1144,7 +1144,8 @@ def on_ui_tabs():
                 with gr.Row().style(equal_height=False):
                     with gr.Column():
                         expand_mask_btn = gr.Button("Expand mask region", elem_id="expand_mask_btn")
-                        expand_mask_iteration_count = gr.Slider(label="Expand Mask Iterations", elem_id="expand_mask_iteration_count", minimum=1, maximum=100, value=1, step=1)
+                        expand_mask_iteration_count = gr.Slider(label="Expand Mask Iterations",
+                                                                elem_id="expand_mask_iteration_count", minimum=1, maximum=100, value=1, step=1)
                     with gr.Column():
                         apply_mask_btn = gr.Button("Trim mask by sketch", elem_id="apply_mask_btn")
                         add_mask_btn = gr.Button("Add mask by sketch", elem_id="add_mask_btn")
