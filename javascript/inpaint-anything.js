@@ -154,6 +154,11 @@ async function inpaintAnything_clearSelMask() {
     removeImageButton.addEventListener("click", clickRemoveImage);
 }
 
+async function inpaintAnything_initSamSelMask() {
+    inpaintAnything_clearSamMask();
+    inpaintAnything_clearSelMask();
+}
+
 async function inpaintAnything_getPrompt(tabName, promptId, negPromptId) {
     const tabTxt2img = document.querySelector(`#tab_${tabName}`);
     if (!tabTxt2img) {
