@@ -103,8 +103,27 @@ def input_image_upload(input_image, sam_image, sel_mask):
     sam_dict["orig_image"] = input_image
     sam_dict["pad_mask"] = None
 
-    ret_sam_image = np.zeros_like(input_image, dtype=np.uint8) if sam_image is None else gr.update()
-    ret_sel_mask = np.zeros_like(input_image, dtype=np.uint8) if sel_mask is None else gr.update()
+    if (sam_dict["mask_image"] is None or not isinstance(sam_dict["mask_image"], np.ndarray) or
+            sam_dict["mask_image"].shape != input_image.shape):
+        sam_dict["mask_image"] = np.zeros_like(input_image, dtype=np.uint8)
+
+    ret_sel_image = cv2.addWeighted(input_image, 0.5, sam_dict["mask_image"], 0.5, 0)
+
+    if sam_image is None or not isinstance(sam_image, dict) or "image" not in sam_image:
+        sam_dict["sam_masks"] = None
+        ret_sam_image = np.zeros_like(input_image, dtype=np.uint8)
+    elif sam_image["image"].shape == input_image.shape:
+        ret_sam_image = gr.update()
+    else:
+        sam_dict["sam_masks"] = None
+        ret_sam_image = gr.update(value=np.zeros_like(input_image, dtype=np.uint8))
+
+    if sel_mask is None or not isinstance(sel_mask, dict) or "image" not in sel_mask:
+        ret_sel_mask = ret_sel_image
+    elif sel_mask["image"].shape == ret_sel_image.shape and np.all(sel_mask["image"] == ret_sel_image):
+        ret_sel_mask = gr.update()
+    else:
+        ret_sel_mask = gr.update(value=ret_sel_image)
 
     return ret_sam_image, ret_sel_mask, gr.update(interactive=True)
 
