@@ -955,7 +955,7 @@ def on_ui_tabs():
 
                     with gr.Row():
                         out_image = gr.Gallery(label="Inpainted image", elem_id="ia_out_image", show_label=False,
-                                               columns=2, height=520, object_fit="contain")
+                                               columns=2, height=520, object_fit="contain", preview=True)
 
                 with gr.Tab("Cleaner", elem_id="cleaner_tab"):
                     with gr.Row():
@@ -971,7 +971,7 @@ def on_ui_tabs():
 
                     with gr.Row():
                         cleaner_out_image = gr.Gallery(label="Cleaned image", elem_id="ia_cleaner_out_image", show_label=False,
-                                                       columns=2, height=520, object_fit="contain")
+                                                       columns=2, height=520, object_fit="contain", preview=True)
 
                 if webui_inpaint_enabled:
                     with gr.Tab("Inpainting webui", elem_id="webui_inpainting_tab"):
@@ -1031,7 +1031,7 @@ def on_ui_tabs():
 
                         with gr.Row():
                             webui_out_image = gr.Gallery(label="Inpainted image", elem_id="ia_webui_out_image", show_label=False,
-                                                         columns=2, height=520, object_fit="contain")
+                                                         columns=2, height=520, object_fit="contain", preview=True)
 
                 with gr.Tab("ControlNet Inpaint", elem_id="cn_inpaint_tab"):
                     if cn_enabled:
@@ -1117,7 +1117,7 @@ def on_ui_tabs():
 
                         with gr.Row():
                             cn_out_image = gr.Gallery(label="Inpainted image", elem_id="ia_cn_out_image", show_label=False,
-                                                      columns=2, height=520, object_fit="contain")
+                                                      columns=2, height=520, object_fit="contain", preview=True)
 
                     else:
                         if sam_dict["cnet"] is None:
