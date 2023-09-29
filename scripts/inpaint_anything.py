@@ -437,6 +437,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
 
+    output_list = []
     for count in range(int(iteration_count)):
         gc.collect()
         if seed < 0 or count > 0:
@@ -483,7 +484,9 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
         output_image.save(save_name, pnginfo=metadata)
 
-        yield output_image, max([1, iteration_count - (count + 1)])
+        output_list.append(output_image)
+
+        yield output_list, max([1, iteration_count - (count + 1)])
 
 
 @offload_reload_decorator
@@ -534,7 +537,7 @@ def run_cleaner(input_image, sel_mask, cleaner_model_id, cleaner_save_mask_chk):
     output_image.save(save_name)
 
     del model
-    return output_image
+    return [output_image]
 
 
 @clear_cache_decorator
@@ -598,13 +601,13 @@ def run_cn_inpaint(input_image, sel_mask,
     if (shared.sd_model.parameterization == "v" and "sd15" in cn_model_id):
         ia_logging.error("The SDv2 model is not compatible with the ControlNet model")
         ret_image = draw_text_image(input_image, "The SD v2 model is not compatible with the ControlNet model")
-        yield ret_image, 1
+        yield [ret_image], 1
         return
 
     if (getattr(shared.sd_model, "is_sdxl", False) and "sd15" in cn_model_id):
         ia_logging.error("The SDXL model is not compatible with the ControlNet model")
         ret_image = draw_text_image(input_image, "The SD XL model is not compatible with the ControlNet model")
-        yield ret_image, 1
+        yield [ret_image], 1
         return
 
     cnet = sam_dict.get("cnet", None)
@@ -682,6 +685,7 @@ def run_cn_inpaint(input_image, sel_mask,
 
     no_hash_cn_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", cn_model_id).strip()
 
+    output_list = []
     for count in range(int(cn_iteration_count)):
         gc.collect()
         if cn_seed < 0 or count > 0:
@@ -698,7 +702,7 @@ def run_cn_inpaint(input_image, sel_mask,
                 input_image, "A tensor with all NaNs was produced in VAE")
             clear_controlnet_cache(cnet, p.scripts)
             restore_alwayson_scripts(p.scripts)
-            yield ret_image, 1
+            yield [ret_image], 1
             return
 
         if processed is not None and len(processed.images) > 0:
@@ -713,7 +717,9 @@ def run_cn_inpaint(input_image, sel_mask,
             save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
             output_image.save(save_name, pnginfo=metadata)
 
-            yield output_image, max([1, cn_iteration_count - (count + 1)])
+            output_list.append(output_image)
+
+            yield output_list, max([1, cn_iteration_count - (count + 1)])
 
     clear_controlnet_cache(cnet, p.scripts)
     restore_alwayson_scripts(p.scripts)
@@ -739,7 +745,7 @@ def run_webui_inpaint(input_image, sel_mask,
         ia_logging.error("The SDXL VAE is not compatible with the inpainting model")
         ret_image = draw_text_image(
             input_image, "The SDXL VAE is not compatible with the inpainting model")
-        yield ret_image, 1
+        yield [ret_image], 1
         return
 
     set_ia_config(IAConfig.KEYS.INP_WEBUI_MODEL_ID, webui_model_id, IAConfig.SECTIONS.USER)
@@ -772,6 +778,7 @@ def run_webui_inpaint(input_image, sel_mask,
     no_hash_webui_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", webui_model_id).strip()
     no_hash_webui_model_id = os.path.splitext(no_hash_webui_model_id)[0]
 
+    output_list = []
     for count in range(int(webui_iteration_count)):
         gc.collect()
         if webui_seed < 0 or count > 0:
@@ -787,7 +794,7 @@ def run_webui_inpaint(input_image, sel_mask,
             ret_image = draw_text_image(
                 input_image, "A tensor with all NaNs was produced in VAE")
             restore_alwayson_scripts(p.scripts)
-            yield ret_image, 1
+            yield [ret_image], 1
             return
 
         if processed is not None and len(processed.images) > 0:
@@ -802,7 +809,9 @@ def run_webui_inpaint(input_image, sel_mask,
             save_name = os.path.join(ia_file_manager.outputs_dir, save_name)
             output_image.save(save_name, pnginfo=metadata)
 
-            yield output_image, max([1, webui_iteration_count - (count + 1)])
+            output_list.append(output_image)
+
+            yield output_list, max([1, webui_iteration_count - (count + 1)])
 
     restore_alwayson_scripts(p.scripts)
 
@@ -942,11 +951,10 @@ def on_ui_tabs():
                             with gr.Row():
                                 save_mask_chk = gr.Checkbox(label="Save mask", elem_id="save_mask_chk",
                                                             value=False, show_label=False, interactive=False, visible=False)
-                                iteration_count = gr.Slider(label="Iteration", elem_id="iteration_count", minimum=1, maximum=10, value=1, step=1)
+                                iteration_count = gr.Slider(label="Iterations", elem_id="iteration_count", minimum=1, maximum=10, value=1, step=1)
 
                     with gr.Row():
-                        out_image = gr.Image(label="Inpainted image", elem_id="ia_out_image", type="pil",
-                                             interactive=False, show_label=False).style(height=480)
+                        out_image = gr.Gallery(label="Inpainted image", elem_id="ia_out_image", show_label=False, height=480)
 
                 with gr.Tab("Cleaner", elem_id="cleaner_tab"):
                     with gr.Row():
@@ -961,8 +969,7 @@ def on_ui_tabs():
                                                                     value=False, show_label=False, interactive=False, visible=False)
 
                     with gr.Row():
-                        cleaner_out_image = gr.Image(label="Cleaned image", elem_id="ia_cleaner_out_image", type="pil",
-                                                     interactive=False, show_label=False).style(height=480)
+                        cleaner_out_image = gr.Gallery(label="Cleaned image", elem_id="ia_cleaner_out_image", show_label=False, height=480)
 
                 if webui_inpaint_enabled:
                     with gr.Tab("Inpainting webui", elem_id="webui_inpainting_tab"):
@@ -1017,12 +1024,11 @@ def on_ui_tabs():
                                 with gr.Row():
                                     webui_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="webui_save_mask_chk",
                                                                       value=False, show_label=False, interactive=False, visible=False)
-                                    webui_iteration_count = gr.Slider(label="Iteration", elem_id="webui_iteration_count",
+                                    webui_iteration_count = gr.Slider(label="Iterations", elem_id="webui_iteration_count",
                                                                       minimum=1, maximum=10, value=1, step=1)
 
                         with gr.Row():
-                            webui_out_image = gr.Image(label="Inpainted image", elem_id="ia_webui_out_image", type="pil",
-                                                       interactive=False, show_label=False).style(height=480)
+                            webui_out_image = gr.Gallery(label="Inpainted image", elem_id="ia_webui_out_image", show_label=False, height=480)
 
                 with gr.Tab("ControlNet Inpaint", elem_id="cn_inpaint_tab"):
                     if cn_enabled:
@@ -1103,12 +1109,11 @@ def on_ui_tabs():
                                 with gr.Row():
                                     cn_save_mask_chk = gr.Checkbox(label="Save mask", elem_id="cn_save_mask_chk",
                                                                    value=False, show_label=False, interactive=False, visible=False)
-                                    cn_iteration_count = gr.Slider(label="Iteration", elem_id="cn_iteration_count",
+                                    cn_iteration_count = gr.Slider(label="Iterations", elem_id="cn_iteration_count",
                                                                    minimum=1, maximum=10, value=1, step=1)
 
                         with gr.Row():
-                            cn_out_image = gr.Image(label="Inpainted image", elem_id="ia_cn_out_image", type="pil",
-                                                    interactive=False, show_label=False).style(height=480)
+                            cn_out_image = gr.Gallery(label="Inpainted image", elem_id="ia_cn_out_image", show_label=False, height=480)
 
                     else:
                         if sam_dict["cnet"] is None:
@@ -1269,7 +1274,7 @@ def on_ui_settings():
     shared.opts.add_option("inpaint_anything_offline_inpainting",
                            shared.OptionInfo(
                                default=False,
-                               label="Run Inpainting on offline network",
+                               label="Run Inpainting on offline network (Models not auto-downloaded)",
                                component=gr.Checkbox,
                                component_args={"interactive": True},
                                section=section))
