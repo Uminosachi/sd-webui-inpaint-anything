@@ -954,7 +954,8 @@ def on_ui_tabs():
                                 iteration_count = gr.Slider(label="Iterations", elem_id="iteration_count", minimum=1, maximum=10, value=1, step=1)
 
                     with gr.Row():
-                        out_image = gr.Gallery(label="Inpainted image", elem_id="ia_out_image", show_label=False, columns=2, height=520)
+                        out_image = gr.Gallery(label="Inpainted image", elem_id="ia_out_image", show_label=False,
+                                               columns=2, height=520, object_fit="contain")
 
                 with gr.Tab("Cleaner", elem_id="cleaner_tab"):
                     with gr.Row():
@@ -969,7 +970,8 @@ def on_ui_tabs():
                                                                     value=False, show_label=False, interactive=False, visible=False)
 
                     with gr.Row():
-                        cleaner_out_image = gr.Gallery(label="Cleaned image", elem_id="ia_cleaner_out_image", show_label=False, columns=2, height=520)
+                        cleaner_out_image = gr.Gallery(label="Cleaned image", elem_id="ia_cleaner_out_image", show_label=False,
+                                                       columns=2, height=520, object_fit="contain")
 
                 if webui_inpaint_enabled:
                     with gr.Tab("Inpainting webui", elem_id="webui_inpainting_tab"):
@@ -1028,7 +1030,8 @@ def on_ui_tabs():
                                                                       minimum=1, maximum=10, value=1, step=1)
 
                         with gr.Row():
-                            webui_out_image = gr.Gallery(label="Inpainted image", elem_id="ia_webui_out_image", show_label=False, columns=2, height=520)
+                            webui_out_image = gr.Gallery(label="Inpainted image", elem_id="ia_webui_out_image", show_label=False,
+                                                         columns=2, height=520, object_fit="contain")
 
                 with gr.Tab("ControlNet Inpaint", elem_id="cn_inpaint_tab"):
                     if cn_enabled:
@@ -1113,7 +1116,8 @@ def on_ui_tabs():
                                                                    minimum=1, maximum=10, value=1, step=1)
 
                         with gr.Row():
-                            cn_out_image = gr.Gallery(label="Inpainted image", elem_id="ia_cn_out_image", show_label=False, columns=2, height=520)
+                            cn_out_image = gr.Gallery(label="Inpainted image", elem_id="ia_cn_out_image", show_label=False,
+                                                      columns=2, height=520, object_fit="contain")
 
                     else:
                         if sam_dict["cnet"] is None:
