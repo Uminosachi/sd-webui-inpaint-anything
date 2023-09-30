@@ -74,5 +74,12 @@ class IACheckVersions:
         else:
             return False
 
+    @cached_property
+    def gradio_version_is_old(self):
+        if find_spec("gradio") is not None and compare_module_version("gradio", "3.34.0") <= 0:
+            return True
+        else:
+            return False
+
 
 ia_check_versions = IACheckVersions()
