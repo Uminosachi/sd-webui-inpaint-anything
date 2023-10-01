@@ -235,8 +235,19 @@ onUiLoaded(async () => {
     function setStyleHeight(elemId, height) {
         const elem = gradioApp().querySelector(elemId);
         if (elem) {
-            if (elem.style.height === null || elem.style.height === "") {
+            if (!elem.style.height) {
                 elem.style.height = height;
+                const observer = new MutationObserver(() => {
+                    const divPreview = elem.querySelector(".preview");
+                    if (divPreview) {
+                        divPreview.classList.remove("fixed-height");
+                    }
+                });
+                observer.observe(elem, {
+                    childList: true,
+                    attributes: true,
+                    attributeFilter: ["class"],
+                });
             }
         }
     }
