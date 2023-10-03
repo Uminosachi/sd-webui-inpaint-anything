@@ -13,10 +13,16 @@ class IAFileManager:
 
     def __init__(self) -> None:
         config_save_folder = get_webui_setting("inpaint_anything_save_folder", "inpaint-anything")
-        config_save_folder = config_save_folder if config_save_folder in ["inpaint-anything", "img2img-images"] else "inpaint-anything"
-        self._ia_outputs_dir = os.path.join(shared.data_path,
-                                            "outputs", config_save_folder,
-                                            datetime.now().strftime("%Y-%m-%d"))
+        if config_save_folder == "inpaint-anything":
+            self._ia_outputs_dir = os.path.join(shared.data_path,
+                                                "outputs", config_save_folder,
+                                                datetime.now().strftime("%Y-%m-%d"))
+        else:
+            self._ia_outputs_dir = get_webui_setting(
+                "outdir_img2img_samples",
+                os.path.join(shared.data_path,
+                             "outputs", config_save_folder,
+                             datetime.now().strftime("%Y-%m-%d")))
 
         self._ia_models_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
 
@@ -27,10 +33,16 @@ class IAFileManager:
             None
         """
         config_save_folder = get_webui_setting("inpaint_anything_save_folder", "inpaint-anything")
-        if config_save_folder in ["inpaint-anything", "img2img-images"]:
+        if config_save_folder == "inpaint-anything":
             self._ia_outputs_dir = os.path.join(shared.data_path,
                                                 "outputs", config_save_folder,
                                                 datetime.now().strftime("%Y-%m-%d"))
+        else:
+            self._ia_outputs_dir = get_webui_setting(
+                "outdir_img2img_samples",
+                os.path.join(shared.data_path,
+                             "outputs", config_save_folder,
+                             datetime.now().strftime("%Y-%m-%d")))
 
     @property
     def outputs_dir(self) -> str:
