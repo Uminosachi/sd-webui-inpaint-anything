@@ -1293,7 +1293,7 @@ def on_ui_settings():
                                default="inpaint-anything",
                                label="Folder name where output images will be saved",
                                component=gr.Radio,
-                               component_args={"choices": ["inpaint-anything", "img2img-images"]},
+                               component_args={"choices": ["inpaint-anything", "img2img-images (img2img output setting of web UI)"]},
                                section=section))
     shared.opts.add_option("inpaint_anything_sam_oncpu",
                            shared.OptionInfo(

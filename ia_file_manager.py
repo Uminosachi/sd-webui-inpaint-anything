@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from pathlib import Path
 
 from huggingface_hub import snapshot_download
 from modules import shared
@@ -13,16 +14,15 @@ class IAFileManager:
 
     def __init__(self) -> None:
         config_save_folder = get_webui_setting("inpaint_anything_save_folder", "inpaint-anything")
+        self.folder_is_webui = False if config_save_folder == "inpaint-anything" else True
         if config_save_folder == "inpaint-anything":
-            self._ia_outputs_dir = os.path.join(shared.data_path,
-                                                "outputs", config_save_folder,
-                                                datetime.now().strftime("%Y-%m-%d"))
+            self._ia_outputs_dir = os.path.join(shared.data_path, "outputs", config_save_folder, datetime.now().strftime("%Y-%m-%d"))
         else:
-            self._ia_outputs_dir = get_webui_setting(
-                "outdir_img2img_samples",
-                os.path.join(shared.data_path,
-                             "outputs", config_save_folder,
-                             datetime.now().strftime("%Y-%m-%d")))
+            webui_save_folder = Path(get_webui_setting("outdir_img2img_samples", os.path.join("outputs", "img2img-images")))
+            if webui_save_folder.is_absolute():
+                self._ia_outputs_dir = os.path.join(str(webui_save_folder), datetime.now().strftime("%Y-%m-%d"))
+            else:
+                self._ia_outputs_dir = os.path.join(shared.data_path, str(webui_save_folder), datetime.now().strftime("%Y-%m-%d"))
 
         self._ia_models_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
 
@@ -33,16 +33,15 @@ class IAFileManager:
             None
         """
         config_save_folder = get_webui_setting("inpaint_anything_save_folder", "inpaint-anything")
+        self.folder_is_webui = False if config_save_folder == "inpaint-anything" else True
         if config_save_folder == "inpaint-anything":
-            self._ia_outputs_dir = os.path.join(shared.data_path,
-                                                "outputs", config_save_folder,
-                                                datetime.now().strftime("%Y-%m-%d"))
+            self._ia_outputs_dir = os.path.join(shared.data_path, "outputs", config_save_folder, datetime.now().strftime("%Y-%m-%d"))
         else:
-            self._ia_outputs_dir = get_webui_setting(
-                "outdir_img2img_samples",
-                os.path.join(shared.data_path,
-                             "outputs", config_save_folder,
-                             datetime.now().strftime("%Y-%m-%d")))
+            webui_save_folder = Path(get_webui_setting("outdir_img2img_samples", os.path.join("outputs", "img2img-images")))
+            if webui_save_folder.is_absolute():
+                self._ia_outputs_dir = os.path.join(str(webui_save_folder), datetime.now().strftime("%Y-%m-%d"))
+            else:
+                self._ia_outputs_dir = os.path.join(shared.data_path, str(webui_save_folder), datetime.now().strftime("%Y-%m-%d"))
 
     @property
     def outputs_dir(self) -> str:
@@ -75,7 +74,8 @@ class IAFileManager:
             str: inpaint-anything savename prefix
         """
         config_save_folder = get_webui_setting("inpaint_anything_save_folder", "inpaint-anything")
-        basename = "inpainta-" if config_save_folder == "img2img-images" else ""
+        self.folder_is_webui = False if config_save_folder == "inpaint-anything" else True
+        basename = "inpainta-" if self.folder_is_webui else ""
 
         return basename + datetime.now().strftime("%Y%m%d-%H%M%S")
 
