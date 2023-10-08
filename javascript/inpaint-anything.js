@@ -19,6 +19,29 @@ const inpaintAnything_waitForElement = async (parent, selector, exist) => {
     });
 };
 
+const inpaintAnything_waitForStyle = async (parent, selector, style) => {
+    return new Promise((resolve) => {
+        const observer = new MutationObserver(() => {
+            if (!parent.querySelector(selector) || !parent.querySelector(selector).style[style]) {
+                return;
+            }
+            observer.disconnect();
+            resolve(undefined);
+        });
+
+        observer.observe(parent, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["style"],
+        });
+
+        if (!!parent.querySelector(selector) && !!parent.querySelector(selector).style[style]) {
+            resolve(undefined);
+        }
+    });
+};
+
 const inpaintAnything_timeout = (ms) => {
     return new Promise(function (resolve, reject) {
         setTimeout(() => reject("Timeout"), ms);
