@@ -438,6 +438,7 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
     width, height = init_image.size
 
     output_list = []
+    iteration_count = iteration_count if iteration_count is not None else 1
     for count in range(int(iteration_count)):
         gc.collect()
         if seed < 0 or count > 0:
@@ -686,6 +687,7 @@ def run_cn_inpaint(input_image, sel_mask,
     no_hash_cn_model_id = re.sub(r"\s\[[0-9a-f]{8,10}\]", "", cn_model_id).strip()
 
     output_list = []
+    cn_iteration_count = cn_iteration_count if cn_iteration_count is not None else 1
     for count in range(int(cn_iteration_count)):
         gc.collect()
         if cn_seed < 0 or count > 0:
@@ -779,6 +781,7 @@ def run_webui_inpaint(input_image, sel_mask,
     no_hash_webui_model_id = os.path.splitext(no_hash_webui_model_id)[0]
 
     output_list = []
+    webui_iteration_count = webui_iteration_count if webui_iteration_count is not None else 1
     for count in range(int(webui_iteration_count)):
         gc.collect()
         if webui_seed < 0 or count > 0:
