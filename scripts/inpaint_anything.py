@@ -1319,6 +1319,14 @@ def on_ui_settings():
                                component=gr.Slider,
                                component_args={"minimum": 0, "maximum": 255, "step": 1},
                                section=section))
+    shared.opts.add_option("inpain_anything_sam_models_dir",
+                           shared.OptionInfo(
+                                default="",
+                                label="Segment Anything Models Directory; If empty, defaults to [Inpaint Anything extension folder]/models",
+                                component=gr.Textbox,
+                                component_args={"interactive": True},
+                                section=section))
+
 
 
 script_callbacks.on_ui_settings(on_ui_settings)

@@ -15,7 +15,10 @@ class IAFileManager:
     def __init__(self) -> None:
         self.update_ia_outputs_dir()
 
-        self._ia_models_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
+        sam_models_dir = shared.opts.data.get("inpain_anything_sam_models_dir", "")
+        if (len(sam_models_dir) == 0) or (sam_models_dir.isspace()):
+            sam_models_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
+        self._ia_models_dir = sam_models_dir
 
     def update_ia_outputs_dir(self) -> None:
         """Update inpaint-anything outputs directory.
