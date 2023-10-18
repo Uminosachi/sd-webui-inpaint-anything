@@ -14,11 +14,7 @@ class IAFileManager:
 
     def __init__(self) -> None:
         self.update_ia_outputs_dir()
-
-        sam_models_dir = shared.opts.data.get("inpain_anything_sam_models_dir", "")
-        if (len(sam_models_dir) == 0) or (sam_models_dir.isspace()):
-            sam_models_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
-        self._ia_models_dir = sam_models_dir
+        self.update_ia_sam_models_dir()
 
     def update_ia_outputs_dir(self) -> None:
         """Update inpaint-anything outputs directory.
@@ -40,6 +36,17 @@ class IAFileManager:
             except Exception:
                 self._ia_outputs_dir = os.path.join(shared.data_path, "outputs", "img2img-images", datetime.now().strftime("%Y-%m-%d"))
 
+    def update_ia_sam_models_dir(self) -> None:
+        """Update inpaint-anything sam models directory.
+
+        Returns:
+            None
+        """
+        sam_models_dir = get_webui_setting("inpain_anything_sam_models_dir", "")
+        if (len(sam_models_dir) == 0) or (sam_models_dir.isspace()):
+            sam_models_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
+        self._ia_models_dir = sam_models_dir
+
     @property
     def outputs_dir(self) -> str:
         """Get inpaint-anything outputs directory.
@@ -59,6 +66,7 @@ class IAFileManager:
         Returns:
             str: inpaint-anything models directory
         """
+        self.update_ia_sam_models_dir()
         if not os.path.isdir(self._ia_models_dir):
             os.makedirs(self._ia_models_dir, exist_ok=True)
         return self._ia_models_dir
