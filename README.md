@@ -81,7 +81,7 @@ exit()
 
 * Choose the Cleaner Model ID.
 * Click on the `Run Cleaner` button (**Please note that it may take some time to download the model for the first time**).
-* Cleaner process is performed using [Lama Cleaner](https://github.com/Sanster/lama-cleaner).
+* Cleaner process is performed using [Lama Cleaner/IOPaint](https://github.com/Sanster/lama-cleaner).
 
 ### Inpainting webui Tab
 

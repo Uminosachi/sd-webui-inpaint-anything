@@ -48,11 +48,11 @@ if not launch.is_installed("transformers"):
     except Exception:
         print("Can't install transformers. Please follow the readme to install manually")
 
-if not launch.is_installed("lama_cleaner"):
+if not launch.is_installed("iopaint"):
     try:
-        launch.run_pip("install lama-cleaner", "requirements for lama_cleaner")
+        launch.run_pip("install iopaint", "requirements for iopaint")
     except Exception:
-        print("Can't install lama-cleaner. Please follow the readme to install manually")
+        print("Can't install iopaint. Please follow the readme to install manually")
 
 if not launch.is_installed("ultralytics"):
     try:
