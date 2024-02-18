@@ -5,7 +5,12 @@ from typing import Any, Dict, List
 import cv2
 import numpy as np
 import torch
-from ultralytics import YOLO
+import ultralytics
+
+if hasattr(ultralytics, "FastSAM"):
+    from ultralytics import FastSAM as YOLO
+else:
+    from ultralytics import YOLO
 
 
 class FastSAM:
@@ -15,6 +20,9 @@ class FastSAM:
     ) -> None:
         self.model_path = checkpoint
         self.model = YOLO(self.model_path)
+
+        if not hasattr(torch.nn.Upsample, "recompute_scale_factor"):
+            torch.nn.Upsample.recompute_scale_factor = None
 
     def to(self, device) -> None:
         self.model.to(device)
