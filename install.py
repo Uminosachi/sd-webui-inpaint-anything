@@ -48,11 +48,23 @@ if not launch.is_installed("transformers"):
     except Exception:
         print("Can't install transformers. Please follow the readme to install manually")
 
-# if not launch.is_installed("lama_cleaner"):
-#     try:
-#         launch.run_pip("install lama-cleaner", "requirements for lama_cleaner")
-#     except Exception:
-#         print("Can't install lama-cleaner. Please follow the readme to install manually")
+if not launch.is_installed("loguru"):
+    try:
+        launch.run_pip("install loguru", "requirements for loguru")
+    except Exception:
+        print("Can't install loguru. Please follow the readme to install manually")
+
+if not launch.is_installed("rich"):
+    try:
+        launch.run_pip("install rich", "requirements for rich")
+    except Exception:
+        print("Can't install rich. Please follow the readme to install manually")
+
+if not launch.is_installed("pydantic"):
+    try:
+        launch.run_pip("install pydantic", "requirements for pydantic")
+    except Exception:
+        print("Can't install pydantic. Please follow the readme to install manually")
 
 if not launch.is_installed("ultralytics"):
     try:
