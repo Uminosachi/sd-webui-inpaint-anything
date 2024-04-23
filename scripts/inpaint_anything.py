@@ -641,6 +641,8 @@ def run_cn_inpaint(input_image, sel_mask,
         guidance_end=1.0,
         pixel_perfect=True,
         control_mode=cn_mode,
+        threshold_a=0.5,
+        threshold_b=0.5,
     ))]
 
     if cn_ref_module_id is not None and cn_ref_image is not None:
