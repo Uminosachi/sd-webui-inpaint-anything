@@ -66,6 +66,12 @@ if not launch.is_installed("pydantic"):
     except Exception:
         print("Can't install pydantic. Please follow the readme to install manually")
 
+if not launch.is_installed("timm"):
+    try:
+        launch.run_pip("install timm", "requirements for timm")
+    except Exception:
+        print("Can't install timm. Please follow the readme to install manually")
+
 if not launch.is_installed("ultralytics"):
     try:
         launch.run_pip("install ultralytics", "requirements for ultralytics")
