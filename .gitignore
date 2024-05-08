@@ -5,6 +5,7 @@ models
 ia_config.ini
 .eslintrc
 .eslintrc.json
+pyproject.toml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

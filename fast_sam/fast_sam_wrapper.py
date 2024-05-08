@@ -56,7 +56,7 @@ class FastSamAutomaticMaskGenerator:
         resize_image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
 
         backup_nn_dict = {}
-        for key, value in torch.nn.__dict__.copy().items():
+        for key, _ in torch.nn.__dict__.copy().items():
             if not inspect.isclass(torch.nn.__dict__.get(key)) and "Norm" in key:
                 backup_nn_dict[key] = torch.nn.__dict__.pop(key)
 
@@ -80,7 +80,7 @@ class FastSamAutomaticMaskGenerator:
             annotations = np.array(annotations.cpu())
 
         annotations_list = []
-        for i, mask in enumerate(annotations):
+        for mask in annotations:
             mask = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
             mask = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
             mask = cv2.resize(mask, (width, height), interpolation=cv2.INTER_AREA)

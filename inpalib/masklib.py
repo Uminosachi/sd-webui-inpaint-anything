@@ -86,7 +86,7 @@ def create_mask_image(
 
     canvas_image = np.zeros(mask.shape, dtype=np.uint8)
     mask_region = np.zeros(mask.shape, dtype=np.uint8)
-    for idx, seg_dict in enumerate(sam_masks):
+    for seg_dict in sam_masks:
         seg_mask = np.expand_dims(seg_dict["segmentation"].astype(np.uint8), axis=-1)
         canvas_mask = np.logical_not(canvas_image.astype(bool)).astype(np.uint8)
         if (seg_mask * canvas_mask * mask).astype(bool).any():

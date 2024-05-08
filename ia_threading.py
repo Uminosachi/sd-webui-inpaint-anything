@@ -35,7 +35,7 @@ def pre_offload_model_weights(sem):
         if (shared.sd_model is not None and not is_sdxl_lowvram(shared.sd_model) and
                 getattr(shared.sd_model, "device", devices.cpu) != devices.cpu):
             backup_sd_model = shared.sd_model
-            backup_device = getattr(backup_sd_model, "device")
+            backup_device = backup_sd_model.device
             backup_sd_model.to(devices.cpu)
             clear_cache()
 

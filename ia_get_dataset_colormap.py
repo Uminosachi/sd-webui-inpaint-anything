@@ -27,10 +27,10 @@ defined by the different datasets. Supported colormaps are:
 * PASCAL VOC 2012 (http://host.robots.ox.ac.uk/pascal/VOC/).
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
+
 # from six.moves import range
 
 # Dataset names.
