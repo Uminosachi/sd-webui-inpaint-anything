@@ -17,8 +17,6 @@ import torch
 from diffusers import (DDIMScheduler, EulerAncestralDiscreteScheduler, EulerDiscreteScheduler,
                        KDPM2AncestralDiscreteScheduler, KDPM2DiscreteScheduler,
                        StableDiffusionInpaintPipeline)
-from lama_cleaner.model_manager import ModelManager
-from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
 from modules import devices, script_callbacks, shared
 from modules.processing import create_infotext, process_images
 from modules.sd_models import get_closet_checkpoint_match
@@ -43,6 +41,8 @@ from ia_webui_controlnet import (backup_alwayson_scripts, clear_controlnet_cache
                                  disable_all_alwayson_scripts, disable_alwayson_scripts_wo_cn,
                                  find_controlnet, get_controlnet_args_to, get_max_args_to,
                                  get_sd_img2img_processing, restore_alwayson_scripts)
+from lama_cleaner.model_manager import ModelManager
+from lama_cleaner.schema import Config, HDStrategy, LDMSampler, SDSampler
 
 
 @clear_cache_decorator
