@@ -187,6 +187,7 @@ def get_sd_img2img_processing(init_image, mask_image, prompt, n_prompt, sampler_
         negative_prompt=n_prompt,
         seed=seed,
         sampler_name=sampler_id,
+        scheduler="Automatic",
         batch_size=1,
         n_iter=1,
         steps=ddim_steps,
