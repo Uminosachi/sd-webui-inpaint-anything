@@ -746,6 +746,13 @@ def run_webui_inpaint(input_image, sel_mask,
         ia_logging.error("The sizes of the image and mask do not match")
         return
 
+    info = get_closet_checkpoint_match(webui_model_id)
+    if info is None:
+        ia_logging.error(f"No model found: {webui_model_id}")
+        return
+
+    await_backup_reload_ckpt_info(info=info)
+
     if not getattr(shared.sd_model, "is_sdxl", False) and "sdxl_vae" in getattr(shared.opts, "sd_vae", ""):
         ia_logging.error("The SDXL VAE is not compatible with the inpainting model")
         ret_image = draw_text_image(
@@ -756,13 +763,6 @@ def run_webui_inpaint(input_image, sel_mask,
     set_ia_config(IAConfig.KEYS.INP_WEBUI_MODEL_ID, webui_model_id, IAConfig.SECTIONS.USER)
 
     save_mask_image(mask_image, webui_save_mask_chk)
-
-    info = get_closet_checkpoint_match(webui_model_id)
-    if info is None:
-        ia_logging.error(f"No model found: {webui_model_id}")
-        return
-
-    await_backup_reload_ckpt_info(info=info)
 
     init_image, mask_image = auto_resize_to_pil(input_image, mask_image)
     width, height = init_image.size
