@@ -746,7 +746,7 @@ def run_webui_inpaint(input_image, sel_mask,
         ia_logging.error("The sizes of the image and mask do not match")
         return
 
-    if "sdxl_vae" in getattr(shared.opts, "sd_vae", ""):
+    if not getattr(shared.sd_model, "is_sdxl", False) and "sdxl_vae" in getattr(shared.opts, "sd_vae", ""):
         ia_logging.error("The SDXL VAE is not compatible with the inpainting model")
         ret_image = draw_text_image(
             input_image, "The SDXL VAE is not compatible with the inpainting model")
