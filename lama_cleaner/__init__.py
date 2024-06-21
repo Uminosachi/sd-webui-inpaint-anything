@@ -2,11 +2,12 @@ import os
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
-import warnings
+import warnings  # noqa: E402
 
-warnings.simplefilter("ignore", UserWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
+warnings.filterwarnings("ignore", category=UserWarning, module="lama_cleaner")
 
-from lama_cleaner.parse_args import parse_args
+from lama_cleaner.parse_args import parse_args  # noqa: E402
 
 
 def entry_point():
