@@ -8,14 +8,18 @@
 # --------------------------------------------------------
 
 import itertools
+import warnings
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
-from timm.models.layers import DropPath as TimmDropPath,\
-    to_2tuple, trunc_normal_
+from timm.models.layers import DropPath as TimmDropPath
+from timm.models.layers import to_2tuple, trunc_normal_
 from timm.models.registry import register_model
-from typing import Tuple
+
+warnings.simplefilter("ignore", category=UserWarning)
 
 
 class Conv2d_BN(torch.nn.Sequential):
