@@ -6,6 +6,9 @@ import platform
 if platform.system() == "Darwin":
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
+if platform.system() == "Windows":
+    os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
+
 import random
 import re
 import traceback
