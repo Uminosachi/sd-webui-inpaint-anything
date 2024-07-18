@@ -1,4 +1,5 @@
-import launch
+import subprocess
+import sys
 
 required_packages = {
     "accelerate": "accelerate",
@@ -18,9 +19,13 @@ required_packages = {
     "timm": "timm",
 }
 
-for package in required_packages:
-    if not launch.is_installed(package):
+for package, install_name in required_packages.items():
+    try:
+        __import__(package)
+        # print(f"{package} is already installed.")
+    except ImportError:
         try:
-            launch.run_pip(f"install {required_packages[package]}", f"requirements for {package}")
-        except Exception:
-            print(f"Can't install {required_packages[package]}. Please follow the readme to install manually")
+            subprocess.run([sys.executable, "-m", "pip", "install", install_name], check=True)
+            print(f"Successfully installed {install_name}.")
+        except subprocess.CalledProcessError:
+            print(f"Can't install {install_name}. Please follow the readme to install manually.")
