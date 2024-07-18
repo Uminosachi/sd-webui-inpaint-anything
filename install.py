@@ -17,6 +17,7 @@ required_packages = {
     "rich": "rich",
     "pydantic": "pydantic",
     "timm": "timm",
+    "onnxruntime": "onnxruntime",
 }
 
 for package, install_name in required_packages.items():
