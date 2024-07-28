@@ -663,7 +663,7 @@ def run_cn_inpaint(input_image, sel_mask,
             ia_logging.info(f"Reference image is resized and cropped to ({height}, {width})")
         assert cn_ref_image.size == init_image.size, "The sizes of the reference image and input image do not match"
 
-        cn_ref_model_id = None
+        cn_ref_model_id = "None"
         if cn_ipa_or_ref is not None and cn_ipa_model_id is not None:
             cn_ipa_module_ids = [cn for cn in cnet.get_modules() if "ip-adapter" in cn and "sd15" in cn]
             if len(cn_ipa_module_ids) > 0 and cn_ipa_or_ref == "IP-Adapter":
@@ -1327,11 +1327,11 @@ def on_ui_settings():
                                section=section))
     shared.opts.add_option("inpain_anything_sam_models_dir",
                            shared.OptionInfo(
-                                default="",
-                                label="Segment Anything Models Directory; If empty, defaults to [Inpaint Anything extension folder]/models",
-                                component=gr.Textbox,
-                                component_args={"interactive": True},
-                                section=section))
+                               default="",
+                               label="Segment Anything Models Directory; If empty, defaults to [Inpaint Anything extension folder]/models",
+                               component=gr.Textbox,
+                               component_args={"interactive": True},
+                               section=section))
 
 
 script_callbacks.on_ui_settings(on_ui_settings)
