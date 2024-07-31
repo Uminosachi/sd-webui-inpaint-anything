@@ -98,6 +98,8 @@ def get_sam_mask_generator(sam_checkpoint, anime_style_chk=False):
             crop_n_layers=1,
             box_nms_thresh=0.7,
             crop_n_points_downscale_factor=2)
+        if platform.system() == "Darwin":
+            sam2_gen_kwargs.update(dict(points_per_side=32, points_per_batch=64, crop_n_points_downscale_factor=1))
 
     if os.path.isfile(sam_checkpoint):
         sam = sam_model_registry_local[model_type](checkpoint=sam_checkpoint)
