@@ -18,6 +18,8 @@ required_packages = {
     "pydantic": "pydantic",
     "timm": "timm",
     "onnxruntime": "onnxruntime",
+    "hydra": "hydra-core",
+    "iopath": "iopath",
 }
 
 for package, install_name in required_packages.items():

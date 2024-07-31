@@ -64,8 +64,9 @@ def download_model(sam_model_id):
         url_sam = "https://huggingface.co/Uminosachi/FastSAM/resolve/main/" + sam_model_id
     elif "mobile_sam" in sam_model_id:
         url_sam = "https://huggingface.co/Uminosachi/MobileSAM/resolve/main/" + sam_model_id
+    elif "sam2_" in sam_model_id:
+        url_sam = "https://dl.fbaipublicfiles.com/segment_anything_2/072824/" + sam_model_id
     else:
-        # url_sam_vit_h_4b8939 = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
         url_sam = "https://dl.fbaipublicfiles.com/segment_anything/" + sam_model_id
 
     sam_checkpoint = os.path.join(ia_file_manager.models_dir, sam_model_id)
