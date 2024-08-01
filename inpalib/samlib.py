@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Union
 
 import cv2
 import numpy as np
+import torch
 from PIL import Image
 from tqdm import tqdm
 
@@ -72,7 +73,7 @@ def check_inputs_generate_sam_masks(
         input_image: Union[np.ndarray, Image.Image],
         sam_id: str,
         anime_style_chk: bool = False,
-        ) -> None:
+) -> None:
     """Check generate SAM masks inputs.
 
     Args:
@@ -118,7 +119,7 @@ def generate_sam_masks(
         input_image: Union[np.ndarray, Image.Image],
         sam_id: str,
         anime_style_chk: bool = False,
-        ) -> List[Dict[str, Any]]:
+) -> List[Dict[str, Any]]:
     """Generate SAM masks.
 
     Args:
@@ -136,7 +137,12 @@ def generate_sam_masks(
     sam_mask_generator = get_sam_mask_generator(sam_checkpoint, anime_style_chk)
     ia_logging.info(f"{sam_mask_generator.__class__.__name__} {sam_id}")
 
-    sam_masks = sam_mask_generator.generate(input_image)
+    if "sam2_" in sam_id:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        with torch.inference_mode(), torch.autocast(device, dtype=torch.bfloat16):
+            sam_masks = sam_mask_generator.generate(input_image)
+    else:
+        sam_masks = sam_mask_generator.generate(input_image)
 
     if anime_style_chk:
         for sam_mask in sam_masks:
@@ -153,7 +159,7 @@ def generate_sam_masks(
 
 def sort_masks_by_area(
         sam_masks: List[Dict[str, Any]],
-        ) -> List[Dict[str, Any]]:
+) -> List[Dict[str, Any]]:
     """Sort mask by area.
 
     Args:
@@ -181,7 +187,7 @@ def get_seg_colormap() -> np.ndarray:
 def insert_mask_to_sam_masks(
         sam_masks: List[Dict[str, Any]],
         insert_mask: Dict[str, Any],
-        ) -> List[Dict[str, Any]]:
+) -> List[Dict[str, Any]]:
     """Insert mask to SAM masks.
 
     Args:
@@ -204,7 +210,7 @@ def insert_mask_to_sam_masks(
 def create_seg_color_image(
         input_image: Union[np.ndarray, Image.Image],
         sam_masks: List[Dict[str, Any]],
-        ) -> np.ndarray:
+) -> np.ndarray:
     """Create segmentation color image.
 
     Args:
