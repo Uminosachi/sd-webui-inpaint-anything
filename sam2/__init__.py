@@ -5,8 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
+import warnings
 
 from hydra import initialize_config_dir, initialize_config_module  # noqa: F401
+
+warnings.filterwarnings("ignore", category=UserWarning, module="sam2")
 
 inpa_basedir = os.path.abspath(os.path.normpath(os.path.join(os.path.dirname(__file__), "..")))
 configs_path = os.path.join(inpa_basedir, "sam2_configs")
