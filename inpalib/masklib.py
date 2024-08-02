@@ -24,7 +24,7 @@ def check_inputs_create_mask_image(
         mask: Union[np.ndarray, Image.Image],
         sam_masks: List[Dict[str, Any]],
         ignore_black_chk: bool = True,
-        ) -> None:
+) -> None:
     """Check create mask image inputs.
 
     Args:
@@ -70,7 +70,7 @@ def create_mask_image(
         mask: Union[np.ndarray, Image.Image],
         sam_masks: List[Dict[str, Any]],
         ignore_black_chk: bool = True,
-        ) -> np.ndarray:
+) -> np.ndarray:
     """Create mask image.
 
     Args:

@@ -21,6 +21,20 @@ from segment_anything_hq import SamPredictor as SamPredictorHQ
 from segment_anything_hq import sam_model_registry as sam_model_registry_hq
 
 
+def check_bfloat16_support() -> bool:
+    if torch.cuda.is_available():
+        compute_capability = torch.cuda.get_device_capability(torch.cuda.current_device())
+        if compute_capability[0] >= 8:
+            ia_logging.debug("The CUDA device supports bfloat16")
+            return True
+        else:
+            ia_logging.debug("The CUDA device does not support bfloat16")
+            return False
+    else:
+        ia_logging.debug("CUDA is not available")
+        return False
+
+
 def partial_from_end(func, /, *fixed_args, **fixed_kwargs):
     def wrapper(*args, **kwargs):
         updated_kwargs = {**fixed_kwargs, **kwargs}

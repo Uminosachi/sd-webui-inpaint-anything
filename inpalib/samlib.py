@@ -16,7 +16,7 @@ if inpa_basedir not in sys.path:
 from ia_file_manager import ia_file_manager  # noqa: E402
 from ia_get_dataset_colormap import create_pascal_label_colormap  # noqa: E402
 from ia_logging import ia_logging  # noqa: E402
-from ia_sam_manager import get_sam_mask_generator  # noqa: E402
+from ia_sam_manager import check_bfloat16_support, get_sam_mask_generator  # noqa: E402
 from ia_ui_items import get_sam_model_ids  # noqa: E402
 
 
@@ -139,7 +139,8 @@ def generate_sam_masks(
 
     if "sam2_" in sam_id:
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        with torch.inference_mode(), torch.autocast(device, dtype=torch.bfloat16):
+        torch_dtype = torch.bfloat16 if check_bfloat16_support() else torch.float16
+        with torch.inference_mode(), torch.autocast(device, dtype=torch_dtype):
             sam_masks = sam_mask_generator.generate(input_image)
     else:
         sam_masks = sam_mask_generator.generate(input_image)
