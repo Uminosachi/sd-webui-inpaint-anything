@@ -385,16 +385,19 @@ def run_inpaint(input_image, sel_mask, prompt, n_prompt, ddim_steps, cfg_scale, 
         torch_dtype = torch.float16
 
     try:
-        pipe = StableDiffusionInpaintPipeline.from_pretrained(inp_model_id, torch_dtype=torch_dtype, local_files_only=local_files_only)
+        pipe = StableDiffusionInpaintPipeline.from_pretrained(
+            inp_model_id, torch_dtype=torch_dtype, local_files_only=local_files_only, use_safetensors=True)
     except Exception as e:
         ia_logging.error(str(e))
         if not config_offline_inpainting:
             try:
-                pipe = StableDiffusionInpaintPipeline.from_pretrained(inp_model_id, torch_dtype=torch_dtype)
+                pipe = StableDiffusionInpaintPipeline.from_pretrained(
+                    inp_model_id, torch_dtype=torch_dtype, use_safetensors=True)
             except Exception as e:
                 ia_logging.error(str(e))
                 try:
-                    pipe = StableDiffusionInpaintPipeline.from_pretrained(inp_model_id, torch_dtype=torch_dtype, force_download=True)
+                    pipe = StableDiffusionInpaintPipeline.from_pretrained(
+                        inp_model_id, torch_dtype=torch_dtype, force_download=True, use_safetensors=True)
                 except Exception as e:
                     ia_logging.error(str(e))
                     return
