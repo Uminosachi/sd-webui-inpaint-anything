@@ -14,5 +14,8 @@ warnings.filterwarnings("ignore", category=UserWarning, module="sam2")
 inpa_basedir = os.path.abspath(os.path.normpath(os.path.join(os.path.dirname(__file__), "..")))
 configs_path = os.path.join(inpa_basedir, "sam2_configs")
 
-initialize_config_dir(configs_path, version_base="1.2")
+try:
+    initialize_config_dir(configs_path, version_base="1.2")
+except TypeError:
+    initialize_config_dir(configs_path)
 # initialize_config_module("sam2_configs", version_base="1.2")
