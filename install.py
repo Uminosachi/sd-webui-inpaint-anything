@@ -3,7 +3,7 @@ import sys
 
 required_packages = {
     "accelerate": "accelerate",
-    "diffusers": "diffusers",
+    "diffusers": "diffusers<0.32.0",
     "huggingface_hub": "huggingface-hub",
     "numpy": "numpy",
     "cv2": "opencv-python",
@@ -25,7 +25,6 @@ required_packages = {
 for package, install_name in required_packages.items():
     try:
         __import__(package)
-        # print(f"{package} is already installed.")
     except ImportError:
         try:
             subprocess.run([sys.executable, "-m", "pip", "install", install_name], check=True)
